@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Characters that are considered symbols in lisp
 #define SYMB_CHARS "~!@#$%^&*-_=+:/?<>"
@@ -21,7 +22,7 @@ lisp_lexer_peek(lisp_lexer *lex) {
     }
 
     lex->use_old = true;
-    lex->kind    = TOK_NONE;
+    lex->kind = TOK_NONE;
     while (lex->kind == TOK_NONE) {
         char cp = *lex->cursor;
         if (!cp) {
@@ -72,10 +73,10 @@ lisp_lexer_peek(lisp_lexer *lex) {
         }
 
         char *write_cursor = lex->tok_buf;
-        char *write_eof    = lex->tok_buf + lex->tok_buf_capacity;
+        char *write_eof = lex->tok_buf + lex->tok_buf_capacity;
 
         *write_cursor++ = cp;
-        cp              = *++lex->cursor;
+        cp = *++lex->cursor;
 
         while (cp && (isalnum(cp) || strchr(SYMB_CHARS, cp))) {
             if (write_cursor < write_eof) {
@@ -85,8 +86,21 @@ lisp_lexer_peek(lisp_lexer *lex) {
         }
 
         *write_cursor = 0;
-        lex->symb_len = write_cursor - lex->tok_buf;
-        lex->kind     = TOK_SYMB;
+
+        char *test = lex->tok_buf;
+        if (*test == '-') {
+            ++test;
+        }
+        while (*test && isdigit(*test)) {
+            ++test;
+        }
+        if (*test == 0) {
+            lex->kind = TOK_NUMI;
+            lex->numi = atoi(lex->tok_buf);
+        } else {
+            lex->symb_len = write_cursor - lex->tok_buf;
+            lex->kind = TOK_SYMB;
+        }
         continue;
     }
 

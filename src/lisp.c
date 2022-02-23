@@ -21,6 +21,8 @@ find_symb(lisp_runtime *runtime, char *symb) {
     if (obj == runtime->nil) {
         obj = lisp_make_symbol(runtime, symb);
         runtime->obarray = lisp_make_cons(runtime, obj, runtime->obarray);
+    } else {
+        obj = obj->car;
     }
     return obj;
 }
@@ -176,7 +178,7 @@ lisp_make_symbol(lisp_runtime *runtime, char *symb) {
     uint32_t len = strlen(symb);
     lisp_obj *obj = calloc(1, sizeof(lisp_obj) + len);
     obj->kind = LOBJ_SYMB;
-    memcpy(obj->symb, symb, len + 1);
+    memcpy(obj->symb, symb, len);
     return obj;
 }
 
