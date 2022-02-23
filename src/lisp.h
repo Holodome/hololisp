@@ -75,6 +75,8 @@ typedef struct lisp_runtime {
     lisp_obj *env;
     // Nil object
     lisp_obj *nil;
+    // Symbols
+    lisp_obj *obarray;
 } lisp_runtime;
 
 /**
@@ -91,8 +93,7 @@ lisp_runtime *lisp_create(void);
  * @param buffer buffer from which to execute code
  * @param buffer_size size of buffer in bytes
  */
-void lisp_exec_buffer(lisp_runtime *runtime, char *buffer,
-                      uint32_t buffer_size);
+void lisp_exec_buffer(lisp_runtime *runtime, char *buffer);
 
 /**
  * @brief Makes cons lisp object

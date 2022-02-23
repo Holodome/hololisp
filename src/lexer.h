@@ -29,7 +29,7 @@ typedef enum {
 /**
  * @brief Struct storing data related to lexing lisp source code
  */
-typedef struct {
+typedef struct lisp_lexer {
     // Current parsing point
     char *cursor;
     // Buffer where strings & symbols are written as result of parsing
