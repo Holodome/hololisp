@@ -22,7 +22,7 @@ typedef enum {
     // t
     LOBJ_TRUE,
     // Builtin function
-    LOBJ_PRIMITIVE,
+    LOBJ_BIND,
     // Environment frame
     LOBJ_ENV,
     // Macro definition
@@ -121,6 +121,9 @@ lisp_obj *lisp_make_symbol(lisp_runtime *runtime, char *symb);
 lisp_obj *lisp_make_func(lisp_runtime *runtime, lisp_obj *params,
                          lisp_obj *body, lisp_obj *env);
 
+lisp_obj *lisp_make_acons(lisp_runtime *runtime, lisp_obj *key, lisp_obj *datum,
+                          lisp_obj *alist);
+
 /**
  * @brief Prints given lisp object to stdout
  *
@@ -128,6 +131,11 @@ lisp_obj *lisp_make_func(lisp_runtime *runtime, lisp_obj *params,
  * @param obj object to print
  */
 void lisp_print(lisp_runtime *runtime, lisp_obj *obj);
+
+void lisp_add_binding(lisp_runtime *runtime, char *name,
+                      lisp_func_binding *bind);
+
+lisp_obj *lisp_eval(lisp_runtime *runtime, lisp_obj *list);
 
 #endif
 

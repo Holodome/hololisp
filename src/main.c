@@ -9,7 +9,7 @@
 
 int
 main(void) {
-    char *filename = "examples/stdlib.lisp";
+    char *filename = "examples/a.lisp";
 
     setbuf(stdout, 0);
     FILE *f = fopen(filename, "rb");

@@ -1,5 +1,2 @@
-; (+ 2 (* 3 4))
-; (cons 2)
-(defmacro let (var val . body)
-  (cons (cons 'lambda (cons (list var) body))
-        (list val)))
+(print (+ 2 (* 1 2 3)))
+
