@@ -136,6 +136,8 @@ void lisp_add_binding(lisp_runtime *runtime, char *name,
                       lisp_func_binding *bind);
 
 lisp_obj *lisp_eval(lisp_runtime *runtime, lisp_obj *list);
+lisp_obj *
+lisp_find(lisp_runtime *runtime, lisp_obj *obj);
 
 #endif
 

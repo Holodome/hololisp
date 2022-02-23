@@ -1,2 +1,4 @@
-(print (+ 2 (* 1 2 3)))
+(defvar a 2)
+(setq a 3)
+(print a)
 

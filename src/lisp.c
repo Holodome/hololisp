@@ -114,6 +114,15 @@ read_expr(lisp_runtime *runtime) {
     return expr;
 }
 
+static uint64_t
+list_length(lisp_runtime *runtime, lisp_obj *list) {
+    uint64_t result = 0;
+    for (; list != runtime->nil; list = list->cdr) {
+        ++result;
+    }
+    return result;
+}
+
 static lisp_obj *
 builtin_print(lisp_runtime *runtime, lisp_obj *list) {
     lisp_print(runtime, lisp_eval(runtime, list->car));
@@ -139,6 +148,28 @@ builtin_mul(lisp_runtime *runtime, lisp_obj *list) {
     return lisp_make_num(runtime, result);
 }
 
+static lisp_obj *
+builtin_defvar(lisp_runtime *runtime, lisp_obj *list) {
+    assert(list_length(runtime, list) == 2);
+    assert(list->car->kind == LOBJ_SYMB);
+    lisp_obj *symb = list->car;
+    lisp_obj *value = lisp_eval(runtime, list->cdr->car);
+    runtime->env->vars =
+        lisp_make_acons(runtime, symb, value, runtime->env->vars);
+    return value;
+}
+
+static lisp_obj *
+builtin_setq(lisp_runtime *runtime, lisp_obj *list) {
+    assert(list_length(runtime, list) == 2);
+    assert(list->car->kind == LOBJ_SYMB);
+    lisp_obj *bind = lisp_find(runtime, list->car);
+    assert(bind);
+    lisp_obj *value = lisp_eval(runtime, list->cdr->car);
+    bind->cdr = value;
+    return value;
+}
+
 lisp_runtime *
 lisp_create(void) {
     lisp_runtime *runtime = calloc(1, sizeof(lisp_runtime));
@@ -156,6 +187,8 @@ lisp_create(void) {
     lisp_add_binding(runtime, "print", builtin_print);
     lisp_add_binding(runtime, "+", builtin_add);
     lisp_add_binding(runtime, "*", builtin_mul);
+    lisp_add_binding(runtime, "setq", builtin_setq);
+    lisp_add_binding(runtime, "defvar", builtin_defvar);
 
     return runtime;
 }
@@ -314,6 +347,9 @@ lisp_eval(lisp_runtime *runtime, lisp_obj *list) {
         break;
     case LOBJ_SYMB: {
         lisp_obj *bind = lisp_find(runtime, list);
+        if (!bind) {
+            fprintf(stderr, "Use of undeclared symbol\n");
+        }
         assert(bind);
         result = bind->cdr;
     } break;
