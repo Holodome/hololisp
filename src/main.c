@@ -12,6 +12,7 @@ main(void) {
     char *filename = "examples/a.lisp";
 
     setbuf(stdout, 0);
+    setbuf(stderr, 0);
     FILE *f = fopen(filename, "rb");
     assert(f);
     fseek(f, 0, SEEK_END);

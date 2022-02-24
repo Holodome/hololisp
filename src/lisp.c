@@ -7,18 +7,20 @@
 
 #include "lexer.h"
 
+static lisp_obj *nil = &(lisp_obj){.kind = LOBJ_NIL};
+
 static lisp_obj *read_expr(lisp_runtime *runtime);
 
 static lisp_obj *
 find_symb(lisp_runtime *runtime, char *symb) {
     lisp_obj *obj;
-    for (obj = runtime->obarray; obj != runtime->nil; obj = obj->cdr) {
+    for (obj = runtime->obarray; obj != nil; obj = obj->cdr) {
         if (strcmp(obj->car->symb, symb) == 0) {
             break;
         }
     }
 
-    if (obj == runtime->nil) {
+    if (obj == nil) {
         obj = lisp_make_symbol(runtime, symb);
         runtime->obarray = lisp_make_cons(runtime, obj, runtime->obarray);
     } else {
@@ -28,9 +30,9 @@ find_symb(lisp_runtime *runtime, char *symb) {
 }
 
 static lisp_obj *
-reverse_list(lisp_runtime *runtime, lisp_obj *obj) {
-    lisp_obj *ret = runtime->nil;
-    while (obj != runtime->nil) {
+reverse_list(lisp_obj *obj) {
+    lisp_obj *ret = nil;
+    while (obj != nil) {
         lisp_obj *head = obj;
         obj = obj->cdr;
         head->cdr = ret;
@@ -41,7 +43,7 @@ reverse_list(lisp_runtime *runtime, lisp_obj *obj) {
 
 static lisp_obj *
 read_cons(lisp_runtime *runtime) {
-    lisp_obj *expr = runtime->nil;
+    lisp_obj *expr = nil;
 
     lisp_lexer_peek(runtime->lexer);
     assert(runtime->lexer->kind = TOK_LPAREN);
@@ -56,12 +58,12 @@ read_cons(lisp_runtime *runtime) {
         lisp_lexer_peek(runtime->lexer);
         if (runtime->lexer->kind == TOK_RPAREN) {
             lisp_lexer_eat_peek(runtime->lexer);
-            expr = reverse_list(runtime, expr);
+            expr = reverse_list(expr);
             break;
         } else if (runtime->lexer->kind == TOK_DOT) {
             lisp_lexer_eat_peek(runtime->lexer);
             lisp_obj *car = read_expr(runtime);
-            expr = reverse_list(runtime, lisp_make_cons(runtime, car, expr));
+            expr = reverse_list(lisp_make_cons(runtime, car, expr));
             lisp_lexer_peek(runtime->lexer);
             assert(runtime->lexer->kind == TOK_RPAREN);
             lisp_lexer_eat(runtime->lexer);
@@ -80,14 +82,13 @@ static lisp_obj *
 read_quote(lisp_runtime *runtime) {
     lisp_obj *sym = find_symb(runtime, "quote");
     lisp_lexer_eat(runtime->lexer);
-    return lisp_make_cons(
-        runtime, sym,
-        lisp_make_cons(runtime, read_expr(runtime), runtime->nil));
+    return lisp_make_cons(runtime, sym,
+                          lisp_make_cons(runtime, read_expr(runtime), nil));
 }
 
 static lisp_obj *
 read_expr(lisp_runtime *runtime) {
-    lisp_obj *expr = runtime->nil;
+    lisp_obj *expr = nil;
 
     lisp_lexer_peek(runtime->lexer);
     switch (runtime->lexer->kind) {
@@ -115,9 +116,9 @@ read_expr(lisp_runtime *runtime) {
 }
 
 static uint64_t
-list_length(lisp_runtime *runtime, lisp_obj *list) {
+list_length(lisp_obj *list) {
     uint64_t result = 0;
-    for (; list != runtime->nil; list = list->cdr) {
+    for (; list != nil; list = list->cdr) {
         ++result;
     }
     return result;
@@ -127,14 +128,24 @@ static lisp_obj *
 builtin_print(lisp_runtime *runtime, lisp_obj *list) {
     lisp_print(runtime, lisp_eval(runtime, list->car));
     printf("\n");
-    return runtime->nil;
+    return nil;
 }
 
 static lisp_obj *
 builtin_add(lisp_runtime *runtime, lisp_obj *list) {
     int64_t result = 0;
-    for (lisp_obj *obj = list; obj != runtime->nil; obj = obj->cdr) {
+    for (lisp_obj *obj = list; obj != nil; obj = obj->cdr) {
         result += lisp_eval(runtime, obj->car)->numi;
+    }
+    return lisp_make_num(runtime, result);
+}
+
+static lisp_obj *
+builtin_sub(lisp_runtime *runtime, lisp_obj *list) {
+    int64_t result = lisp_eval(runtime, list->car)->numi;
+    list = list->cdr;
+    for (; list != nil; list = list->cdr) {
+        result -= lisp_eval(runtime, list->car)->numi;
     }
     return lisp_make_num(runtime, result);
 }
@@ -142,15 +153,25 @@ builtin_add(lisp_runtime *runtime, lisp_obj *list) {
 static lisp_obj *
 builtin_mul(lisp_runtime *runtime, lisp_obj *list) {
     int64_t result = 1;
-    for (lisp_obj *obj = list; obj != runtime->nil; obj = obj->cdr) {
+    for (lisp_obj *obj = list; obj != nil; obj = obj->cdr) {
         result *= lisp_eval(runtime, obj->car)->numi;
     }
     return lisp_make_num(runtime, result);
 }
 
 static lisp_obj *
+builtin_div(lisp_runtime *runtime, lisp_obj *list) {
+    int64_t result = lisp_eval(runtime, list->car)->numi;
+    list = list->cdr;
+    for (; list != nil; list = list->cdr) {
+        result /= lisp_eval(runtime, list->car)->numi;
+    }
+    return lisp_make_num(runtime, result);
+}
+
+static lisp_obj *
 builtin_defvar(lisp_runtime *runtime, lisp_obj *list) {
-    assert(list_length(runtime, list) == 2);
+    assert(list_length(list) == 2);
     assert(list->car->kind == LOBJ_SYMB);
     lisp_obj *symb = list->car;
     lisp_obj *value = lisp_eval(runtime, list->cdr->car);
@@ -161,7 +182,7 @@ builtin_defvar(lisp_runtime *runtime, lisp_obj *list) {
 
 static lisp_obj *
 builtin_setq(lisp_runtime *runtime, lisp_obj *list) {
-    assert(list_length(runtime, list) == 2);
+    assert(list_length(list) == 2);
     assert(list->car->kind == LOBJ_SYMB);
     lisp_obj *bind = lisp_find(runtime, list->car);
     assert(bind);
@@ -170,25 +191,42 @@ builtin_setq(lisp_runtime *runtime, lisp_obj *list) {
     return value;
 }
 
+static lisp_obj *
+builtin_defun(lisp_runtime *runtime, lisp_obj *list) {
+    lisp_obj *symb = list->car;
+    assert(symb->kind == LOBJ_SYMB);
+    lisp_obj *args = list->cdr->car;
+    assert(args->kind == LOBJ_CONS);
+    for (lisp_obj *test = args; test != nil; test = test->cdr) {
+        assert(test->car->kind == LOBJ_SYMB);
+        assert(test->cdr->kind == LOBJ_NIL || test->cdr->kind == LOBJ_CONS);
+    }
+    lisp_obj *body = list->cdr->cdr->car;
+
+    lisp_obj *func = lisp_make_func(runtime, args, body, runtime->env);
+    runtime->env->vars =
+        lisp_make_acons(runtime, symb, func, runtime->env->vars);
+    return func;
+}
+
 lisp_runtime *
 lisp_create(void) {
     lisp_runtime *runtime = calloc(1, sizeof(lisp_runtime));
 
-    lisp_obj *nil = calloc(1, sizeof(lisp_obj));
-    nil->kind = LOBJ_NIL;
-    runtime->nil = nil;
-
-    lisp_obj *env = lisp_make_env(runtime, runtime->nil);
+    lisp_obj *env = lisp_make_env(runtime, nil);
     runtime->env = env;
 
     runtime->lexer = calloc(1, sizeof(lisp_lexer));
-    runtime->obarray = runtime->nil;
+    runtime->obarray = nil;
 
     lisp_add_binding(runtime, "print", builtin_print);
     lisp_add_binding(runtime, "+", builtin_add);
     lisp_add_binding(runtime, "*", builtin_mul);
+    lisp_add_binding(runtime, "/", builtin_div);
+    lisp_add_binding(runtime, "-", builtin_sub);
     lisp_add_binding(runtime, "setq", builtin_setq);
     lisp_add_binding(runtime, "defvar", builtin_defvar);
+    lisp_add_binding(runtime, "defun", builtin_defun);
 
     return runtime;
 }
@@ -229,7 +267,7 @@ lisp_make_env(lisp_runtime *runtime, lisp_obj *up) {
     lisp_obj *obj = calloc(1, sizeof(lisp_obj));
     obj->kind = LOBJ_ENV;
     obj->up = up;
-    obj->vars = runtime->nil;
+    obj->vars = nil;
     return obj;
 }
 
@@ -248,7 +286,7 @@ lisp_make_func(lisp_runtime *runtime, lisp_obj *params, lisp_obj *body,
                lisp_obj *env) {
     (void)runtime;
     lisp_obj *obj = calloc(1, sizeof(lisp_obj));
-    obj->kind = LOBJ_CONS;
+    obj->kind = LOBJ_FUNC;
     obj->params = params;
     obj->body = body;
     obj->env = env;
@@ -272,7 +310,7 @@ lisp_print(lisp_runtime *runtime, lisp_obj *obj) {
         printf("(");
         for (;;) {
             lisp_print(runtime, obj->car);
-            if (obj->cdr == runtime->nil) {
+            if (obj->cdr == nil) {
                 break;
             }
 
@@ -313,9 +351,8 @@ lisp_add_binding(lisp_runtime *runtime, char *symb, lisp_func_binding *bind) {
 lisp_obj *
 lisp_find(lisp_runtime *runtime, lisp_obj *obj) {
     lisp_obj *result = 0;
-    for (lisp_obj *env = runtime->env; env != runtime->nil && !result;
-         env = env->up) {
-        for (lisp_obj *test = env->vars; test != runtime->nil && !result;
+    for (lisp_obj *env = runtime->env; env != nil && !result; env = env->up) {
+        for (lisp_obj *test = env->vars; test != nil && !result;
              test = test->cdr) {
             if (test->car->car == obj) {
                 result = test->car;
@@ -327,16 +364,42 @@ lisp_find(lisp_runtime *runtime, lisp_obj *obj) {
 }
 
 static lisp_obj *
+lisp_progn(lisp_runtime *runtime, lisp_obj *list) {
+    lisp_obj *result = nil;
+    for (; list != nil; list = list->cdr) {
+        result = lisp_eval(runtime, list->car);
+    }
+    return result;
+}
+
+static lisp_obj *
 apply_func(lisp_runtime *runtime, lisp_obj *fn, lisp_obj *args) {
     lisp_obj *result;
-    assert(fn->kind == LOBJ_BIND);
-    result = fn->bind(runtime, args);
+    switch (fn->kind) {
+    default:
+        assert(0);
+    case LOBJ_BIND:
+        result = fn->bind(runtime, args);
+        break;
+    case LOBJ_FUNC: {
+        lisp_obj *stack_env = runtime->env;
+        lisp_obj *new_env = lisp_make_env(runtime, fn->env);
+        lisp_obj *arg_names = fn->params;
+        for (; args != nil; args = args->cdr, arg_names = arg_names->cdr) {
+            new_env->vars =
+                lisp_make_acons(runtime, arg_names->car, args->car, new_env->vars);
+        }
+        runtime->env = new_env;
+        result = lisp_progn(runtime, fn->body);
+        runtime->env = stack_env;
+    } break;
+    }
     return result;
 }
 
 lisp_obj *
 lisp_eval(lisp_runtime *runtime, lisp_obj *list) {
-    lisp_obj *result = runtime->nil;
+    lisp_obj *result = nil;
     switch (list->kind) {
     default:
         assert(0);
@@ -348,7 +411,7 @@ lisp_eval(lisp_runtime *runtime, lisp_obj *list) {
     case LOBJ_SYMB: {
         lisp_obj *bind = lisp_find(runtime, list);
         if (!bind) {
-            fprintf(stderr, "Use of undeclared symbol\n");
+            fprintf(stderr, "Use of undeclared symbol '%s'\n", list->symb);
         }
         assert(bind);
         result = bind->cdr;

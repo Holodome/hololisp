@@ -1,4 +1,4 @@
-(defvar a 2)
-(setq a 3)
-(print a)
+(defun % (a b)
+  (- a (* b (/ a b))))
 
+(print (% 3 2))
