@@ -1,5 +1,5 @@
 ERROR_POLICY =-pedantic -Wshadow -Wextra -Wall -Werror -Wno-c11-extensions
-CFLAGS =-g -O0 -std=c99 -Isrc -D_CRT_SECURE_NO_WARNINGS $(ERROR_POLICY)
+CFLAGS =-g -O0 -std=c89 -Isrc -D_CRT_SECURE_NO_WARNINGS $(ERROR_POLICY)
 
 DIR = build
 SRCS = $(wildcard src/*.c)
