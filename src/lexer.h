@@ -51,10 +51,10 @@ typedef enum {
 } hll_lex_result;
 
 /* Call to initialize the lexer. */
-hll_lexer hll_init_lex(char const *cursor, char *buf, uint32_t buffer_size);
+hll_lexer hll_lexer_init(char const *cursor, char *buf, uint32_t buffer_size);
 
 /* Generate token */
-hll_lex_result hll_lex(hll_lexer *lexer);
+hll_lex_result hll_lexer_token(hll_lexer *lexer);
 
 #ifdef __cplusplus
 }

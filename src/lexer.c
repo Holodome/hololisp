@@ -1,19 +1,18 @@
 #include "lexer.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <string.h>
-#include <assert.h>
 
 #include "general.h"
 #include "unicode.h"
 
 hll_lexer
-hll_init_lex(char const *cursor, char *buffer,
-             uint32_t buffer_size) {
-    hll_lexer lex = { 0 };
+hll_lexer_init(char const *cursor, char *buffer, uint32_t buffer_size) {
+    hll_lexer lex = {0};
 
-    lex.cursor = cursor;
-    lex.buffer = buffer;
+    lex.cursor      = cursor;
+    lex.buffer      = buffer;
     lex.buffer_size = buffer_size;
 
     return lex;
@@ -26,16 +25,15 @@ is_codepoint_a_symbol(uint32_t codepoint) {
 }
 
 /* Function behaviourally similar to strtoll.
- * But, they are not present in c89 and do some stuff that we don't want, so let's
- * roll our own.
- * Since this is function that is used only internally, we can make assumption that 'start' is a valid 
- * c-string
+ * But, they are not present in c89 and do some stuff that we don't want, so
+ * let's roll our own. Since this is function that is used only internally, we
+ * can make assumption that 'start' is a valid c-string
  */
 static hll_bool32
 is_lisp_numberi(char const *start, int64_t *number) {
-    hll_bool32 result = FALSE;
-    int64_t test = 0;
-    int64_t multiplier = 1;
+    hll_bool32 result     = FALSE;
+    int64_t    test       = 0;
+    int64_t    multiplier = 1;
 
     if (*start == '-') {
         ++start;
@@ -43,7 +41,7 @@ is_lisp_numberi(char const *start, int64_t *number) {
     }
 
     while (*start && isdigit(*start)) {
-        test = test * 10 + (*start++ - '0');
+        test   = test * 10 + (*start++ - '0');
         result = TRUE;
     }
 
@@ -61,7 +59,7 @@ is_lisp_numberi(char const *start, int64_t *number) {
  * Return number of bytes written, which can be used to detect buffer undeflow.
  * Number of bytes doesn't include terminating symbol.
  */
-static uint32_t 
+static uint32_t
 eat_symbol(char *buffer, uint32_t buffer_size, char const **cursor) {
     uint32_t written = 0;
 
@@ -83,24 +81,31 @@ eat_symbol(char *buffer, uint32_t buffer_size, char const **cursor) {
 }
 
 hll_lex_result
-hll_lex(hll_lexer *lexer) {
+hll_lexer_token(hll_lexer *lexer) {
     hll_lex_result result = HLL_LOK;
 
-    hll_bool32 is_finished = FALSE;
+    /* This is short-circuiting branch for testing null buffer.
+     This shouldn't be ever hit during normal execution so we don't care if this
+     is ugly */
+    hll_bool32 is_finished = lexer->cursor == NULL;
+    if (is_finished) {
+        lexer->token_kind = HLL_LTOK_EOF;
+    }
+
     while (!is_finished) {
         uint8_t cp = *lexer->cursor;
-        
+
         /* Non-ASCII */
 
         if (cp & 0x80) {
             uint32_t codepoint;
 
-            /* We treat non ASCII symbol in unexpected place as string 
+            /* We treat non ASCII symbol in unexpected place as string
              * Later it we can change to allow UTF8 symbols too */
 
             lexer->token_start = lexer->cursor;
             /* TODO: utf8 decoding errors */
-            lexer->cursor = utf8_decode(lexer->cursor, &codepoint);
+            lexer->cursor     = utf8_decode(lexer->cursor, &codepoint);
             lexer->token_kind = HLL_LTOK_OTHER;
 
             if (lexer->cursor - lexer->token_start + 1 > lexer->buffer_size) {
@@ -169,7 +174,8 @@ hll_lex(hll_lexer *lexer) {
         }
 
         {
-            lexer->token_strlen = eat_symbol(lexer->buffer, lexer->buffer_size, &lexer->cursor);
+            lexer->token_strlen =
+                eat_symbol(lexer->buffer, lexer->buffer_size, &lexer->cursor);
             if (lexer->token_strlen != lexer->cursor - lexer->token_start) {
                 result = HLL_LBUF_OVERFLOW;
             }
@@ -186,6 +192,3 @@ hll_lex(hll_lexer *lexer) {
     return result;
 }
 
-#ifdef HLL_TEST
-
-#endif 

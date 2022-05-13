@@ -1,4 +1,4 @@
-ERROR_POLICY =-pedantic -Wshadow -Wextra -Wall -Werror -Wno-c11-extensions
+ERROR_POLICY =-pedantic -Wshadow -Wextra -Wall -Werror
 CFLAGS =-g -O0 -std=c89 -Isrc -D_CRT_SECURE_NO_WARNINGS $(ERROR_POLICY)
 
 DIR = build
@@ -25,10 +25,19 @@ $(DIR)/%.o: %.c | $(DEPS)
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<  
 
+test: $(TEST_EXES) | $(DIR) $(DEPS) $(SRCS)
+	@echo Running unit tests:
+	for i in $^; do echo $$i; ./$$i || exit 1; echo; done
+
+
+$(DIR)/tests/%.exe: tests/%.c $(DEPS) $(SRCS)
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -o $@ $<
+
 $(DIR):
 	mkdir -p $@
 
 clean:
 	rm -rf $(DIR)
 
-.PHONY: clean
+.PHONY: clean test
