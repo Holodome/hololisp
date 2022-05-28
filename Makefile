@@ -1,43 +1,38 @@
-ERROR_POLICY =-pedantic -Wshadow -Wextra -Wall -Werror
-CFLAGS =-g -O0 -std=c89 -Isrc -D_CRT_SECURE_NO_WARNINGS $(ERROR_POLICY)
+TARGET = hololisp
+SRC_DIR = src
+OUT_DIR = build
+# If you want to compile for debugging, run 'make CFLAGS=-g'
+CFLAGS = -O2
 
-DIR = build
-SRCS = $(wildcard src/*.c)
-OBJS = $(SRCS:%.c=$(DIR)/%.o)
-DEPS = $(wildcard src/*.h)
+LOCAL_CFLAGS = -std=c89 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
+LOCAL_LDFLAGS = -pthread -lm
 
-TESTS = $(wildcard tests/*.c)
-TEST_EXES = $(TESTS:%.c=$(DIR)/%.exe)
+DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
-all: hololisp 
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
 
-hololisp: $(OBJS) | $(DIR) $(DEPS)
-	$(CC) -o $(DIR)/$@ $^ $(LDFLAGS)
+all: $(OUT_DIR) $(TARGET)
 
-run: hololisp 
-	$(DIR)/holoc
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
 
-$(DIR)/%.i: %.c
-	mkdir -p $(dir $@)
-	$(CC) -E $(CFLAGS) -c -o $@ $<  
+-include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
-$(DIR)/%.o: %.c | $(DEPS)
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<  
+$(TARGET): $(OBJS) 
+	$(CC) -o $(OUT_DIR)/$@ $(OBJS) $(LOCAL_LDFLAGS) $(LDFLAGS)
 
-test: $(TEST_EXES) | $(DIR) $(DEPS) $(SRCS)
-	@echo Running unit tests:
-	for i in $^; do echo $$i; ./$$i || exit 1; echo; done
+$(OUT_DIR)/%.o: $(SRC_DIR)/%.c 
+	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<  
 
-
-$(DIR)/tests/%.exe: tests/%.c $(DEPS) $(SRCS)
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $<
-
-$(DIR):
-	mkdir -p $@
+run: $(TARGET) 
+	$(OUT_DIR)/$(TARGET)
 
 clean:
-	rm -rf $(DIR)
+	rm -rf $(OUT_DIR)
 
-.PHONY: clean test
+# Generate preprocessor output 
+$(DIR)/%.i: $(SRC_DIR)/%.c
+	$(CC) -E $(CFLAGS) -c -o $@ $<  
+
+.PHONY: clean 
