@@ -8,7 +8,7 @@
 #include "unicode.h"
 
 hll_lexer
-hll_lexer_init(char const *cursor, char *buffer, uint32_t buffer_size) {
+hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     hll_lexer lex = {0};
 
     lex.cursor      = cursor;
@@ -81,19 +81,23 @@ eat_symbol(char *buffer, uint32_t buffer_size, char const **cursor) {
 }
 
 hll_lex_result
-hll_lexer_token(hll_lexer *lexer) {
-    hll_lex_result result = HLL_LOK;
+hll_lexer_peek(hll_lexer *lexer) {
+    hll_lex_result result = HLL_LEX_OK;
 
     /* This is short-circuiting branch for testing null buffer.
      This shouldn't be ever hit during normal execution so we don't care if this
      is ugly */
-    hll_bool32 is_finished = lexer->cursor == NULL;
+    int is_finished = lexer->cursor == NULL ||
+                      (lexer->already_met_eof && !lexer->should_return_old);
     if (is_finished) {
         lexer->token_kind = HLL_LTOK_EOF;
+    } else {
+        is_finished = lexer->should_return_old;
     }
 
     while (!is_finished) {
-        uint8_t cp = *lexer->cursor;
+        uint8_t cp         = *lexer->cursor;
+        lexer->token_start = lexer->cursor;
 
         /* Non-ASCII */
 
@@ -174,21 +178,40 @@ hll_lexer_token(hll_lexer *lexer) {
         }
 
         {
-            lexer->token_strlen =
+            lexer->token_length =
                 eat_symbol(lexer->buffer, lexer->buffer_size, &lexer->cursor);
-            if (lexer->token_strlen != lexer->cursor - lexer->token_start) {
-                result = HLL_LBUF_OVERFLOW;
+            if (lexer->token_length != lexer->cursor - lexer->token_start) {
+                result            = HLL_LEX_BUF_OVERFLOW;
+                lexer->token_kind = HLL_LTOK_SYMB;
+                break;
             }
 
             /* Check if it is a number */
-            if (is_lisp_numberi(lexer->token_start, &lexer->token_i)) {
+            if (is_lisp_numberi(lexer->buffer, &lexer->token_int)) {
                 lexer->token_kind = HLL_LTOK_NUMI;
+                break;
             } else {
                 lexer->token_kind = HLL_LTOK_SYMB;
+                break;
             }
         }
     }
 
+    lexer->should_return_old = 1;
+
     return result;
 }
 
+void
+hll_lexer_eat(hll_lexer *lexer) {
+    /* Forbid eating EOF. This should not be done anyway (and has no sence). */
+    if (lexer->token_kind != HLL_LTOK_EOF) {
+        lexer->should_return_old = 0;
+    }
+}
+
+hll_lex_result
+hll_lexer_eat_peek(hll_lexer *lexer) {
+    hll_lexer_eat(lexer);
+    return hll_lexer_peek(lexer);
+}

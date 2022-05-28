@@ -61,10 +61,10 @@ clean:
 
 TESTS = $(wildcard $(TEST_DIR)/*.c) $(filter-out $(SRC_DIR)/main.c, $(SRCS))
 
+# Note: We disable pedantic here because check does not goes along well with it (sigh)
 unit_test: $(TESTS) 
-	# Note: We disable pedantic here because check does not goes along well with it (sigh)
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(DIR)/$@ -lcheck $(TESTS)
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ -lcheck $(TESTS)
 
 test tests check: all unit_test
-	$(DIR)/unit_test
+	$(OUT_DIR)/unit_test
 

@@ -8,22 +8,22 @@
 #include "prog.h"
 
 static void
-help(uint32_t rc) {
+help(void) {
     printf(
         "OVERVIEW: toy lisp interprenter\n"
         "\n"
         "USAGE: hololisp [opts] file...\n");
-    exit(rc);
 }
 
 static void
 version(void) {
     printf("hololisp version 0.0.1\n");
-    exit(EXIT_SUCCESS);
 }
 
 static hll_bool32
 cli_params(uint32_t argc, char **argv, hll_options *opts) {
+    hll_bool32 result = TRUE;
+
     uint32_t cursor = 1;
     while (cursor < argc) {
         char const *option = argv[cursor++];
@@ -34,8 +34,10 @@ cli_params(uint32_t argc, char **argv, hll_options *opts) {
 
         if (!strcmp(option, "--version") || !strcmp(option, "-v")) {
             version();
+            break;
         } else if (!strcmp(option, "--help") || !strcmp(option, "-h")) {
-            help(EXIT_SUCCESS);
+            help();
+            break;
         } else if (!strcmp(option, "--lex")) {
             opts->mode = HLL_PROGM_LEX;
         } else if (!strcmp(option, "--pp")) {
@@ -44,11 +46,12 @@ cli_params(uint32_t argc, char **argv, hll_options *opts) {
             opts->mode = HLL_PROGM_INTERP;
         } else {
             fprintf(stderr, "Unknown option '%s'\n", option);
-            help(EXIT_FAILURE);
+            result = FALSE;
+            break;
         }
     }
 
-    return TRUE;
+    return result;
 }
 
 int
