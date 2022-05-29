@@ -53,8 +53,6 @@ run: $(TARGET)
 clean:
 	rm -rf $(OUT_DIR)
 
-.PHONY: clean 
-
 #
 # Test rules
 #
@@ -68,3 +66,4 @@ unit_test: $(TESTS)
 test tests check: all unit_test
 	$(OUT_DIR)/unit_test
 
+.PHONY: all test tests check clean
