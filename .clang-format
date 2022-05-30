@@ -13,5 +13,6 @@ AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+Cpp11BracedListStyle: false
 
 ColumnLimit: 80
