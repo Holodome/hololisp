@@ -123,10 +123,11 @@ test_lexer_parses_character_tokens(void) {
 
 void
 test_lexer_parse_basic_syntax_multiple_tokens(void) {
-    char           buffer[4096];
-    hll_lexer      lexer  = hll_lexer_create("(cons -6 +7) (wha-te#ver . '-)", buffer, sizeof(buffer));
+    char      buffer[4096];
+    hll_lexer lexer = hll_lexer_create("(cons -6 +7) (wha-te#ver . '-)", buffer,
+                                       sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
-    
+
     TEST_ASSERT(result == HLL_LEX_OK);
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
 
@@ -187,6 +188,40 @@ test_lexer_parse_basic_syntax_multiple_tokens(void) {
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
 }
 
+void
+test_lexer_eats_and_peeks(void) {
+    char           buffer[4096];
+    hll_lexer      lexer  = hll_lexer_create("123 abc", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    // Nothing should change
+    hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    // Nothing should change
+    hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    // Nothing should change
+    hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    // The same way, eating EOF should do nothing
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
 TEST_LIST = {
     { "test_lexer_accepts_null_and_returns_eof",
       test_lexer_accepts_null_and_returns_eof },
@@ -196,7 +231,9 @@ TEST_LIST = {
     { "test_lexer_returns_number", test_lexer_returns_number },
     { "test_lexer_parses_character_tokens",
       test_lexer_parses_character_tokens },
-    { "test_lexer_parse_basic_syntax_multiple_tokens", test_lexer_parse_basic_syntax_multiple_tokens },
+    { "test_lexer_parse_basic_syntax_multiple_tokens",
+      test_lexer_parse_basic_syntax_multiple_tokens },
+    { "test_lexer_eats_and_peeks", test_lexer_eats_and_peeks },
 
     { NULL, NULL }
 };
