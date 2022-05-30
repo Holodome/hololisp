@@ -11,10 +11,7 @@ typedef enum {
     HLL_LTOK_DOT    = 0x3, /**< . */
     HLL_LTOK_LPAREN = 0x4, /**< ( */
     HLL_LTOK_RPAREN = 0x5, /**< ) */
-    HLL_LTOK_NUMR   = 0x6, /**< Real number */
-    HLL_LTOK_STR    = 0x7, /**< String literal (UTF8) */
-    HLL_LTOK_QUOTE  = 0x8, /**< ' */
-    HLL_LTOK_OTHER  = 0x9  /**< Unrecognized token */
+    HLL_LTOK_QUOTE  = 0x6, /**< ' */
 } hll_ltoken_kind;
 
 /** Structure storing data related to perfoming lexical analysis on lisp code.
@@ -52,7 +49,6 @@ typedef struct hll_lexer {
 typedef enum {
     HLL_LEX_OK                  = 0x0, /**< OK */
     HLL_LEX_BUF_OVERFLOW        = 0x1, /**< String buffer overflow */
-    HLL_LEX_UNTERMINATED_STRING = 0x3  /**< Unterminated string literal */
 } hll_lex_result;
 
 /** Call to initialize the lexer. */
