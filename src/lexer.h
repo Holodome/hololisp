@@ -3,10 +3,6 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Lisp lexer token kind. */
 typedef enum {
     HLL_LTOK_EOF    = 0x0, /** End of file */
@@ -69,9 +65,5 @@ hll_lex_result hll_lexer_peek(hll_lexer *lexer);
 void hll_lexer_eat(hll_lexer *lexer);
 
 hll_lex_result hll_lexer_eat_peek(hll_lexer *lexer);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

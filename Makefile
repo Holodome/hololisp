@@ -42,7 +42,7 @@ $(OUT_DIR):
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
 $(TARGET): $(OBJS) 
-	$(CC) -o $(OUT_DIR)/$@ $(OBJS) $(LOCAL_LDFLAGS) $(LDFLAGS)
+	$(CC) -o $(OUT_DIR)/$@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
 
 $(OUT_DIR)/%.o: $(SRC_DIR)/%.c 
 	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<  
@@ -61,7 +61,7 @@ TESTS = $(wildcard $(TEST_DIR)/*.c) $(filter-out $(SRC_DIR)/main.c, $(SRCS))
 
 # Note: We disable pedantic here because check does not goes along well with it (sigh)
 unit_test: $(TESTS) 
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ -lcheck $(TESTS)
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ $^ -lcheck 
 
 test tests check: all unit_test
 	$(OUT_DIR)/unit_test
