@@ -1,7 +1,7 @@
 #ifndef __HLL_UNICODE_H__
 #define __HLL_UNICODE_H__
 
-#include "general.h"
+#include <stdint.h>
 
 /* 
  * Decodes from utf8 unicode codepoint

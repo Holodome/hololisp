@@ -5,16 +5,16 @@
 
 /** Lisp lexer token kind. */
 typedef enum {
-    HLL_LTOK_EOF    = 0x0, /** End of file */
-    HLL_LTOK_NUMI   = 0x1, /** Integer */
-    HLL_LTOK_SYMB   = 0x2, /** lisp symbol */
-    HLL_LTOK_DOT    = 0x3, /** . */
-    HLL_LTOK_LPAREN = 0x4, /** ( */
-    HLL_LTOK_RPAREN = 0x5, /** ) */
-    HLL_LTOK_NUMR   = 0x6, /** Real number */
-    HLL_LTOK_STR    = 0x7, /** String literal (UTF8) */
-    HLL_LTOK_QUOTE  = 0x8, /** ' */
-    HLL_LTOK_OTHER  = 0x9  /** Unrecognized token */
+    HLL_LTOK_EOF    = 0x0, /**< End of file */
+    HLL_LTOK_NUMI   = 0x1, /**< Integer */
+    HLL_LTOK_SYMB   = 0x2, /**< lisp symbol */
+    HLL_LTOK_DOT    = 0x3, /**< . */
+    HLL_LTOK_LPAREN = 0x4, /**< ( */
+    HLL_LTOK_RPAREN = 0x5, /**< ) */
+    HLL_LTOK_NUMR   = 0x6, /**< Real number */
+    HLL_LTOK_STR    = 0x7, /**< String literal (UTF8) */
+    HLL_LTOK_QUOTE  = 0x8, /**< ' */
+    HLL_LTOK_OTHER  = 0x9  /**< Unrecognized token */
 } hll_ltoken_kind;
 
 /** Structure storing data related to perfoming lexical analysis on lisp code.
@@ -34,7 +34,6 @@ typedef struct hll_lexer {
     hll_ltoken_kind token_kind;
     int64_t         token_int;
     uint32_t        token_length;
-    double          token_real;
     char const     *token_start;
     /**
      * This is hacky way to implement peeking and returning same token for
@@ -45,6 +44,7 @@ typedef struct hll_lexer {
     int should_return_old;
     /** Flag that we should always return eof after buffer is fully parsed. */
     int already_met_eof;
+    char const *line_start;
 } hll_lexer;
 
 /** Result of lexing. This return code can either be ignored or used to report
@@ -52,7 +52,6 @@ typedef struct hll_lexer {
 typedef enum {
     HLL_LEX_OK                  = 0x0, /**< OK */
     HLL_LEX_BUF_OVERFLOW        = 0x1, /**< String buffer overflow */
-    HLL_LEX_UTF8_ERROR          = 0x2, /**< UTF8 decoding error */
     HLL_LEX_UNTERMINATED_STRING = 0x3  /**< Unterminated string literal */
 } hll_lex_result;
 

@@ -3,13 +3,13 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "general.h"
 #include "unicode.h"
 
 hll_lexer
 hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
-    hll_lexer lex = {0};
+    hll_lexer lex = { 0 };
 
     lex.cursor      = cursor;
     lex.buffer      = buffer;
@@ -18,40 +18,47 @@ hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     return lex;
 }
 
-static hll_bool32
+static bool
 is_codepoint_a_symbol(uint32_t codepoint) {
     static char const SYMB_CHARS[] = "~!@#$%^&*-_=+:/?<>";
     return isalnum(codepoint) || strchr(SYMB_CHARS, codepoint);
 }
 
-/* Function behaviourally similar to strtoll.
- * But, they are not present in c89 and do some stuff that we don't want, so
- * let's roll our own. Since this is function that is used only internally, we
- * can make assumption that 'start' is a valid c-string
- */
-static hll_bool32
-is_lisp_numberi(char const *start, int64_t *number) {
-    hll_bool32 result     = FALSE;
-    int64_t    test       = 0;
-    int64_t    multiplier = 1;
+static bool
+try_to_parse_number(char const *buffer, int64_t *number) {
+    bool is_number = false;
 
-    if (*start == '-') {
-        ++start;
-        multiplier = -1;
+    char const *cursor = buffer;
+    if (cursor) {
+        int64_t multiplier = 1;
+        if (*cursor == '+') {
+            ++cursor;
+        } else if (*cursor == '-') {
+            ++cursor;
+            multiplier = -1;
+        }
+
+        // TODO: Report overflow
+        int64_t result = 0;
+        while (isdigit(*cursor)) {
+            result    = result * 10 + (*cursor++ - '0');
+            is_number = true;
+        }
+
+        if (is_number && (is_number = (*cursor == 0))) {
+            *number = result * multiplier;
+        }
     }
 
-    while (*start && isdigit(*start)) {
-        test   = test * 10 + (*start++ - '0');
-        result = TRUE;
-    }
-
-    if (result) {
-        test *= multiplier;
-        *number = test;
-    }
-
-    return result;
+    return is_number;
 }
+
+typedef struct {
+    hll_lex_result result;
+    size_t         written;
+    size_t         length;
+    char const    *cursor;
+} eat_symbol_result;
 
 /*
  * Reads lisp symbol from given cursor and writes it to buffer.
@@ -59,25 +66,34 @@ is_lisp_numberi(char const *start, int64_t *number) {
  * Return number of bytes written, which can be used to detect buffer undeflow.
  * Number of bytes doesn't include terminating symbol.
  */
-static uint32_t
-eat_symbol(char *buffer, uint32_t buffer_size, char const **cursor) {
-    uint32_t written = 0;
+static eat_symbol_result
+eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
+    eat_symbol_result result = { .result = HLL_LEX_OK, .cursor = cursor_ };
 
-    char const *temp = *cursor;
-    while (*temp && is_codepoint_a_symbol(*temp)) {
-        if (written < buffer_size) {
-            buffer[written++] = *temp;
+    char *write      = buffer;
+    char *buffer_eof = buffer + buffer_size;
+
+    if (write) {
+        while (*result.cursor && is_codepoint_a_symbol(*result.cursor) &&
+               write < buffer_eof) {
+            *write++ = *result.cursor++;
         }
-        ++temp;
+
+        if (buffer_eof != write) {
+            result.written = result.length = write - buffer;
+            *write                         = 0;
+        } else {
+            result.result = HLL_LEX_BUF_OVERFLOW;
+        }
+    } else {
+        result.written = 0;
+        while (*result.cursor && is_codepoint_a_symbol(*result.cursor)) {
+            ++result.length;
+            ++result.cursor;
+        }
     }
 
-    if (buffer_size - written) {
-        buffer[written] = 0;
-    }
-
-    *cursor = temp;
-
-    return written;
+    return result;
 }
 
 hll_lex_result
@@ -99,95 +115,70 @@ hll_lexer_peek(hll_lexer *lexer) {
         uint8_t cp         = *lexer->cursor;
         lexer->token_start = lexer->cursor;
 
-        /* Non-ASCII */
-
-        if (cp & 0x80) {
-            uint32_t codepoint;
-
-            /* We treat non ASCII symbol in unexpected place as string
-             * Later it we can change to allow UTF8 symbols too */
-
-            lexer->token_start = lexer->cursor;
-            /* TODO: utf8 decoding errors */
-            lexer->cursor     = utf8_decode(lexer->cursor, &codepoint);
-            lexer->token_kind = HLL_LTOK_OTHER;
-
-            if (lexer->cursor - lexer->token_start + 1 > lexer->buffer_size) {
-                size_t length = lexer->cursor - lexer->token_start;
-
-                memcpy(lexer->buffer, lexer->token_start, length);
-                lexer->buffer[length] = 0;
-            }
-
-            break;
-        }
-
-        /* EOF */
-
+        //
+        // EOF
+        //
         if (!cp) {
-            lexer->token_kind = HLL_LTOK_EOF;
-            break;
+            lexer->token_kind      = HLL_LTOK_EOF;
+            lexer->already_met_eof = 1;
+            is_finished            = 1;
         }
-
-        /* Spaces */
-
-        if (isspace(*lexer->cursor)) {
+        //
+        // Spaces (skip)
+        //
+        else if (isspace(cp)) {
+            do {
+                if (cp == '\n') {
+                    ++lexer->line;
+                    lexer->line_start = lexer->cursor + 1;
+                }
+                cp = *++lexer->cursor;
+            } while (isspace(cp) && cp);
+        }
+        //
+        // Comments
+        //
+        else if (cp == ';') {
             do {
                 cp = *++lexer->cursor;
-            } while (cp && isspace(cp));
-            continue;
+            } while (cp != '\n' && cp);
         }
-
-        /* Comments */
-
-        if (cp == ';') {
-            do {
-                cp = *++lexer->cursor;
-            } while (cp && cp != '\n');
-
-            if (cp == '\n') {
-                cp = *++lexer->cursor;
-            }
-            continue;
-        }
-
-        /* Individual characters */
-
-        if (cp == '\'') {
+        //
+        // Individual characters
+        //
+        else if (cp == '\'') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_QUOTE;
-            continue;
-        }
-
-        if (cp == '.') {
+            is_finished       = 1;
+        } else if (cp == '.') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_DOT;
-            continue;
-        }
-
-        if (cp == '(') {
+            is_finished       = 1;
+        } else if (cp == '(') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_LPAREN;
-            continue;
-        }
-
-        if (cp == ')') {
+            is_finished       = 1;
+        } else if (cp == ')') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_RPAREN;
-            continue;
+            is_finished       = 1;
         }
+        //
+        // Symbol
+        //
+        else {
+            eat_symbol_result eat_symb_res =
+                eat_symbol(lexer->buffer, lexer->buffer_size, lexer->cursor);
+            lexer->cursor       = eat_symb_res.cursor;
+            lexer->token_length = eat_symb_res.length;
 
-        {
-            lexer->token_length =
-                eat_symbol(lexer->buffer, lexer->buffer_size, &lexer->cursor);
-            if (lexer->token_length != lexer->cursor - lexer->token_start) {
-                result            = HLL_LEX_BUF_OVERFLOW;
+            if ((result = eat_symb_res.result) != HLL_LEX_OK) {
                 lexer->token_kind = HLL_LTOK_SYMB;
                 break;
             }
 
-            /* Check if it is a number */
-            if (is_lisp_numberi(lexer->buffer, &lexer->token_int)) {
+            // Now we perform checks
+            if (try_to_parse_number(lexer->buffer, &lexer->token_int)) {
                 lexer->token_kind = HLL_LTOK_NUMI;
                 break;
             } else {

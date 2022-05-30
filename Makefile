@@ -5,7 +5,6 @@
 # Notes:
 # 1. Must have target directory separate from source directories (otherwise 'clean' would delete everything)
 # 2. Source code directory must not have subdirectories
-# 3. check (https://libcheck.github.io/check/) is used for unit testing
 #
 # Separate from that, all variables should be freely configurable
 
@@ -21,7 +20,7 @@ TEST_DIR = tests
 CFLAGS = -O2
 
 # To separate CLI-settable parameters from constant. These are constant
-LOCAL_CFLAGS = -std=c89 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
+LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 LOCAL_LDFLAGS = -pthread -lm
 
 # Flags used to generate .d files
@@ -61,7 +60,7 @@ TESTS = $(wildcard $(TEST_DIR)/*.c) $(filter-out $(SRC_DIR)/main.c, $(SRCS))
 
 # Note: We disable pedantic here because check does not goes along well with it (sigh)
 unit_test: $(TESTS) 
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ $^ -lcheck 
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ $^ 
 
 test tests check: all unit_test
 	$(OUT_DIR)/unit_test

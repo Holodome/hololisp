@@ -1,9 +1,8 @@
-#include "general.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "prog.h"
 
@@ -20,9 +19,9 @@ version(void) {
     printf("hololisp version 0.0.1\n");
 }
 
-static hll_bool32
+static bool
 cli_params(uint32_t argc, char **argv, hll_options *opts) {
-    hll_bool32 result = TRUE;
+    bool result = true;
 
     uint32_t cursor = 1;
     while (cursor < argc) {
@@ -46,7 +45,7 @@ cli_params(uint32_t argc, char **argv, hll_options *opts) {
             opts->mode = HLL_PROGM_INTERP;
         } else {
             fprintf(stderr, "Unknown option '%s'\n", option);
-            result = FALSE;
+            result = false;
             break;
         }
     }
