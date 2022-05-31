@@ -1,6 +1,7 @@
 # hololisp 
 
 [![codecov](https://codecov.io/gh/Holodome/hololisp/branch/master/graph/badge.svg?token=U41DRI0GU9)](https://codecov.io/gh/Holodome/hololisp)
+[![Build and Test](https://github.com/Holodome/hololisp/actions/workflows/test.yml/badge.svg)](https://github.com/Holodome/hololisp/actions/workflows/test.yml)
 
 Simple minimal lisp dialect runtime.
 

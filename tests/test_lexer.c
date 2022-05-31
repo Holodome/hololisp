@@ -220,8 +220,6 @@ test_lexer_eats_and_peeks(void) {
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
-
-    TEST_ASSERT(0);
 }
 
 TEST_LIST = {
