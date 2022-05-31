@@ -1,8 +1,16 @@
-name: codecov
+name: Build and Test
 on: [push, pull_request]
 
 jobs:
-  run:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch
+        uses: actions/checkout@master
+      - name: Test
+        run: |
+          make test
+  coverage:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch
