@@ -16,7 +16,7 @@ jobs:
           make test
       - name: Generate coverage statistics
         run: |
-          gcovr --exclude='tests/*' --json cov.json
+          gcovr --exclude='tests/*' --json cov.json > cov.json
       - name: Upload 
         run: |
           ./codecov -f cov.json
