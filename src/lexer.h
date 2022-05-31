@@ -40,15 +40,16 @@ typedef struct hll_lexer {
      */
     int should_return_old;
     /** Flag that we should always return eof after buffer is fully parsed. */
-    int already_met_eof;
+    int         already_met_eof;
     char const *line_start;
 } hll_lexer;
 
 /** Result of lexing. This return code can either be ignored or used to report
  * error. */
 typedef enum {
-    HLL_LEX_OK                  = 0x0, /**< OK */
-    HLL_LEX_BUF_OVERFLOW        = 0x1, /**< String buffer overflow */
+    HLL_LEX_OK           = 0x0, /**< OK */
+    HLL_LEX_BUF_OVERFLOW = 0x1, /**< String buffer overflow. Note that this is
+                                   not reported if buffer is NULL. */
 } hll_lex_result;
 
 /** Call to initialize the lexer. */

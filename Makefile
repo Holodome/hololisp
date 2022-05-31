@@ -15,7 +15,6 @@
 TARGET = hololisp
 SRC_DIR = src
 OUT_DIR = build
-TEST_DIR = tests
 # If you want to compile for debugging, run 'make CFLAGS=-g'
 CFLAGS = -O2
 
@@ -50,19 +49,30 @@ run: $(TARGET)
 	$(OUT_DIR)/$(TARGET)
 
 clean:
-	rm -rf $(OUT_DIR)
+	rm -rf $(OUT_DIR) *.gcda *.gcno
 
 #
 # Test rules
 #
 
-TESTS = $(wildcard $(TEST_DIR)/*.c) $(filter-out $(SRC_DIR)/main.c, $(SRCS))
+TEST_DIR = tests
+UNIT_TEST_OUT_DIR = $(OUT_DIR)/$(TEST_DIR)
+UNIT_TEST_PROJECT_SRCS = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
+UNIT_TEST_SRCS = $(wildcard $(TEST_DIR)/*.c) 
+UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
+	
+UNIT_TEST_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS) --coverage -fprofile-arcs -ftest-coverage -g -O0 
 
-# Note: We disable pedantic here because check does not goes along well with it (sigh)
-unit_test: $(TESTS) 
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -Wno-pedantic -g -O0 -o $(OUT_DIR)/$@ $^ 
+$(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_SRCS) $(UNIT_TEST_PROJECT_SRCS)
+	$(CC) $(UNIT_TEST_CFLAGS) -o $@ $^
 
-test tests check: all unit_test
-	$(OUT_DIR)/unit_test
+test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) 
+	for file in $(UNIT_TESTS) ; do echo "Running $$file" && $$file || exit 1 ; done 
 
-.PHONY: all test tests check clean
+$(UNIT_TEST_OUT_DIR): $(OUT_DIR)
+	mkdir -p $(UNIT_TEST_OUT_DIR)
+
+# Run this to get coverage reports
+# make test && gcovr --exclude='tests/*' && make clean
+
+.PHONY: all test clean coverage
