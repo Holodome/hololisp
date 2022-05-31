@@ -486,3 +486,7 @@ build/
 
 *.pkex
 *.xcodeproj/*
+*.gcda
+*.gcno
+codecov
+cov.json
