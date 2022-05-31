@@ -7,12 +7,14 @@ jobs:
     steps:
       - name: Fetch
         uses: actions/checkout@master
+      - name: Install stuff
+        run: |
+          sudo apt-get install -y gcovr
+          curl -Os https://uploader.codecov.io/latest/linux/codecov && chmod +x codecov 
       - name: Test
         run: |
           make test
-          sudo apt-get install -y gcovr
           gcovr --exclude='tests/*' --json cov.json
-          curl -Os https://uploader.codecov.io/latest/linux/codecov && chmod +x codecov 
           ./codecov -f cov.json
       - name: Upload
         uses: codecov/codecov-action@v2
