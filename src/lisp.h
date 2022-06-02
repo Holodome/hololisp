@@ -46,7 +46,7 @@ typedef struct {
 extern hll_lisp_obj_head *hll_nil;
 
 #define HLL_LOBJ_ALLOC(_name) \
-    hll_lisp_obj_head *_name(size_t size, hll_lisp_obj_kind kind)
+    hll_lisp_obj_head *_name(size_t body_size, hll_lisp_obj_kind kind)
 typedef HLL_LOBJ_ALLOC(hll_lisp_obj_alloc);
 
 #define HLL_LOBJ_FREE(_name) void *_name(hll_lisp_obj_head *head)
@@ -58,9 +58,8 @@ typedef struct {
     void               *state;
 } hll_lisp_ctx;
 
-hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx,
-                                 hll_lisp_obj_head  *car,
-                                 hll_lisp_obj_head  *cdr);
+hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
+                                 hll_lisp_obj_head *cdr);
 
 hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
