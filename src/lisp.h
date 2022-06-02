@@ -17,6 +17,7 @@ typedef enum {
     HLL_LOBJ_INT = 0x7
 } hll_lisp_obj_kind;
 
+// TODO: See if this inheritance thingy goes well
 typedef struct hll_lisp_obj_head {
     hll_lisp_obj_kind kind;
     size_t size;
@@ -26,21 +27,21 @@ typedef struct hll_lisp_obj_head {
 typedef struct {
     hll_lisp_obj_head *car;
     hll_lisp_obj_head *cdr;
-} hll_lisp_obj_cons;
+} hll_lisp_cons;
 
 typedef struct {
     char const *symb;
-} hll_lisp_obj_symb;
+} hll_lisp_symb;
 
 typedef struct {
     hll_lisp_obj_head *params;
     hll_lisp_obj_head *body;
     hll_lisp_obj_head *env;
-} hll_lisp_obj_func;
+} hll_lisp_func;
 
 typedef struct {
     int64_t value;
-} hll_lisp_obj_int;
+} hll_lisp_int;
 
 /* extern hll_lisp_obj_head *hll_true; */
 extern hll_lisp_obj_head *hll_nil;
@@ -56,6 +57,8 @@ typedef struct hll_lisp_ctx {
     hll_lisp_obj_alloc *alloc;
     hll_lisp_obj_free *free;
     void *state;
+
+    hll_lisp_obj_head *objects;
 } hll_lisp_ctx;
 
 hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
@@ -67,5 +70,8 @@ hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
 hll_lisp_obj_head *hll_make_int(hll_lisp_ctx *ctx, int64_t value);
 
 hll_lisp_obj_head *hll_reverse_list(hll_lisp_obj_head *obj);
+
+hll_lisp_obj_head *hll_find_symb(hll_lisp_ctx *ctx, char const *symb,
+                                 size_t length);
 
 #endif
