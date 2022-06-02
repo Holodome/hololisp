@@ -1,8 +1,8 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "prog.h"
 
@@ -55,7 +55,7 @@ cli_params(uint32_t argc, char **argv, hll_options *opts) {
 
 int
 main(int argc, char **argv) {
-    hll_options opts = {0};
+    hll_options opts = { 0 };
     if (!cli_params(argc, argv, &opts)) {
         return EXIT_FAILURE;
     }

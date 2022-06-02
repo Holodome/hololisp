@@ -11,8 +11,10 @@
 void logger_set_file(FILE *file);
 
 /**
- * Sets bool value that indicates whether should logs be written to stdout/stderr. 
- * @param is_writing non-zero value if needs to write, 0 otherwise. Default is 0.
+ * Sets bool value that indicates whether should logs be written to
+ * stdout/stderr.
+ * @param is_writing non-zero value if needs to write, 0 otherwise. Default is
+ * 0.
  */
 void logger_set_write_to_console(int is_writing);
 

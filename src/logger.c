@@ -1,6 +1,6 @@
 #include "logger.h"
 
-static FILE *output_file      = NULL;
+static FILE *output_file = NULL;
 static int has_console_output = 0;
 
 void

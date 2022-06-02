@@ -6,6 +6,8 @@
 
 struct hll_lexer;
 
+#define HLL_BUILTIN_QUOTE_SYMB_NAME "quote"
+
 typedef enum {
     HLL_LOBJ_NONE = 0x0,
     HLL_LOBJ_CONS = 0x1,
@@ -60,6 +62,8 @@ typedef struct hll_lisp_ctx {
 
     hll_lisp_obj_head *objects;
 } hll_lisp_ctx;
+
+hll_lisp_ctx hll_default_ctx(void);
 
 hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
                                  hll_lisp_obj_head *cdr);

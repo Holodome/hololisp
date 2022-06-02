@@ -1,10 +1,10 @@
 #include "prog.h"
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 /* static FILE * */
 /* open_file_read(char const *filename) { */

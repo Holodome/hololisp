@@ -1,1 +1,116 @@
 #include "parser.h"
+
+#include <assert.h>
+
+#include "lexer.h"
+#include "lisp.h"
+
+hll_parser
+hll_parser_create(hll_lexer *lexer, hll_lisp_ctx *ctx) {
+    hll_parser parser = { 0 };
+
+    parser.lexer = lexer;
+    parser.ctx = ctx;
+
+    return parser;
+}
+
+static hll_parse_result
+read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
+    hll_parse_result result = HLL_PARSE_OK;
+
+    hll_lexer *lexer = parser->lexer;
+    hll_lisp_ctx *ctx = parser->ctx;
+
+    hll_lex_result lex_result = hll_lexer_peek(lexer);
+    assert(lex_result == HLL_LEX_OK);
+    assert(lexer->token_kind == HLL_LTOK_LPAREN);
+    lex_result = hll_lexer_eat_peek(lexer);
+
+    if (lex_result != HLL_LEX_OK) {
+        result = HLL_PARSE_LEX_FAILED;
+    } else {
+        hll_lisp_obj_head *expr = hll_nil;
+
+        while (result && lex_result == HLL_LEX_OK &&
+               lexer->token_kind != HLL_LTOK_RPAREN) {
+            hll_lisp_obj_head *car = NULL;
+            result = hll_parse(parser, &car);
+
+            if (result == HLL_PARSE_OK) {
+                assert(car != NULL);
+                expr = hll_make_cons(ctx, car, expr);
+                lex_result = hll_lexer_peek(lexer);
+            }
+        }
+
+        if (result) {
+        } else if (lex_result != HLL_LEX_OK) {
+            result = HLL_PARSE_LEX_FAILED;
+        } else {
+            assert(lexer->token_kind == HLL_LTOK_RPAREN);
+            hll_lexer_eat(lexer);
+            *head = hll_reverse_list(expr);
+        }
+    }
+
+    return result;
+}
+
+static hll_parse_result
+read_quote(hll_parser *parser, hll_lisp_obj_head **head) {
+    hll_parse_result result = HLL_PARSE_OK;
+
+    hll_lisp_obj_head *symb =
+        hll_find_symb(parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME,
+                      sizeof(HLL_BUILTIN_QUOTE_SYMB_NAME) - 1);
+    hll_lexer_eat(parser->lexer);
+
+    hll_lisp_obj_head *car = NULL;
+    result = hll_parse(parser, &car);
+    if (result == HLL_PARSE_OK) {
+        assert(car != NULL);
+        *head = hll_make_cons(parser->ctx, symb,
+                              hll_make_cons(parser->ctx, car, hll_nil));
+    }
+
+    return result;
+}
+
+hll_parse_result
+hll_parse(hll_parser *parser, hll_lisp_obj_head **head) {
+    hll_parse_result result = HLL_PARSE_OK;
+
+    hll_lexer *lexer = parser->lexer;
+    hll_lex_result lex_result = hll_lexer_peek(lexer);
+    if (lex_result != HLL_LEX_OK) {
+        result = HLL_PARSE_LEX_FAILED;
+    } else {
+        switch (lexer->token_kind) {
+        default:
+            // TODO: Error handling
+            assert(0);
+            break;
+        case HLL_LTOK_EOF:
+            result = HLL_PARSE_EOF;
+            break;
+        case HLL_LTOK_NUMI:
+            *head = hll_make_int(parser->ctx, lexer->token_int);
+            hll_lexer_eat(lexer);
+            break;
+        case HLL_LTOK_SYMB:
+            *head =
+                hll_find_symb(parser->ctx, lexer->buffer, lexer->token_length);
+            hll_lexer_eat(lexer);
+            break;
+        case HLL_LTOK_LPAREN:
+            result = read_cons(parser, head);
+            break;
+        case HLL_LTOK_QUOTE:
+            result = read_quote(parser, head);
+            break;
+        }
+    }
+
+    return result;
+}

@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "unicode.h"
 
@@ -11,8 +11,8 @@ hll_lexer
 hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     hll_lexer lex = { 0 };
 
-    lex.cursor      = cursor;
-    lex.buffer      = buffer;
+    lex.cursor = cursor;
+    lex.buffer = buffer;
     lex.buffer_size = buffer_size;
 
     return lex;
@@ -41,7 +41,7 @@ try_to_parse_number(char const *buffer, int64_t *number) {
         // TODO: Report overflow
         int64_t result = 0;
         while (isdigit(*cursor)) {
-            result    = result * 10 + (*cursor++ - '0');
+            result = result * 10 + (*cursor++ - '0');
             is_number = true;
         }
 
@@ -55,9 +55,9 @@ try_to_parse_number(char const *buffer, int64_t *number) {
 
 typedef struct {
     hll_lex_result result;
-    size_t         written;
-    size_t         length;
-    char const    *cursor;
+    size_t written;
+    size_t length;
+    char const *cursor;
 } eat_symbol_result;
 
 /*
@@ -70,7 +70,7 @@ static eat_symbol_result
 eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
     eat_symbol_result result = { .result = HLL_LEX_OK, .cursor = cursor_ };
 
-    char *write      = buffer;
+    char *write = buffer;
     char *buffer_eof = buffer + buffer_size;
 
     if (write) {
@@ -81,7 +81,7 @@ eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
 
         if (buffer_eof != write) {
             result.written = result.length = write - buffer;
-            *write                         = 0;
+            *write = 0;
         } else {
             result.result = HLL_LEX_BUF_OVERFLOW;
         }
@@ -112,16 +112,16 @@ hll_lexer_peek(hll_lexer *lexer) {
     }
 
     while (!is_finished) {
-        uint8_t cp         = *lexer->cursor;
+        uint8_t cp = *lexer->cursor;
         lexer->token_start = lexer->cursor;
 
         //
         // EOF
         //
         if (!cp) {
-            lexer->token_kind      = HLL_LTOK_EOF;
+            lexer->token_kind = HLL_LTOK_EOF;
             lexer->already_met_eof = 1;
-            is_finished            = 1;
+            is_finished = 1;
         }
         //
         // Spaces (skip)
@@ -149,19 +149,19 @@ hll_lexer_peek(hll_lexer *lexer) {
         else if (cp == '\'') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_QUOTE;
-            is_finished       = 1;
+            is_finished = 1;
         } else if (cp == '.') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_DOT;
-            is_finished       = 1;
+            is_finished = 1;
         } else if (cp == '(') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_LPAREN;
-            is_finished       = 1;
+            is_finished = 1;
         } else if (cp == ')') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_RPAREN;
-            is_finished       = 1;
+            is_finished = 1;
         }
         //
         // Symbol
@@ -169,7 +169,7 @@ hll_lexer_peek(hll_lexer *lexer) {
         else {
             eat_symbol_result eat_symb_res =
                 eat_symbol(lexer->buffer, lexer->buffer_size, lexer->cursor);
-            lexer->cursor       = eat_symb_res.cursor;
+            lexer->cursor = eat_symb_res.cursor;
             lexer->token_length = eat_symb_res.length;
 
             if ((result = eat_symb_res.result) != HLL_LEX_OK) {
