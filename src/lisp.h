@@ -19,8 +19,8 @@ typedef enum {
 
 typedef struct hll_lisp_obj_head {
     hll_lisp_obj_kind kind;
-    size_t            size;
-    void             *body;
+    size_t size;
+    void *body;
 } hll_lisp_obj_head;
 
 typedef struct {
@@ -52,10 +52,10 @@ typedef HLL_LOBJ_ALLOC(hll_lisp_obj_alloc);
 #define HLL_LOBJ_FREE(_name) void *_name(hll_lisp_obj_head *head)
 typedef HLL_LOBJ_FREE(hll_lisp_obj_free);
 
-typedef struct {
+typedef struct hll_lisp_ctx {
     hll_lisp_obj_alloc *alloc;
-    hll_lisp_obj_free  *free;
-    void               *state;
+    hll_lisp_obj_free *free;
+    void *state;
 } hll_lisp_ctx;
 
 hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
@@ -65,5 +65,7 @@ hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
 
 hll_lisp_obj_head *hll_make_int(hll_lisp_ctx *ctx, int64_t value);
+
+hll_lisp_obj_head *hll_reverse_list(hll_lisp_obj_head *obj);
 
 #endif
