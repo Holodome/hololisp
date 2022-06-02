@@ -19,31 +19,27 @@ typedef enum {
 
 typedef struct hll_lisp_obj_head {
     hll_lisp_obj_kind kind;
-
-    size_t size;
+    size_t            size;
+    void             *body;
 } hll_lisp_obj_head;
 
 typedef struct {
-    hll_lisp_obj_head  head;
     hll_lisp_obj_head *car;
     hll_lisp_obj_head *cdr;
 } hll_lisp_obj_cons;
 
 typedef struct {
-    hll_lisp_obj_head head;
-    char const       *symb;
+    char const *symb;
 } hll_lisp_obj_symb;
 
 typedef struct {
-    hll_lisp_obj_head  head;
     hll_lisp_obj_head *params;
     hll_lisp_obj_head *body;
     hll_lisp_obj_head *env;
 } hll_lisp_obj_func;
 
 typedef struct {
-    hll_lisp_obj_head head;
-    int64_t           value;
+    int64_t value;
 } hll_lisp_obj_int;
 
 /* extern hll_lisp_obj_head *hll_true; */
@@ -60,14 +56,15 @@ typedef struct {
     hll_lisp_obj_alloc *alloc;
     hll_lisp_obj_free  *free;
     void               *state;
-} hll_lisp_runtime;
+} hll_lisp_ctx;
 
-hll_lisp_obj_head *hll_make_cons(hll_lisp_runtime *ctx, hll_lisp_obj_head *car,
-                                 hll_lisp_obj_head *cdr);
+hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx,
+                                 hll_lisp_obj_head  *car,
+                                 hll_lisp_obj_head  *cdr);
 
-hll_lisp_obj_head *hll_make_symb(hll_lisp_runtime *ctx, char const *symb,
+hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
 
-hll_lisp_obj_head *hll_make_int(hll_lisp_runtime *ctx, int64_t value);
+hll_lisp_obj_head *hll_make_int(hll_lisp_ctx *ctx, int64_t value);
 
 #endif
