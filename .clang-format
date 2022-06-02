@@ -6,13 +6,13 @@ IndentWidth: 4
 
 AlwaysBreakAfterDefinitionReturnType: true
 IndentCaseLabels: false
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+PointerAlignment: Right
 
 ColumnLimit: 80
