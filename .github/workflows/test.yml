@@ -24,7 +24,9 @@ jobs:
           make test COV=1
       - name: Generate coverage statistics
         run: |
-          gcovr --exclude='tests/*' -x cov.xml > cov.xml
+          gcovr --exclude='tests/*' -x cov.xml 
+          # This is for debugging
+          gcovr --exclude='tests/*' 
       - name: Upload 
         run: |
           ./codecov -f cov.xml
