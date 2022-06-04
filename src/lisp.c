@@ -187,7 +187,7 @@ lisp_print(void *file_, hll_lisp_obj_head *obj) {
         fprintf(file, "%" PRId64 "", hll_unwrap_int(obj)->value);
         break;
     case HLL_LOBJ_BIND:
-        fprintf(file, "<c-bind %p>", (void *)hll_unwrap_bind(obj)->bind);
+        fprintf(file, "<c-binding>");
         break;
     }
 }
