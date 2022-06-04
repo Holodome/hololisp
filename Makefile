@@ -79,4 +79,4 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 # Run this to get coverage reports
 # make test && gcovr --exclude='tests/*' && make clean
 
-.PHONY: all test clean coverage
+.PHONY: all test clean 
