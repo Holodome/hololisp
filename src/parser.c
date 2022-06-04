@@ -35,7 +35,8 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
 
     hll_lisp_obj_head *expr = hll_nil;
     while (result == HLL_PARSE_OK && lex_result == HLL_LEX_OK &&
-           lexer->token_kind != HLL_LTOK_RPAREN) {
+           lexer->token_kind != HLL_LTOK_RPAREN &&
+           lexer->token_kind != HLL_LTOK_EOF) {
         hll_lisp_obj_head *car = NULL;
         result = hll_parse(parser, &car);
 
@@ -51,10 +52,11 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
     if (result != HLL_PARSE_OK) {
     } else if (lex_result != HLL_LEX_OK) {
         result = HLL_PARSE_LEX_FAILED;
-    } else {
-        assert(lexer->token_kind == HLL_LTOK_RPAREN);
+    } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
         hll_lexer_eat(lexer);
         *head = hll_reverse_list(expr);
+    } else {
+        result = HLL_PARSE_MISSING_RPAREN;
     }
 
     return result;
@@ -91,8 +93,7 @@ hll_parse(hll_parser *parser, hll_lisp_obj_head **head) {
     } else {
         switch (lexer->token_kind) {
         default:
-            // TODO: Error handling
-            assert(0);
+            result = HLL_PARSE_UNEXPECTED_TOKEN;
             break;
         case HLL_LTOK_EOF:
             result = HLL_PARSE_EOF;

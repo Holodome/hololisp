@@ -15,7 +15,9 @@ typedef struct hll_parser {
 typedef enum {
     HLL_PARSE_OK = 0x0,
     HLL_PARSE_EOF = 0x1,
-    HLL_PARSE_LEX_FAILED = 0x2
+    HLL_PARSE_LEX_FAILED = 0x2,
+    HLL_PARSE_UNEXPECTED_TOKEN = 0x3,
+    HLL_PARSE_MISSING_RPAREN = 0x4,
 } hll_parse_result;
 
 hll_parser hll_parser_create(struct hll_lexer *lexer, struct hll_lisp_ctx *ctx);

@@ -7,4 +7,4 @@ struct hll_lisp_ctx;
 
 void hll_init_libc_no_gc(struct hll_lisp_ctx *ctx);
 
-#endif 
+#endif
