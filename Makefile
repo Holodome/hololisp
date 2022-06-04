@@ -58,6 +58,7 @@ clean:
 TEST_DIR = tests
 UNIT_TEST_OUT_DIR = $(OUT_DIR)/$(TEST_DIR)
 UNIT_TEST_PROJECT_SRCS = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
+UNIT_TEST_PROJECT_OBJS = $(UNIT_TEST_PROJECT_SRCS:$(SRC_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.o) 
 UNIT_TEST_SRCS = $(wildcard $(TEST_DIR)/*.c) 
 UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
@@ -67,8 +68,14 @@ endif
 
 UNIT_TEST_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 
 
-$(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_SRCS) $(TEST_DIR)/%.c
+$(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
 	$(CC) $(UNIT_TEST_CFLAGS) -o $@ $^
+
+$(UNIT_TEST_OUT_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_CFLAGS) -c -o $@ $<  
+
+$(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -O0 -g -c -o $@ $<  
 
 test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) 
 	for file in $(UNIT_TESTS) ; do echo "Running $$file" && $$file || exit 1 ; done 
