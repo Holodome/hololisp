@@ -3,7 +3,7 @@
 #include "acutest.h"
 
 static void
-hll_make_int_works(void) {
+test_hll_make_int_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
     hll_init_libc_no_gc(&ctx);
 
@@ -17,7 +17,7 @@ hll_make_int_works(void) {
 }
 
 static void
-hll_make_symb_works(void) {
+test_hll_make_symb_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
     hll_init_libc_no_gc(&ctx);
 
@@ -35,7 +35,7 @@ hll_make_symb_works(void) {
 }
 
 static void
-hll_make_cons_works(void) {
+test_hll_make_cons_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
     hll_init_libc_no_gc(&ctx);
 
@@ -55,7 +55,7 @@ hll_make_cons_works(void) {
 #define TCASE(_name) \
     { #_name, _name }
 
-TEST_LIST = { TCASE(hll_make_int_works),
-              TCASE(hll_make_symb_works),
-              TCASE(hll_make_cons_works),
+TEST_LIST = { TCASE(test_hll_make_int_works),
+              TCASE(test_hll_make_symb_works),
+              TCASE(test_hll_make_cons_works),
               { NULL, NULL } };
