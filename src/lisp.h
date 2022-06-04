@@ -62,8 +62,11 @@ typedef struct hll_lisp_ctx {
 extern hll_lisp_obj_head *hll_nil;
 
 hll_lisp_obj_kind hll_obj_kind(hll_lisp_obj_head *obj);
+
 hll_lisp_cons *hll_unwrap_cons(hll_lisp_obj_head *obj);
+
 hll_lisp_symb *hll_unwrap_symb(hll_lisp_obj_head *obj);
+
 hll_lisp_int *hll_unwrap_int(hll_lisp_obj_head *obj);
 
 hll_lisp_ctx hll_default_ctx(void);

@@ -110,11 +110,50 @@ test_hll_reverse_list_works(void) {
     }
 }
 
+static void
+test_hll_find_symb_works_single_item(void) {
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_init_libc_no_gc(&ctx);
+
+    char const symb[] = "hello";
+    size_t length = sizeof(symb) - 1;
+
+    hll_lisp_obj_head *initial = hll_find_symb(&ctx, symb, length);
+    hll_lisp_obj_head *other = hll_find_symb(&ctx, symb, length);
+
+    TEST_ASSERT(initial == other);
+}
+
+static void
+test_hll_find_symb_works(void) {
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_init_libc_no_gc(&ctx);
+
+    char const symb1[] = "hello";
+    size_t length1 = sizeof(symb1) - 1;
+    char const symb2[] = "world";
+    size_t length2 = sizeof(symb2) - 1;
+    char const symb3[] = "holodome";
+    size_t length3 = sizeof(symb3) - 1;
+
+    hll_lisp_obj_head *obj1 = hll_find_symb(&ctx, symb1, length1);
+    hll_lisp_obj_head *obj2 = hll_find_symb(&ctx, symb2, length2);
+    hll_lisp_obj_head *obj3 = hll_find_symb(&ctx, symb3, length3);
+
+    hll_lisp_obj_head *test1 = hll_find_symb(&ctx, symb1, length1);
+    hll_lisp_obj_head *test2 = hll_find_symb(&ctx, symb2, length2);
+    hll_lisp_obj_head *test3 = hll_find_symb(&ctx, symb3, length3);
+
+    TEST_ASSERT(test1 == obj1);
+    TEST_ASSERT(test2 == obj2);
+    TEST_ASSERT(test3 == obj3);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
-TEST_LIST = { TCASE(test_hll_make_int_works),
-              TCASE(test_hll_make_symb_works),
-              TCASE(test_hll_make_cons_works),
-              TCASE(test_hll_reverse_list_works),
-              { NULL, NULL } };
+TEST_LIST = {
+    TCASE(test_hll_make_int_works),  TCASE(test_hll_make_symb_works),
+    TCASE(test_hll_make_cons_works), TCASE(test_hll_reverse_list_works),
+    TCASE(test_hll_find_symb_works), TCASE(test_hll_find_symb_works_single_item), { NULL, NULL }
+};
