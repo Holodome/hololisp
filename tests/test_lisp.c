@@ -152,8 +152,10 @@ test_hll_find_symb_works(void) {
 #define TCASE(_name) \
     { #_name, _name }
 
-TEST_LIST = {
-    TCASE(test_hll_make_int_works),  TCASE(test_hll_make_symb_works),
-    TCASE(test_hll_make_cons_works), TCASE(test_hll_reverse_list_works),
-    TCASE(test_hll_find_symb_works), TCASE(test_hll_find_symb_works_single_item), { NULL, NULL }
-};
+TEST_LIST = { TCASE(test_hll_make_int_works),
+              TCASE(test_hll_make_symb_works),
+              TCASE(test_hll_make_cons_works),
+              TCASE(test_hll_reverse_list_works),
+              TCASE(test_hll_find_symb_works),
+              TCASE(test_hll_find_symb_works_single_item),
+              { NULL, NULL } };

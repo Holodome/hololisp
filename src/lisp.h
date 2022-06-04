@@ -48,7 +48,7 @@ typedef struct {
 typedef HLL_LISP_BIND(hll_lisp_bind_func);
 
 typedef struct {
-    hll_lisp_bind_func *binding;
+    hll_lisp_bind_func *bind;
 } hll_lisp_bind;
 
 #define HLL_LOBJ_ALLOC(_name) \
@@ -63,7 +63,8 @@ typedef struct hll_lisp_ctx {
     hll_lisp_obj_free *free;
     void *state;
 
-    hll_lisp_obj_head *objects;
+    hll_lisp_obj_head *symbols;
+    hll_lisp_obj_head *bindings;
 } hll_lisp_ctx;
 
 extern hll_lisp_obj_head *hll_nil;
@@ -93,11 +94,16 @@ hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
 
 hll_lisp_obj_head *hll_make_int(hll_lisp_ctx *ctx, int64_t value);
 
-hll_lisp_obj_head *hll_make_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind);
+void hll_add_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind,
+                     char const *symbol, size_t length);
 
 hll_lisp_obj_head *hll_reverse_list(hll_lisp_obj_head *obj);
 
 hll_lisp_obj_head *hll_find_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
+
+hll_lisp_obj_head *hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj);
+
+void lisp_print(void *file, hll_lisp_obj_head *obj);
 
 #endif
