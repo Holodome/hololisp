@@ -15,15 +15,13 @@ typedef enum {
     /* HLL_LOBJ_FUNC  = 0x3, */
     /* HLL_LOBJ_MACRO = 0x4, */
     /* HLL_LOBJ_TRUE  = 0x5, */
-    /* HLL_LOBJ_NIL   = 0x6, */
+    HLL_LOBJ_NIL = 0x6,
     HLL_LOBJ_INT = 0x7
 } hll_lisp_obj_kind;
 
-// TODO: See if this inheritance thingy goes well
 typedef struct hll_lisp_obj_head {
     hll_lisp_obj_kind kind;
     size_t size;
-    void *body;
 } hll_lisp_obj_head;
 
 typedef struct {
@@ -33,6 +31,7 @@ typedef struct {
 
 typedef struct {
     char const *symb;
+    size_t length;
 } hll_lisp_symb;
 
 typedef struct {
@@ -45,14 +44,11 @@ typedef struct {
     int64_t value;
 } hll_lisp_int;
 
-/* extern hll_lisp_obj_head *hll_true; */
-extern hll_lisp_obj_head *hll_nil;
-
 #define HLL_LOBJ_ALLOC(_name) \
     hll_lisp_obj_head *_name(size_t body_size, hll_lisp_obj_kind kind)
 typedef HLL_LOBJ_ALLOC(hll_lisp_obj_alloc);
 
-#define HLL_LOBJ_FREE(_name) void *_name(hll_lisp_obj_head *head)
+#define HLL_LOBJ_FREE(_name) void _name(hll_lisp_obj_head *head)
 typedef HLL_LOBJ_FREE(hll_lisp_obj_free);
 
 typedef struct hll_lisp_ctx {
@@ -63,10 +59,20 @@ typedef struct hll_lisp_ctx {
     hll_lisp_obj_head *objects;
 } hll_lisp_ctx;
 
+extern hll_lisp_obj_head *hll_nil;
+
+hll_lisp_obj_kind hll_obj_kind(hll_lisp_obj_head *obj);
+hll_lisp_cons *hll_obj_unwrap_cons(hll_lisp_obj_head *obj);
+hll_lisp_symb *hll_obj_unwrap_symb(hll_lisp_obj_head *obj);
+hll_lisp_int *hll_obj_unwrap_int(hll_lisp_obj_head *obj);
+
 hll_lisp_ctx hll_default_ctx(void);
 
 hll_lisp_obj_head *hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
                                  hll_lisp_obj_head *cdr);
+
+hll_lisp_obj_head *hll_make_acons(hll_lisp_ctx *ctx, hll_lisp_obj_head *x,
+                                  hll_lisp_obj_head *y, hll_lisp_obj_head *a);
 
 hll_lisp_obj_head *hll_make_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);

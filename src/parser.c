@@ -19,39 +19,42 @@ static hll_parse_result
 read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
+    // Pull the pointers
+
     hll_lexer *lexer = parser->lexer;
     hll_lisp_ctx *ctx = parser->ctx;
+
+    // Test initial conditions
 
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     assert(lex_result == HLL_LEX_OK);
     assert(lexer->token_kind == HLL_LTOK_LPAREN);
     lex_result = hll_lexer_eat_peek(lexer);
 
-    if (lex_result != HLL_LEX_OK) {
+    // Accumulate list
+
+    hll_lisp_obj_head *expr = hll_nil;
+    while (result == HLL_PARSE_OK && lex_result == HLL_LEX_OK &&
+           lexer->token_kind != HLL_LTOK_RPAREN) {
+        hll_lisp_obj_head *car = NULL;
+        result = hll_parse(parser, &car);
+
+        if (result == HLL_PARSE_OK) {
+            assert(car != NULL);
+            expr = hll_make_cons(ctx, car, expr);
+            lex_result = hll_lexer_peek(lexer);
+        }
+    }
+
+    // Finalize
+
+    if (result != HLL_PARSE_OK) {
+    } else if (lex_result != HLL_LEX_OK) {
         result = HLL_PARSE_LEX_FAILED;
     } else {
-        hll_lisp_obj_head *expr = hll_nil;
-
-        while (result && lex_result == HLL_LEX_OK &&
-               lexer->token_kind != HLL_LTOK_RPAREN) {
-            hll_lisp_obj_head *car = NULL;
-            result = hll_parse(parser, &car);
-
-            if (result == HLL_PARSE_OK) {
-                assert(car != NULL);
-                expr = hll_make_cons(ctx, car, expr);
-                lex_result = hll_lexer_peek(lexer);
-            }
-        }
-
-        if (result) {
-        } else if (lex_result != HLL_LEX_OK) {
-            result = HLL_PARSE_LEX_FAILED;
-        } else {
-            assert(lexer->token_kind == HLL_LTOK_RPAREN);
-            hll_lexer_eat(lexer);
-            *head = hll_reverse_list(expr);
-        }
+        assert(lexer->token_kind == HLL_LTOK_RPAREN);
+        hll_lexer_eat(lexer);
+        *head = hll_reverse_list(expr);
     }
 
     return result;

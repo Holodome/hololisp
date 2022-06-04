@@ -3,55 +3,88 @@
 #include <assert.h>
 #include <string.h>
 
-static hll_lisp_obj_head *
-cons_car_unwrap(hll_lisp_obj_head *obj) {
-    assert(obj->kind == HLL_LOBJ_CONS);
-    hll_lisp_cons *cons = obj->body;
-    return cons->car;
+typedef struct {
+    hll_lisp_obj_head head;
+    union {
+        hll_lisp_cons cons;
+        hll_lisp_symb symb;
+        hll_lisp_func func;
+        hll_lisp_int integer;
+    } body;
+} lisp_obj;
+
+static lisp_obj hll_nil_ = { .head = {
+                                 .kind = HLL_LOBJ_NIL,
+                                 .size = 0,
+                             } };
+hll_lisp_obj_head *hll_nil = &hll_nil_.head;
+
+hll_lisp_ctx
+hll_default_ctx(void) {
+    hll_lisp_ctx ctx = { 0 };
+
+    ctx.objects = hll_nil;
+
+    return ctx;
 }
 
-static hll_lisp_obj_head *
-cons_cdr_unwrap(hll_lisp_obj_head *obj) {
-    assert(obj->kind == HLL_LOBJ_CONS);
-    hll_lisp_cons *cons = obj->body;
-    return cons->cdr;
+hll_lisp_cons *
+hll_obj_unwrap_cons(hll_lisp_obj_head *head) {
+    lisp_obj *obj = (void *)head;
+    assert(head->kind == HLL_LOBJ_CONS);
+    return &obj->body.cons;
+}
+
+hll_lisp_symb *
+hll_obj_unwrap_symb(hll_lisp_obj_head *head) {
+    lisp_obj *obj = (void *)head;
+    assert(head->kind == HLL_LOBJ_SYMB);
+    return &obj->body.symb;
+}
+
+hll_lisp_int *
+hll_obj_unwrap_int(hll_lisp_obj_head *head) {
+    lisp_obj *obj = (void *)head;
+    assert(head->kind == HLL_LOBJ_INT);
+    return &obj->body.integer;
 }
 
 hll_lisp_obj_head *
 hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
               hll_lisp_obj_head *cdr) {
-    void *memory = ctx->alloc(sizeof(hll_lisp_cons), HLL_LOBJ_CONS);
-    hll_lisp_obj_head *head = memory;
+    hll_lisp_obj_head *cons = ctx->alloc(sizeof(hll_lisp_cons), HLL_LOBJ_CONS);
 
-    hll_lisp_cons *cons = (void *)(head + 1);
-    cons->car = car;
-    cons->cdr = cdr;
+    hll_obj_unwrap_cons(cons)->car = car;
+    hll_obj_unwrap_cons(cons)->cdr = cdr;
 
-    return head;
+    return cons;
+}
+
+hll_lisp_obj_head *
+hll_make_acons(hll_lisp_ctx *ctx, hll_lisp_obj_head *x, hll_lisp_obj_head *y,
+               hll_lisp_obj_head *a) {
+    return hll_make_cons(ctx, hll_make_cons(ctx, x, y), a);
 }
 
 hll_lisp_obj_head *
 hll_make_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
-    void *memory =
+    hll_lisp_obj_head *symb =
         ctx->alloc(sizeof(hll_lisp_symb) + length + 1, HLL_LOBJ_SYMB);
-    hll_lisp_obj_head *head = memory;
 
-    hll_lisp_symb *symb = (void *)(head + 1);
-    symb->symb = (void *)(symb + 1);
-    strncpy((char *)symb->symb, data, length);
+    char *string =
+        (char *)symb + sizeof(hll_lisp_obj_head) + sizeof(hll_lisp_symb);
+    strncpy(string, data, length);
+    hll_obj_unwrap_symb(symb)->symb = string;
+    hll_obj_unwrap_symb(symb)->length = length;
 
-    return head;
+    return symb;
 }
 
 hll_lisp_obj_head *
 hll_make_int(hll_lisp_ctx *ctx, int64_t value) {
-    void *memory = ctx->alloc(sizeof(hll_lisp_int), HLL_LOBJ_INT);
-    hll_lisp_obj_head *head = memory;
-
-    hll_lisp_int *obj = (void *)(head + 1);
-    obj->value = value;
-
-    return head;
+    hll_lisp_obj_head *integer = ctx->alloc(sizeof(hll_lisp_int), HLL_LOBJ_INT);
+    hll_obj_unwrap_int(integer)->value = value;
+    return integer;
 }
 
 hll_lisp_obj_head *
@@ -60,11 +93,9 @@ hll_reverse_list(hll_lisp_obj_head *obj) {
 
     while (obj != hll_nil) {
         assert(obj->kind == HLL_LOBJ_CONS);
-        hll_lisp_obj_head *head = obj;
-        hll_lisp_cons *cons = head->body;
-        obj = cons->cdr;
-        cons->cdr = result;
-        result = head;
+        obj = hll_obj_unwrap_cons(obj)->cdr;
+        hll_obj_unwrap_cons(obj)->cdr = result;
+        result = obj;
     }
 
     return result;
@@ -75,14 +106,11 @@ hll_find_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
     hll_lisp_obj_head *found = NULL;
 
     for (hll_lisp_obj_head *obj = ctx->objects; obj != hll_nil && found == NULL;
-         obj = cons_cdr_unwrap(obj)) {
+         obj = hll_obj_unwrap_cons(obj)->cdr) {
         assert(obj->kind == HLL_LOBJ_CONS);
-        hll_lisp_cons *cons = obj->body;
-        hll_lisp_obj_head *symb_head = cons->car;
-        assert(symb_head->kind == HLL_LOBJ_SYMB);
-        hll_lisp_symb *symb = symb_head->body;
+        hll_lisp_obj_head *symb = hll_obj_unwrap_cons(obj)->car;
 
-        if (strncmp(symb->symb, data, length) == 0) {
+        if (strncmp(hll_obj_unwrap_symb(symb)->symb, data, length) == 0) {
             found = obj;
         }
     }
@@ -91,7 +119,7 @@ hll_find_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
         found = hll_make_symb(ctx, data, length);
         ctx->objects = hll_make_cons(ctx, found, ctx->objects);
     } else {
-        found = cons_car_unwrap(found);
+        found = hll_obj_unwrap_cons(found)->car;
     }
 
     return found;

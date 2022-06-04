@@ -63,7 +63,7 @@ UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
 UNIT_TEST_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS) --coverage -fprofile-arcs -ftest-coverage -g -O0 
 
-$(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_SRCS) $(UNIT_TEST_PROJECT_SRCS)
+$(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_SRCS) $(TEST_DIR)/%.c
 	$(CC) $(UNIT_TEST_CFLAGS) -o $@ $^
 
 test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) 
