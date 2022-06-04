@@ -76,6 +76,7 @@ test_hll_reverse_list_works(void) {
         switch (idx) {
         default:
             TEST_ASSERT(0);
+            break;
         case 0:
             TEST_ASSERT(hll_unwrap_cons(obj)->car == symb);
             break;
@@ -95,6 +96,7 @@ test_hll_reverse_list_works(void) {
         switch (idx) {
         default:
             TEST_ASSERT(0);
+            break;
         case 2:
             TEST_ASSERT(hll_unwrap_cons(obj)->car == symb);
             break;
