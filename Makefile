@@ -49,7 +49,7 @@ run: $(TARGET)
 	$(OUT_DIR)/$(TARGET)
 
 clean:
-	rm -rf $(OUT_DIR) *.gcda *.gcno
+	rm -rf $(OUT_DIR) 
 
 #
 # Test rules
@@ -62,26 +62,27 @@ UNIT_TEST_PROJECT_OBJS = $(UNIT_TEST_PROJECT_SRCS:$(SRC_DIR)/%.c=$(UNIT_TEST_OUT
 UNIT_TEST_SRCS = $(wildcard $(TEST_DIR)/*.c) 
 UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
+UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
+	
 ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
 endif 
+
+-include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
 $(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -O0 -g -c -o $@ $<  
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) -O0 -g -c -o $@ $<  
 
 test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) 
 	for file in $(UNIT_TESTS) ; do echo "Running $$file" && $$file || exit 1 ; done 
 
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
-
-# Run this to get coverage reports
-# make test && gcovr --exclude='tests/*' && make clean
 
 .PHONY: all test clean 
