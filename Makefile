@@ -66,13 +66,11 @@ ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
 endif 
 
-UNIT_TEST_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 
-
 $(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
-	$(CC) $(UNIT_TEST_CFLAGS) -o $@ $^
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_CFLAGS) -c -o $@ $<  
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -O0 -g -c -o $@ $<  

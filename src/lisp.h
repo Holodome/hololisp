@@ -104,6 +104,6 @@ hll_lisp_obj_head *hll_find_symb(hll_lisp_ctx *ctx, char const *symb,
 
 hll_lisp_obj_head *hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj);
 
-void lisp_print(void *file, hll_lisp_obj_head *obj);
+void hll_lisp_print(void *file, hll_lisp_obj_head *obj);
 
 #endif

@@ -154,7 +154,7 @@ hll_find_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
 }
 
 void
-lisp_print(void *file_, hll_lisp_obj_head *obj) {
+hll_lisp_print(void *file_, hll_lisp_obj_head *obj) {
     FILE *file = file_;
 
     switch (obj->kind) {
@@ -165,12 +165,12 @@ lisp_print(void *file_, hll_lisp_obj_head *obj) {
         fprintf(file, "(");
         while (obj != hll_nil) {
             assert(obj->kind == HLL_LOBJ_CONS);
-            lisp_print(file, hll_unwrap_cons(obj)->car);
+            hll_lisp_print(file, hll_unwrap_cons(obj)->car);
 
             hll_lisp_obj_head *cdr = hll_unwrap_cons(obj)->cdr;
             if (cdr != hll_nil && cdr->kind != HLL_LOBJ_CONS) {
                 fprintf(file, " . ");
-                lisp_print(file, cdr);
+                hll_lisp_print(file, cdr);
                 cdr = hll_nil;
             } else if (cdr != hll_nil) {
                 fprintf(file, " ");
@@ -200,7 +200,7 @@ hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
 }
 
 static HLL_LISP_BIND(builtin_print) {
-    lisp_print(stdout, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    hll_lisp_print(stdout, hll_eval(ctx, hll_unwrap_cons(args)->car));
     printf("\n");
     return hll_nil;
 }
