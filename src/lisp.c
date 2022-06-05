@@ -30,6 +30,8 @@ hll_default_ctx(void) {
     ctx.symbols = hll_nil;
     ctx.globals = hll_nil;
     ctx.env_stack = hll_nil;
+    ctx.file_out = stdout;
+    ctx.file_outerr = stderr;
 
     return ctx;
 }
@@ -283,8 +285,9 @@ hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
 }
 
 static HLL_LISP_BIND(builtin_print) {
-    hll_lisp_print(stdout, hll_eval(ctx, hll_unwrap_cons(args)->car));
-    printf("\n");
+    FILE *f = ctx->file_out;
+    hll_lisp_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    fprintf(f, "\n");
     return hll_nil;
 }
 
@@ -292,16 +295,19 @@ static HLL_LISP_BIND(builtin_add) {
     int64_t result = 0;
     for (hll_lisp_obj_head *obj = args; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
-        result += hll_unwrap_int(hll_eval(ctx, obj))->value;
+        result +=
+            hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
     }
     return hll_make_int(ctx, result);
 }
 
 static HLL_LISP_BIND(builtin_sub) {
-    int64_t result = 0;
-    for (hll_lisp_obj_head *obj = args; obj != hll_nil;
+    int64_t result =
+        hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
+    for (hll_lisp_obj_head *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
-        result -= hll_unwrap_int(hll_eval(ctx, obj))->value;
+        result -=
+            hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
     }
     return hll_make_int(ctx, result);
 }
@@ -312,7 +318,8 @@ static HLL_LISP_BIND(builtin_div) {
 
     for (hll_lisp_obj_head *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
-        result /= hll_unwrap_int(hll_eval(ctx, obj))->value;
+        result /=
+            hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
     }
     return hll_make_int(ctx, result);
 }
@@ -321,7 +328,8 @@ static HLL_LISP_BIND(builtin_mul) {
     int64_t result = 1;
     for (hll_lisp_obj_head *obj = args; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
-        result *= hll_unwrap_int(hll_eval(ctx, obj))->value;
+        result *=
+            hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
     }
     return hll_make_int(ctx, result);
 }

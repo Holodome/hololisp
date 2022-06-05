@@ -68,6 +68,8 @@ typedef struct hll_lisp_ctx {
     hll_lisp_obj_alloc *alloc;
     hll_lisp_obj_free *free;
     void *state;
+    void *file_out;
+    void *file_outerr;
 
     hll_lisp_obj_head *symbols;
     hll_lisp_obj_head *globals;
@@ -108,6 +110,8 @@ hll_lisp_obj_head *hll_reverse_list(hll_lisp_obj_head *obj);
 
 hll_lisp_obj_head *hll_find_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
+
+hll_lisp_obj_head *hll_find_var(hll_lisp_ctx *ctx, hll_lisp_obj_head *car);
 
 hll_lisp_obj_head *hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj);
 
