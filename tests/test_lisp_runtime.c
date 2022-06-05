@@ -119,10 +119,53 @@ test_lisp_print_list(void) {
     TEST_ASSERT(strcmp(buffer, "(+ 1 2)") == 0);
 }
 
+static void
+test_lisp_eval_int(void) {
+    assert(0);
+}
+
+static void
+test_lisp_eval_cons(void) {
+    assert(0);
+}
+
+static void
+test_lisp_eval_builtin_call(void) {
+    assert(0);
+}
+
+static void
+test_builtin_print(void) {
+    assert(0);
+}
+
+static void
+test_add_sub_div_mul(void) {
+    assert(0);
+}
+
+static void
+test_add_sub_div_mul_multiple_args(void) {
+    assert(0);
+}
+
+static void
+test_lisp_eval_nested_function_calls(void) {
+    assert(0);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
-TEST_LIST = { TCASE(test_lisp_print_nil), TCASE(test_lisp_print_number),
+TEST_LIST = { TCASE(test_lisp_print_nil),
+              TCASE(test_lisp_print_number),
               TCASE(test_lisp_print_symbol),
               TCASE(test_lisp_print_single_element_list),
-              TCASE(test_lisp_print_list) };
+              TCASE(test_lisp_print_list),
+              TCASE(test_lisp_eval_int),
+              TCASE(test_lisp_eval_cons),
+              TCASE(test_lisp_eval_builtin_call),
+              TCASE(test_builtin_print),
+              TCASE(test_add_sub_div_mul),
+              TCASE(test_add_sub_div_mul_multiple_args),
+              TCASE(test_lisp_eval_nested_function_calls) };
