@@ -18,6 +18,9 @@ OUT_DIR = build
 # If you want to compile for debugging, run 'make CFLAGS=-g'
 CFLAGS = -O2
 
+ifneq (,$(COV))
+	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
+endif 
 # To separate CLI-settable parameters from constant. These are constant
 LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 LOCAL_LDFLAGS = -pthread -lm
@@ -40,10 +43,10 @@ $(OUT_DIR):
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
 $(TARGET): $(OBJS) 
-	$(CC) -o $(OUT_DIR)/$@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
+	$(CC) $(COVERAGE_FLAGS) -o $(OUT_DIR)/$@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
 
 $(OUT_DIR)/%.o: $(SRC_DIR)/%.c 
-	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<  
+	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
 
 run: $(TARGET) 
 	$(OUT_DIR)/$(TARGET)
@@ -64,9 +67,6 @@ UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
 UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
 	
-ifneq (,$(COV))
-	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
-endif 
 
 -include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
