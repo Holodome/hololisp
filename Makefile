@@ -81,6 +81,7 @@ $(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
 
 test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) 
 	for file in $(UNIT_TESTS) ; do echo "Running $$file" && $$file || exit 1 ; done 
+	for file in tests/*.sh ; do echo "Running $$file" && $$file || exit 1 ; done
 
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
