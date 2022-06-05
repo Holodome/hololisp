@@ -261,7 +261,7 @@ test_parser_returns_eof_arbitrary_amount_of_times(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 }
 
-static void 
+static void
 test_parser_reports_stary_rparen(void) {
     char const *source = ")";
     char buffer[4096];
@@ -279,7 +279,7 @@ test_parser_reports_stary_rparen(void) {
     TEST_ASSERT(result == HLL_PARSE_UNEXPECTED_TOKEN);
 }
 
-static void 
+static void
 test_parser_parses_nil(void) {
     char const *source = "()";
     char buffer[4096];
