@@ -426,4 +426,5 @@ TEST_LIST = { TCASE(test_lisp_print_nil),
               TCASE(test_sub_multiple_args),
               TCASE(test_mul_multiple_args),
               TCASE(test_div_multiple_args),
-              TCASE(test_lisp_eval_nested_function_calls) };
+              TCASE(test_lisp_eval_nested_function_calls),
+              { NULL, NULL } };
