@@ -1,10 +1,9 @@
-#include "acutest.h"
-
 #include "../src/lexer.h"
+#include "acutest.h"
 
 static void
 test_lexer_accepts_null_and_returns_eof(void) {
-    hll_lexer      lexer  = hll_lexer_create(NULL, NULL, 0);
+    hll_lexer lexer = hll_lexer_create(NULL, NULL, 0);
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -13,7 +12,7 @@ test_lexer_accepts_null_and_returns_eof(void) {
 
 static void
 test_lexer_eats_simple_symbol(void) {
-    hll_lexer      lexer  = hll_lexer_create("hello", NULL, 0);
+    hll_lexer lexer = hll_lexer_create("hello", NULL, 0);
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -27,8 +26,8 @@ test_lexer_eats_simple_symbol(void) {
 
 static void
 test_lexer_returns_simple_symbol(void) {
-    char           buffer[4096];
-    hll_lexer      lexer  = hll_lexer_create("hello", buffer, sizeof(buffer));
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("hello", buffer, sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -75,7 +74,7 @@ test_lexer_returns_string_literal(void) {
 
 static void
 test_lexer_eats_number(void) {
-    hll_lexer      lexer  = hll_lexer_create("123", NULL, 0);
+    hll_lexer lexer = hll_lexer_create("123", NULL, 0);
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -89,8 +88,8 @@ test_lexer_eats_number(void) {
 
 static void
 test_lexer_returns_number(void) {
-    char           buffer[4096];
-    hll_lexer      lexer  = hll_lexer_create("123", buffer, sizeof(buffer));
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("123", buffer, sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -106,11 +105,11 @@ test_lexer_returns_number(void) {
 
 static void
 test_lexer_parses_character_tokens(void) {
-    char const     *chars[]       = { ".", "(", ")", "'" };
+    char const *chars[] = { ".", "(", ")", "'" };
     hll_ltoken_kind token_kinds[] = { HLL_LTOK_DOT, HLL_LTOK_LPAREN,
                                       HLL_LTOK_RPAREN, HLL_LTOK_QUOTE };
     for (size_t i = 0; i < sizeof(chars) / sizeof(*chars); ++i) {
-        hll_lexer      lexer  = hll_lexer_create(chars[i], NULL, 0);
+        hll_lexer lexer = hll_lexer_create(chars[i], NULL, 0);
         hll_lex_result result = hll_lexer_peek(&lexer);
 
         TEST_ASSERT(result == HLL_LEX_OK);
@@ -124,7 +123,7 @@ test_lexer_parses_character_tokens(void) {
 
 static void
 test_lexer_parse_basic_syntax_multiple_tokens(void) {
-    char      buffer[4096];
+    char buffer[4096];
     hll_lexer lexer = hll_lexer_create("(cons -6 +7) (wha-te#ver . '-)", buffer,
                                        sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
@@ -191,8 +190,8 @@ test_lexer_parse_basic_syntax_multiple_tokens(void) {
 
 static void
 test_lexer_eats_and_peeks(void) {
-    char           buffer[4096];
-    hll_lexer      lexer  = hll_lexer_create("123 abc", buffer, sizeof(buffer));
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("123 abc", buffer, sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -223,17 +222,99 @@ test_lexer_eats_and_peeks(void) {
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
 }
 
-#define TCASE(_name) { #_name, _name }
+static void
+test_lexer_skips_whitespace_symbols(void) {
+    char buffer[4096];
+    hll_lexer lexer =
+        hll_lexer_create(" \f\n\r\t\vhello", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
 
-TEST_LIST = {
-    TCASE(test_lexer_accepts_null_and_returns_eof),
-    TCASE(test_lexer_eats_simple_symbol),
-    TCASE(test_lexer_returns_simple_symbol),
-    TCASE(test_lexer_eats_number),
-    TCASE(test_lexer_returns_number),
-    TCASE(test_lexer_parses_character_tokens),
-    TCASE(test_lexer_parse_basic_syntax_multiple_tokens),
-    TCASE(test_lexer_eats_and_peeks),
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
 
-    { NULL, NULL }
-};
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
+static void
+test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("+ - +- -+", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
+static void
+test_lexer_handles_buffer_overflow(void) {
+    char buffer[5];
+
+    hll_lexer lexer = hll_lexer_create("hello-world", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_BUF_OVERFLOW);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_length == 11);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
+static void
+test_lexer_skips_comments(void) {
+    char buffer[4096];
+    char const *data =
+        "hello ; this is comment\n"
+        "world ; this is comment too\n";
+
+    hll_lexer lexer = hll_lexer_create(data, buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
+#define TCASE(_name) \
+    { #_name, _name }
+
+TEST_LIST = { TCASE(test_lexer_accepts_null_and_returns_eof),
+              TCASE(test_lexer_eats_simple_symbol),
+              TCASE(test_lexer_returns_simple_symbol),
+              TCASE(test_lexer_eats_number),
+              TCASE(test_lexer_returns_number),
+              TCASE(test_lexer_parses_character_tokens),
+              TCASE(test_lexer_parse_basic_syntax_multiple_tokens),
+              TCASE(test_lexer_eats_and_peeks),
+              TCASE(test_lexer_skips_comments),
+              TCASE(test_lexer_handles_buffer_overflow),
+              TCASE(test_lexer_dont_think_that_plus_and_minus_are_numbers),
+              TCASE(test_lexer_skips_whitespace_symbols),
+
+              { NULL, NULL } };

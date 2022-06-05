@@ -245,10 +245,12 @@ static HLL_LISP_BIND(builtin_mul) {
 
 void
 hll_add_builtins(hll_lisp_ctx *ctx) {
-    hll_add_binding(ctx, builtin_print, "print", sizeof("print") - 1);
-    hll_add_binding(ctx, builtin_add, "+", 1);
-    hll_add_binding(ctx, builtin_sub, "-", 1);
-    hll_add_binding(ctx, builtin_div, "/", 1);
-    hll_add_binding(ctx, builtin_mul, "*", 1);
+#define STR_LEN(_str) _str, sizeof(_str) - 1
+    hll_add_binding(ctx, builtin_print, STR_LEN("print"));
+    hll_add_binding(ctx, builtin_add, STR_LEN("+"));
+    hll_add_binding(ctx, builtin_sub, STR_LEN("-"));
+    hll_add_binding(ctx, builtin_div, STR_LEN("/"));
+    hll_add_binding(ctx, builtin_mul, STR_LEN("*"));
+#undef STR_LEN
 }
 

@@ -74,9 +74,12 @@ eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
     char *buffer_eof = buffer + buffer_size;
 
     if (write) {
-        while (*result.cursor && is_codepoint_a_symbol(*result.cursor) &&
-               write < buffer_eof) {
-            *write++ = *result.cursor++;
+        while (*result.cursor && is_codepoint_a_symbol(*result.cursor)) {
+            char cp = *result.cursor++;
+            ++result.length;
+            if (write < buffer_eof) {
+                *write++ = cp;
+            }
         }
 
         if (buffer_eof != write) {
