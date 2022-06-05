@@ -15,7 +15,8 @@ typedef enum {
     HLL_LOBJ_SYMB = 0x2,
     HLL_LOBJ_NIL = 0x3,
     HLL_LOBJ_INT = 0x4,
-    HLL_LOBJ_BIND = 0x5
+    HLL_LOBJ_BIND = 0x5,
+    HLL_LOBJ_ENV = 0x6
 } hll_lisp_obj_kind;
 
 typedef struct hll_lisp_obj_head {
@@ -43,6 +44,11 @@ typedef struct {
     int64_t value;
 } hll_lisp_int;
 
+typedef struct {
+    hll_lisp_obj_head *up;
+    hll_lisp_obj_head *vars;
+} hll_lisp_env;
+
 #define HLL_LISP_BIND(_name) \
     hll_lisp_obj_head *_name(struct hll_lisp_ctx *ctx, hll_lisp_obj_head *args)
 typedef HLL_LISP_BIND(hll_lisp_bind_func);
@@ -64,7 +70,8 @@ typedef struct hll_lisp_ctx {
     void *state;
 
     hll_lisp_obj_head *symbols;
-    hll_lisp_obj_head *bindings;
+    hll_lisp_obj_head *globals;
+    hll_lisp_obj_head *env_stack;
 } hll_lisp_ctx;
 
 extern hll_lisp_obj_head *hll_nil;

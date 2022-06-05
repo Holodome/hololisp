@@ -13,6 +13,7 @@ typedef struct {
         hll_lisp_func func;
         hll_lisp_int integer;
         hll_lisp_bind bind;
+        hll_lisp_env env;
     } body;
 } lisp_obj;
 
@@ -27,7 +28,8 @@ hll_default_ctx(void) {
     hll_lisp_ctx ctx = { 0 };
 
     ctx.symbols = hll_nil;
-    ctx.bindings = hll_nil;
+    ctx.globals = hll_nil;
+    ctx.env_stack = hll_nil;
 
     return ctx;
 }
@@ -58,6 +60,13 @@ hll_unwrap_bind(hll_lisp_obj_head *head) {
     lisp_obj *obj = (void *)head;
     assert(head->kind == HLL_LOBJ_BIND);
     return &obj->body.bind;
+}
+
+hll_lisp_env *
+hll_unwrap_env(hll_lisp_obj_head *head) {
+    lisp_obj *obj = (void *)head;
+    assert(head->kind == HLL_LOBJ_ENV);
+    return &obj->body.env;
 }
 
 hll_lisp_obj_head *
@@ -111,7 +120,7 @@ hll_add_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind, char const *symbol,
                 size_t length) {
     hll_lisp_obj_head *binding = hll_make_binding(ctx, bind);
     hll_lisp_obj_head *symb = hll_find_symb(ctx, symbol, length);
-    ctx->bindings = hll_make_acons(ctx, symb, binding, ctx->bindings);
+    ctx->globals = hll_make_acons(ctx, symb, binding, ctx->globals);
 }
 
 hll_lisp_obj_head *
@@ -151,6 +160,37 @@ hll_find_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
     }
 
     return found;
+}
+
+hll_lisp_obj_head *
+hll_find_var(hll_lisp_ctx *ctx, hll_lisp_obj_head *car) {
+    hll_lisp_obj_head *result = NULL;
+
+    for (hll_lisp_obj_head *env_frame = ctx->env_stack;
+         env_frame != hll_nil && result == NULL;
+         env_frame = hll_unwrap_env(env_frame)->up) {
+        for (hll_lisp_obj_head *cons = hll_unwrap_env(env_frame)->vars;
+             cons != hll_nil && result == NULL;
+             cons = hll_unwrap_cons(cons)->cdr) {
+            hll_lisp_obj_head *test = hll_unwrap_cons(cons)->car;
+            if (hll_unwrap_cons(test)->car == car) {
+                result = test;
+            }
+        }
+    }
+
+    if (!result) {
+        for (hll_lisp_obj_head *cons = ctx->globals;
+             cons != hll_nil && result == NULL;
+             cons = hll_unwrap_cons(cons)->cdr) {
+            hll_lisp_obj_head *test = hll_unwrap_cons(cons)->car;
+            if (hll_unwrap_cons(test)->car == car) {
+                result = test;
+            }
+        }
+    }
+
+    return result;
 }
 
 void
@@ -195,11 +235,51 @@ hll_lisp_print(void *file_, hll_lisp_obj_head *obj) {
     }
 }
 
+static hll_lisp_obj_head *
+call(hll_lisp_ctx *ctx, hll_lisp_obj_head *fn, hll_lisp_obj_head *args) {
+    hll_lisp_obj_head *result = hll_nil;
+
+    switch (fn->kind) {
+    default:
+        assert(0);
+        break;
+    case HLL_LOBJ_BIND:
+        result = hll_unwrap_bind(fn)->bind(ctx, args);
+        break;
+    }
+
+    return result;
+}
+
 hll_lisp_obj_head *
 hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
-    (void)ctx;
-    // TODO:
-    return obj;
+    hll_lisp_obj_head *result = hll_nil;
+
+    switch (obj->kind) {
+    default:
+        assert(0);
+        break;
+    case HLL_LOBJ_BIND:
+    case HLL_LOBJ_NIL:
+    case HLL_LOBJ_INT:
+        result = obj;
+        break;
+    case HLL_LOBJ_SYMB: {
+        hll_lisp_obj_head *var = hll_find_var(ctx, obj);
+        if (var == NULL) {
+            assert(0);
+        }
+        result = hll_unwrap_cons(var)->cdr;
+    } break;
+    case HLL_LOBJ_CONS: {
+        // Car should be function
+        hll_lisp_obj_head *fn = hll_eval(ctx, hll_unwrap_cons(obj)->car);
+        hll_lisp_obj_head *args = hll_unwrap_cons(obj)->cdr;
+        result = call(ctx, fn, args);
+    } break;
+    }
+
+    return result;
 }
 
 static HLL_LISP_BIND(builtin_print) {
