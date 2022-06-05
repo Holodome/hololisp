@@ -279,6 +279,26 @@ test_parser_reports_stary_rparen(void) {
     TEST_ASSERT(result == HLL_PARSE_UNEXPECTED_TOKEN);
 }
 
+static void 
+test_parser_parses_nil(void) {
+    char const *source = "()";
+    char buffer[4096];
+
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_init_libc_no_gc(&ctx);
+
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    hll_parser parser = hll_parser_create(&lexer, &ctx);
+
+    hll_parse_result result;
+    hll_lisp_obj_head *obj;
+
+    result = hll_parse(&parser, &obj);
+    TEST_ASSERT(result == HLL_PARSE_OK);
+    TEST_ASSERT(obj != NULL);
+    TEST_ASSERT(obj->kind == HLL_LOBJ_NIL);
+}
+
 #if 0
 static void
 test_parser_parses_quoted_list(void) {
@@ -310,5 +330,6 @@ TEST_LIST = { TCASE(test_parser_reports_eof),
               TCASE(test_parser_reports_unclosed_list),
               TCASE(test_parser_returns_eof_arbitrary_amount_of_times),
               TCASE(test_parser_reports_stary_rparen),
+              TCASE(test_parser_parses_nil),
               { NULL, NULL } };
 

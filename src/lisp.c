@@ -189,6 +189,9 @@ hll_lisp_print(void *file_, hll_lisp_obj_head *obj) {
     case HLL_LOBJ_BIND:
         fprintf(file, "<c-binding>");
         break;
+    case HLL_LOBJ_NIL:
+        fprintf(file, "()");
+        break;
     }
 }
 
