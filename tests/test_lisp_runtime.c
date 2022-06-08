@@ -475,6 +475,32 @@ test_lisp_prints_quote_without_evaling(void) {
     TEST_ASSERT(strcmp(buffer, "(quote (+ 1 (* 2 3)))") == 0);
 }
 
+static void 
+test_lisp_evals_quote(void) {
+    char const *source = "(print (eval '(+ 1 (* 2 3))))";
+    char buffer[4096];
+
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_init_libc_no_gc(&ctx);
+
+    hll_add_builtins(&ctx);
+
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    hll_parser parser = hll_parser_create(&lexer, &ctx);
+
+    hll_lisp_obj_head *obj = NULL;
+    hll_parse_result result = hll_parse(&parser, &obj);
+    TEST_ASSERT(result == HLL_PARSE_OK);
+
+    FILE *f = tmpfile();
+    ctx.file_out = f;
+    hll_eval(&ctx, obj);
+
+    fseek(f, 0, SEEK_SET);
+    fgets(buffer, sizeof(buffer), f);
+    TEST_ASSERT(strcmp(buffer, "7\n") == 0);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
@@ -499,4 +525,5 @@ TEST_LIST = { TCASE(test_lisp_print_nil),
               TCASE(test_lisp_prints_quote),
               TCASE(test_lisp_prints_dotted_list),
               TCASE(test_lisp_prints_quote_without_evaling),
+              TCASE(test_lisp_evals_quote),
               { NULL, NULL } };
