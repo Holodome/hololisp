@@ -334,6 +334,15 @@ static HLL_LISP_BIND(builtin_mul) {
     return hll_make_int(ctx, result);
 }
 
+static HLL_LISP_BIND(builtin_quote) {
+    (void)ctx;
+    return hll_unwrap_cons(args)->car;
+}
+
+static HLL_LISP_BIND(builtin_eval) {
+    return hll_eval(ctx, hll_eval(ctx, hll_unwrap_cons(args)->car));
+}
+
 void
 hll_add_builtins(hll_lisp_ctx *ctx) {
 #define STR_LEN(_str) _str, sizeof(_str) - 1
@@ -342,6 +351,8 @@ hll_add_builtins(hll_lisp_ctx *ctx) {
     hll_add_binding(ctx, builtin_sub, STR_LEN("-"));
     hll_add_binding(ctx, builtin_div, STR_LEN("/"));
     hll_add_binding(ctx, builtin_mul, STR_LEN("*"));
+    hll_add_binding(ctx, builtin_quote, STR_LEN("quote"));
+    hll_add_binding(ctx, builtin_eval, STR_LEN("eval"));
 #undef STR_LEN
 }
 

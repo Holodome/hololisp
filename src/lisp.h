@@ -8,6 +8,7 @@ struct hll_lexer;
 struct hll_lisp_ctx;
 
 #define HLL_BUILTIN_QUOTE_SYMB_NAME "quote"
+#define HLL_BUILTIN_QUOTE_SYMB_LEN (sizeof(HLL_BUILTIN_QUOTE_SYMB_NAME) - 1)
 
 typedef enum {
     HLL_LOBJ_NONE = 0x0,

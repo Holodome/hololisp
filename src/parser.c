@@ -74,9 +74,8 @@ static hll_parse_result
 read_quote(hll_parser *parser, hll_lisp_obj_head **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
-    hll_lisp_obj_head *symb =
-        hll_find_symb(parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME,
-                      sizeof(HLL_BUILTIN_QUOTE_SYMB_NAME) - 1);
+    hll_lisp_obj_head *symb = hll_find_symb(
+        parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
     hll_lexer_eat(parser->lexer);
 
     hll_lisp_obj_head *car = NULL;
