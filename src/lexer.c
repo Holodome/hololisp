@@ -1,5 +1,6 @@
 #include "lexer.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
@@ -17,7 +18,7 @@ hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
 
 static bool
 is_codepoint_a_symbol(uint32_t codepoint) {
-    static char const SYMB_CHARS[] = "~!@#$%^&*-_=+:/?<>";
+    static char const SYMB_CHARS[] = "+-*/@$%^&_=<>~.?![]{}";
     return isalnum(codepoint) || strchr(SYMB_CHARS, codepoint);
 }
 
@@ -146,21 +147,17 @@ hll_lexer_peek(hll_lexer *lexer) {
         //
         // Individual characters
         //
-        else if (cp == '\'') {
-            ++lexer->cursor;
-            lexer->token_kind = HLL_LTOK_QUOTE;
-            is_finished = 1;
-        } else if (cp == '.') {
-            ++lexer->cursor;
-            lexer->token_kind = HLL_LTOK_DOT;
-            is_finished = 1;
-        } else if (cp == '(') {
+        else if (cp == '(') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_LPAREN;
             is_finished = 1;
         } else if (cp == ')') {
             ++lexer->cursor;
             lexer->token_kind = HLL_LTOK_RPAREN;
+            is_finished = 1;
+        } else if (cp == '\'') {
+            ++lexer->cursor;
+            lexer->token_kind = HLL_LTOK_QUOTE;
             is_finished = 1;
         }
         //
@@ -169,22 +166,38 @@ hll_lexer_peek(hll_lexer *lexer) {
         else {
             eat_symbol_result eat_symb_res =
                 eat_symbol(lexer->buffer, lexer->buffer_size, lexer->cursor);
-            lexer->cursor = eat_symb_res.cursor;
-            lexer->token_length = eat_symb_res.length;
 
+            // TODO: Don't like that error code is taken from eat_symb_res
             if ((result = eat_symb_res.result) != HLL_LEX_OK) {
                 lexer->token_kind = HLL_LTOK_SYMB;
-                break;
+            } else {
+                // Now we perform checks
+                // TODO: don't like that we have to parse multpile times
+                if (try_to_parse_number(lexer->buffer, &lexer->token_int)) {
+                    lexer->token_kind = HLL_LTOK_NUMI;
+                } else {
+                    int is_all_dots = 1;
+                    for (size_t i = 0; i < eat_symb_res.length && is_all_dots;
+                         ++i) {
+                        if (lexer->cursor[i] != '.') {
+                            is_all_dots = 0;
+                        }
+                    }
+
+                    if (is_all_dots && eat_symb_res.length == 1) {
+                        lexer->token_kind = HLL_LTOK_DOT;
+                    } else if (is_all_dots) {
+                        lexer->token_kind = HLL_LTOK_DOT;
+                        result = HLL_LEX_ALL_DOT_SYMB;
+                    } else {
+                        lexer->token_kind = HLL_LTOK_SYMB;
+                    }
+                }
             }
 
-            // Now we perform checks
-            if (try_to_parse_number(lexer->buffer, &lexer->token_int)) {
-                lexer->token_kind = HLL_LTOK_NUMI;
-                break;
-            } else {
-                lexer->token_kind = HLL_LTOK_SYMB;
-                break;
-            }
+            lexer->cursor = eat_symb_res.cursor;
+            lexer->token_length = eat_symb_res.length;
+            is_finished = 1;
         }
     }
 
