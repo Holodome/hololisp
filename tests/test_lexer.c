@@ -40,38 +40,6 @@ test_lexer_returns_simple_symbol(void) {
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
 }
 
-#if 0
-void
-test_lexer_eats_string_literal(void) {
-    hll_lexer      lexer  = hll_lexer_create("\"hello world\"", NULL, 0);
-    hll_lex_result result = hll_lexer_peek(&lexer);
-
-    TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_STR);
-    TEST_ASSERT(lexer.token_length == 11);
-
-    result = hll_lexer_eat_peek(&lexer);
-    TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
-}
-
-void
-test_lexer_returns_string_literal(void) {
-    char      buffer[4096];
-    hll_lexer lexer =
-        hll_lexer_create("\"hello world\"", buffer, sizeof(buffer));
-    hll_lex_result result = hll_lexer_peek(&lexer);
-    TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_STR);
-    TEST_ASSERT(lexer.token_length == 11);
-    TEST_ASSERT(strcmp(lexer.buffer, "hello world") == 0);
-
-    result = hll_lexer_eat_peek(&lexer);
-    TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
-}
-#endif
-
 static void
 test_lexer_eats_number(void) {
     hll_lexer lexer = hll_lexer_create("123", NULL, 0);
@@ -385,6 +353,24 @@ test_lexer_reports_symbol_consisting_of_only_dots(void) {
     TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
 }
 
+static void
+test_lexer_parses_quote(void) {
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("'abc", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_QUOTE);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
@@ -403,5 +389,6 @@ TEST_LIST = { TCASE(test_lexer_accepts_null_and_returns_eof),
               TCASE(test_lexer_parses_lparen),
               TCASE(test_lexer_parses_rparen),
               TCASE(test_lexer_reports_symbol_consisting_of_only_dots),
+              TCASE(test_lexer_parses_quote),
 
               { NULL, NULL } };
