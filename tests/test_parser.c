@@ -347,7 +347,35 @@ test_parser_parses_dotted_list(void) {
     cons = hll_unwrap_cons(cons->cdr);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
     TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_INT);
+}
 
+static void
+test_parser_parses_quote(void) {
+    char const *source = "'1";
+    char buffer[4096];
+
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_init_libc_no_gc(&ctx);
+
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    hll_parser parser = hll_parser_create(&lexer, &ctx);
+
+    hll_parse_result result;
+    hll_lisp_obj_head *obj;
+
+    result = hll_parse(&parser, &obj);
+    TEST_ASSERT(result == HLL_PARSE_OK);
+    TEST_ASSERT(obj != NULL);
+    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+
+    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(strcmp(hll_unwrap_symb(cons->car)->symb, "quote") == 0);
+
+    TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_CONS);
+    cons = hll_unwrap_cons(cons->cdr);
+    TEST_ASSERT(cons->car->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(cons->cdr == hll_nil);
 }
 
 #define TCASE(_name) \
@@ -365,5 +393,6 @@ TEST_LIST = { TCASE(test_parser_reports_eof),
               TCASE(test_parser_parses_nil),
               TCASE(test_parser_parses_simple_dotted_cons),
               TCASE(test_parser_parses_dotted_list),
+              TCASE(test_parser_parses_quote),
               { NULL, NULL } };
 
