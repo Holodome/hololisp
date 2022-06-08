@@ -56,14 +56,13 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
         hll_lexer_eat(lexer);
         *head = hll_reverse_list(expr);
     } else if (lexer->token_kind == HLL_LTOK_DOT &&
-        (lex_result = hll_lexer_eat_peek(lexer)) == HLL_LEX_OK) {
+               (lex_result = hll_lexer_eat_peek(lexer)) == HLL_LEX_OK) {
         hll_lisp_obj_head *car = NULL;
         if ((result = hll_parse(parser, &car)) == HLL_PARSE_OK) {
-            expr = hll_make_cons(ctx, car, expr);
             lex_result = hll_lexer_peek(lexer);
+            *head = hll_reverse_list(expr);
+            hll_unwrap_cons(expr)->cdr = car;
         }
-        *head = hll_reverse_list(expr);
-        hll_unwrap_cons(*head)->cdr = car;
     } else {
         result = HLL_PARSE_MISSING_RPAREN;
     }

@@ -342,13 +342,12 @@ test_parser_parses_dotted_list(void) {
 
     hll_lisp_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
-    cons = hll_unwrap_cons(obj);
+    cons = hll_unwrap_cons(cons->cdr);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
-    cons = hll_unwrap_cons(obj);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
-    cons = hll_unwrap_cons(obj);
+    cons = hll_unwrap_cons(cons->cdr);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
     TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_INT);
+
 }
 
 #define TCASE(_name) \
