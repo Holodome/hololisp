@@ -36,7 +36,8 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
     hll_lisp_obj_head *expr = hll_nil;
     while (result == HLL_PARSE_OK && lex_result == HLL_LEX_OK &&
            lexer->token_kind != HLL_LTOK_RPAREN &&
-           lexer->token_kind != HLL_LTOK_EOF) {
+           lexer->token_kind != HLL_LTOK_EOF &&
+           lexer->token_kind != HLL_LTOK_DOT) {
         hll_lisp_obj_head *car = NULL;
         result = hll_parse(parser, &car);
 
@@ -48,13 +49,20 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
     }
 
     // Finalize
-
     if (result != HLL_PARSE_OK) {
     } else if (lex_result != HLL_LEX_OK) {
         result = HLL_PARSE_LEX_FAILED;
     } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
         hll_lexer_eat(lexer);
         *head = hll_reverse_list(expr);
+    } else if (lexer->token_kind == HLL_LTOK_DOT &&
+               (lex_result = hll_lexer_eat_peek(lexer)) == HLL_LEX_OK) {
+        hll_lisp_obj_head *car = NULL;
+        if ((result = hll_parse(parser, &car)) == HLL_PARSE_OK) {
+            lex_result = hll_lexer_peek(lexer);
+            *head = hll_reverse_list(expr);
+            hll_unwrap_cons(expr)->cdr = car;
+        }
     } else {
         result = HLL_PARSE_MISSING_RPAREN;
     }

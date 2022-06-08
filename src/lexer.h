@@ -50,6 +50,9 @@ typedef enum {
     HLL_LEX_OK = 0x0,           /**< OK */
     HLL_LEX_BUF_OVERFLOW = 0x1, /**< String buffer overflow. Note that this is
                                    not reported if buffer is NULL. */
+    /// Symbol consisting entirely of dots (more than one). Common lisp
+    /// considers such tokens invalid.
+    HLL_LEX_ALL_DOT_SYMB = 0x2,
 } hll_lex_result;
 
 /** Call to initialize the lexer. */
