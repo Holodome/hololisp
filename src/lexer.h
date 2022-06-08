@@ -14,15 +14,15 @@ typedef enum {
     HLL_LTOK_QUOTE = 0x6,  /**< ' */
 } hll_ltoken_kind;
 
-/** Structure storing data related to perfoming lexical analysis on lisp code.
+/** Structure storing data related to performing lexical analysis on lisp code.
  */
 typedef struct hll_lexer {
-    /** Current parsing location. Buffer has to be zero-teminated. */
+    /** Current parsing location. Buffer has to be zero-terminated. */
     char const *cursor;
-    /** Line and character information, characters are UTF8 lexems. */
+    /** Line and character information, characters are UTF8 lexemes. */
     uint32_t line, column;
     /** Buffer, must be supplied on structure creation. Are used for writing
-     * strings when encountered during lexing. It is possiblle to perform
+     * strings when encountered during lexing. It is possible to perform
      * parsing without saving strings. */
     char *buffer;
     /** Size of buffer defined earlier. When overflowed, report error. */

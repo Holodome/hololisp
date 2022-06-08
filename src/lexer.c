@@ -1,11 +1,8 @@
 #include "lexer.h"
 
-#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include "unicode.h"
 
 hll_lexer
 hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
@@ -198,7 +195,7 @@ hll_lexer_peek(hll_lexer *lexer) {
 
 void
 hll_lexer_eat(hll_lexer *lexer) {
-    /* Forbid eating EOF. This should not be done anyway (and has no sence). */
+    /* Forbid eating EOF. This should not be done anyway (and has no sense). */
     if (lexer->token_kind != HLL_LTOK_EOF) {
         lexer->should_return_old = 0;
     }
