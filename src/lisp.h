@@ -17,7 +17,8 @@ typedef enum {
     HLL_LOBJ_NIL = 0x3,
     HLL_LOBJ_INT = 0x4,
     HLL_LOBJ_BIND = 0x5,
-    HLL_LOBJ_ENV = 0x6
+    HLL_LOBJ_ENV = 0x6,
+    HLL_LOBJ_TRUE = 0x7,
 } hll_lisp_obj_kind;
 
 typedef struct hll_lisp_obj_head {
@@ -78,6 +79,7 @@ typedef struct hll_lisp_ctx {
 } hll_lisp_ctx;
 
 extern hll_lisp_obj_head *hll_nil;
+extern hll_lisp_obj_head *hll_true;
 
 hll_lisp_obj_kind hll_obj_kind(hll_lisp_obj_head *obj);
 

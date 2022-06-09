@@ -23,6 +23,9 @@ static lisp_obj hll_nil_ = { .head = {
                              } };
 hll_lisp_obj_head *hll_nil = &hll_nil_.head;
 
+static lisp_obj hll_true_ = { .head = { .kind = HLL_LOBJ_TRUE, .size = 0 } };
+hll_lisp_obj_head *hll_true = &hll_true_.head;
+
 hll_lisp_ctx
 hll_default_ctx(void) {
     hll_lisp_ctx ctx = { 0 };
@@ -353,6 +356,9 @@ hll_add_builtins(hll_lisp_ctx *ctx) {
     hll_add_binding(ctx, builtin_mul, STR_LEN("*"));
     hll_add_binding(ctx, builtin_quote, STR_LEN("quote"));
     hll_add_binding(ctx, builtin_eval, STR_LEN("eval"));
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, hll_find_symb(ctx, STR_LEN("t")), hll_true,
+                       hll_unwrap_env(ctx->env_stack)->vars);
 #undef STR_LEN
 }
 
