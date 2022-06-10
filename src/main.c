@@ -6,7 +6,6 @@
 
 #include "lexer.h"
 #include "lisp.h"
-#include "lisp_gcs.h"
 #include "parser.h"
 #include "utils.h"
 
@@ -55,43 +54,32 @@ cli_params(uint32_t argc, char const **argv, run_opts *opts) {
     return result;
 }
 
-int
-main(int argc, char const **argv) {
-    run_opts opts = { 0 };
-    if (!cli_params(argc, argv, &opts)) {
-        goto error;
-    }
-
-    if (!opts.filename) {
-        fprintf(stderr, "No input files provided\n");
-        goto error;
-    }
-
+static int
+execute_file(char const *filename) {
     FILE *file;
-    if (hll_open_file(&file, opts.filename, "r") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", opts.filename);
+    if (hll_open_file(&file, filename, "r") != HLL_FS_IO_OK) {
+        fprintf(stderr, "Failed to open file '%s'\n", filename);
         goto error;
     }
 
     size_t fsize;
     if (hll_get_file_size(file, &fsize) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", opts.filename);
+        fprintf(stderr, "Failed to open file '%s'\n", filename);
         goto close_file_error;
     }
 
     char *file_contents = calloc(fsize, 1);
     if (fread(file_contents, fsize, 1, file) != 1) {
-        fprintf(stderr, "Failed to read file '%s'\n", opts.filename);
+        fprintf(stderr, "Failed to read file '%s'\n", filename);
         goto close_file_error;
     }
 
     if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", opts.filename);
+        fprintf(stderr, "Failed to close file '%s'\n", filename);
         goto error;
     }
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
     hll_add_builtins(&ctx);
 
     enum { BUFFER_SIZE = 4096 };
@@ -117,8 +105,62 @@ main(int argc, char const **argv) {
     return EXIT_SUCCESS;
 close_file_error:
     if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", opts.filename);
+        fprintf(stderr, "Failed to close file '%s'\n", filename);
     }
 error:
+    return EXIT_SUCCESS;
+}
+
+static int
+execute_repl(void) {
+    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_add_builtins(&ctx);
+
+    enum { BUFFER_SIZE = 4096 };
+    char buffer[BUFFER_SIZE];
+    char line_buffer[BUFFER_SIZE];
+
+    for (;;) {
+        printf("hololisp> ");
+        // TODO: Overflow
+        if (fgets(line_buffer, BUFFER_SIZE, stdin) == NULL) {
+            break;
+        }
+
+        hll_lexer lexer = hll_lexer_create(line_buffer, buffer, BUFFER_SIZE);
+        hll_parser parser = hll_parser_create(&lexer, &ctx);
+
+        for (;;) {
+            hll_lisp_obj_head *obj;
+            hll_parse_result parse_result = hll_parse(&parser, &obj);
+
+            if (parse_result == HLL_PARSE_EOF) {
+                break;
+            } else if (parse_result != HLL_PARSE_OK) {
+                fprintf(stderr, "Invalid syntax\n");
+                break;
+            } else {
+                hll_lisp_print(stdout, hll_eval(&ctx, obj));
+                printf("\n");
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int
+main(int argc, char const **argv) {
+    run_opts opts = { 0 };
+    if (!cli_params(argc, argv, &opts)) {
+        return EXIT_FAILURE;
+    }
+
+    if (!opts.filename) {
+        return execute_repl();
+    } else {
+        return execute_file(opts.filename);
+    }
+
     return EXIT_SUCCESS;
 }

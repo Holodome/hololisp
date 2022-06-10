@@ -1,6 +1,5 @@
 #include "../src/lexer.h"
 #include "../src/lisp.h"
-#include "../src/lisp_gcs.h"
 #include "../src/parser.h"
 #include "acutest.h"
 
@@ -10,8 +9,6 @@ test_parser_reports_eof(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -28,8 +25,6 @@ test_parser_parses_num(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -51,8 +46,6 @@ test_parser_parses_symbol(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -74,8 +67,6 @@ test_parser_parses_one_element_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -102,8 +93,6 @@ test_parser_parses_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -149,8 +138,6 @@ test_parser_parses_nested_lists(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -225,8 +212,6 @@ test_parser_reports_unclosed_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -245,8 +230,6 @@ test_parser_returns_eof_arbitrary_amount_of_times(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -267,8 +250,6 @@ test_parser_reports_stary_rparen(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -285,8 +266,6 @@ test_parser_parses_nil(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -305,8 +284,6 @@ test_parser_parses_simple_dotted_cons(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -328,8 +305,6 @@ test_parser_parses_dotted_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
@@ -355,8 +330,6 @@ test_parser_parses_quote(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 

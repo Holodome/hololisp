@@ -2,8 +2,11 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "lisp_gc.h"
 
 typedef struct {
     hll_lisp_obj_head head;
@@ -23,19 +26,19 @@ static lisp_obj hll_nil_ = { .head = {
                              } };
 hll_lisp_obj_head *hll_nil = &hll_nil_.head;
 
-hll_lisp_ctx
-hll_default_ctx(void) {
-    hll_lisp_ctx ctx = { 0 };
+static lisp_obj hll_true_ = { .head = { .kind = HLL_LOBJ_TRUE, .size = 0 } };
+hll_lisp_obj_head *hll_true = &hll_true_.head;
 
-    ctx.symbols = hll_nil;
-    ctx.globals = hll_nil;
-    ctx.env_stack = hll_nil;
-    ctx.file_out = stdout;
-    ctx.file_outerr = stderr;
-
-    return ctx;
+static void
+report_error(hll_lisp_ctx *ctx, char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(ctx->file_outerr, format, args);
+    fprintf(ctx->file_outerr, "\n");
 }
 
+#define CAR(_obj) (hll_unwrap_cons(_obj)->car)
+#define CDR(_obj) (hll_unwrap_cons(_obj)->cdr)
 hll_lisp_cons *
 hll_unwrap_cons(hll_lisp_obj_head *head) {
     lisp_obj *obj = (void *)head;
@@ -74,12 +77,23 @@ hll_unwrap_env(hll_lisp_obj_head *head) {
 hll_lisp_obj_head *
 hll_make_cons(hll_lisp_ctx *ctx, hll_lisp_obj_head *car,
               hll_lisp_obj_head *cdr) {
-    hll_lisp_obj_head *cons = ctx->alloc(sizeof(hll_lisp_cons), HLL_LOBJ_CONS);
+    (void)ctx;
+    hll_lisp_obj_head *cons = hll_alloc(sizeof(hll_lisp_cons), HLL_LOBJ_CONS);
 
     hll_unwrap_cons(cons)->car = car;
     hll_unwrap_cons(cons)->cdr = cdr;
 
     return cons;
+}
+
+hll_lisp_obj_head *
+hll_make_env(hll_lisp_ctx *ctx, hll_lisp_obj_head *up) {
+    (void)ctx;
+    hll_lisp_obj_head *env = hll_alloc(sizeof(hll_lisp_env), HLL_LOBJ_ENV);
+
+    hll_unwrap_env(env)->up = up;
+
+    return env;
 }
 
 hll_lisp_obj_head *
@@ -90,8 +104,9 @@ hll_make_acons(hll_lisp_ctx *ctx, hll_lisp_obj_head *x, hll_lisp_obj_head *y,
 
 hll_lisp_obj_head *
 hll_make_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
+    (void)ctx;
     hll_lisp_obj_head *symb =
-        ctx->alloc(sizeof(hll_lisp_symb) + length + 1, HLL_LOBJ_SYMB);
+        hll_alloc(sizeof(hll_lisp_symb) + length + 1, HLL_LOBJ_SYMB);
 
     char *string =
         (char *)symb + sizeof(hll_lisp_obj_head) + sizeof(hll_lisp_symb);
@@ -104,15 +119,17 @@ hll_make_symb(hll_lisp_ctx *ctx, char const *data, size_t length) {
 
 hll_lisp_obj_head *
 hll_make_int(hll_lisp_ctx *ctx, int64_t value) {
-    hll_lisp_obj_head *integer = ctx->alloc(sizeof(hll_lisp_int), HLL_LOBJ_INT);
+    (void)ctx;
+    hll_lisp_obj_head *integer = hll_alloc(sizeof(hll_lisp_int), HLL_LOBJ_INT);
     hll_unwrap_int(integer)->value = value;
     return integer;
 }
 
 static hll_lisp_obj_head *
 hll_make_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind) {
+    (void)ctx;
     hll_lisp_obj_head *binding =
-        ctx->alloc(sizeof(hll_lisp_obj_head), HLL_LOBJ_BIND);
+        hll_alloc(sizeof(hll_lisp_obj_head), HLL_LOBJ_BIND);
     hll_unwrap_bind(binding)->bind = bind;
     return binding;
 }
@@ -122,7 +139,9 @@ hll_add_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind, char const *symbol,
                 size_t length) {
     hll_lisp_obj_head *binding = hll_make_binding(ctx, bind);
     hll_lisp_obj_head *symb = hll_find_symb(ctx, symbol, length);
-    ctx->globals = hll_make_acons(ctx, symb, binding, ctx->globals);
+    assert(ctx->env_stack != hll_nil);
+    hll_unwrap_env(ctx->env_stack)->vars = hll_make_acons(
+        ctx, symb, binding, hll_unwrap_env(ctx->env_stack)->vars);
 }
 
 hll_lisp_obj_head *
@@ -181,17 +200,6 @@ hll_find_var(hll_lisp_ctx *ctx, hll_lisp_obj_head *car) {
         }
     }
 
-    if (!result) {
-        for (hll_lisp_obj_head *cons = ctx->globals;
-             cons != hll_nil && result == NULL;
-             cons = hll_unwrap_cons(cons)->cdr) {
-            hll_lisp_obj_head *test = hll_unwrap_cons(cons)->car;
-            if (hll_unwrap_cons(test)->car == car) {
-                result = test;
-            }
-        }
-    }
-
     return result;
 }
 
@@ -234,6 +242,9 @@ hll_lisp_print(void *file_, hll_lisp_obj_head *obj) {
     case HLL_LOBJ_NIL:
         fprintf(file, "()");
         break;
+    case HLL_LOBJ_TRUE:
+        fprintf(file, "t");
+        break;
     }
 }
 
@@ -243,7 +254,7 @@ call(hll_lisp_ctx *ctx, hll_lisp_obj_head *fn, hll_lisp_obj_head *args) {
 
     switch (fn->kind) {
     default:
-        assert(0);
+        fprintf(stderr, "Unsupported callable type\n");
         break;
     case HLL_LOBJ_BIND:
         result = hll_unwrap_bind(fn)->bind(ctx, args);
@@ -269,9 +280,11 @@ hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
     case HLL_LOBJ_SYMB: {
         hll_lisp_obj_head *var = hll_find_var(ctx, obj);
         if (var == NULL) {
-            assert(0);
+            fprintf(stderr, "Undefined variable '%s'\n",
+                    hll_unwrap_symb(obj)->symb);
+        } else {
+            result = hll_unwrap_cons(var)->cdr;
         }
-        result = hll_unwrap_cons(var)->cdr;
     } break;
     case HLL_LOBJ_CONS: {
         // Car should be function
@@ -279,6 +292,18 @@ hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
         hll_lisp_obj_head *args = hll_unwrap_cons(obj)->cdr;
         result = call(ctx, fn, args);
     } break;
+    }
+
+    return result;
+}
+
+size_t
+hll_list_length(hll_lisp_obj_head *obj) {
+    size_t result = 0;
+
+    while (obj->kind == HLL_LOBJ_CONS) {
+        ++result;
+        obj = hll_unwrap_cons(obj)->cdr;
     }
 
     return result;
@@ -343,16 +368,262 @@ static HLL_LISP_BIND(builtin_eval) {
     return hll_eval(ctx, hll_eval(ctx, hll_unwrap_cons(args)->car));
 }
 
+static HLL_LISP_BIND(builtin_num_ne) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, "/= must have at least 1 argument");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
+        hll_lisp_obj_head *num1 = CAR(obj1);
+        if (num1->kind != HLL_LOBJ_INT) {
+            report_error(ctx, "= arguments must be integers");
+            return hll_nil;
+        }
+
+        for (hll_lisp_obj_head *obj2 = CDR(obj1); obj2 != hll_nil;
+             obj2 = CDR(obj2)) {
+            if (obj1 == obj2) {
+                continue;
+            }
+
+            hll_lisp_obj_head *num2 = CAR(obj2);
+            if (num2->kind != HLL_LOBJ_INT) {
+                report_error(ctx, "= arguments must be integers");
+                return hll_nil;
+            }
+
+            if (hll_unwrap_int(num1)->value == hll_unwrap_int(num2)->value) {
+                return hll_nil;
+            }
+        }
+    }
+
+    return hll_true;
+}
+
+static HLL_LISP_BIND(builtin_num_eq) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, "= must have at least 1 argument");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
+        hll_lisp_obj_head *num1 = CAR(obj1);
+        if (num1->kind != HLL_LOBJ_INT) {
+            report_error(ctx, "= arguments must be integers");
+            return hll_nil;
+        }
+
+        for (hll_lisp_obj_head *obj2 = CDR(obj1); obj2 != hll_nil;
+             obj2 = CDR(obj2)) {
+            if (obj1 == obj2) {
+                continue;
+            }
+
+            hll_lisp_obj_head *num2 = CAR(obj2);
+            if (num2->kind != HLL_LOBJ_INT) {
+                report_error(ctx, "= arguments must be integers");
+                return hll_nil;
+            }
+
+            if (hll_unwrap_int(num1)->value != hll_unwrap_int(num2)->value) {
+                return hll_nil;
+            }
+        }
+    }
+
+    return hll_true;
+}
+
+static HLL_LISP_BIND(builtin_num_gt) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, "> must have at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_lisp_obj_head *prev = CAR(args);
+    if (prev->kind != HLL_LOBJ_INT) {
+        report_error(ctx, "> arguments must be integers");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_lisp_obj_head *num = CAR(obj);
+        if (num->kind != HLL_LOBJ_INT) {
+            report_error(ctx, "> arguments must be integers");
+            return hll_nil;
+        }
+
+        if (hll_unwrap_int(prev)->value <= hll_unwrap_int(num)->value) {
+            return hll_nil;
+        }
+
+        prev = num;
+    }
+
+    return hll_true;
+}
+
+static HLL_LISP_BIND(builtin_num_ge) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, ">= must have at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_lisp_obj_head *prev = CAR(args);
+    if (prev->kind != HLL_LOBJ_INT) {
+        report_error(ctx, ">= arguments must be integers");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_lisp_obj_head *num = CAR(obj);
+        if (num->kind != HLL_LOBJ_INT) {
+            report_error(ctx, ">= arguments must be integers");
+            return hll_nil;
+        }
+
+        if (hll_unwrap_int(prev)->value < hll_unwrap_int(num)->value) {
+            return hll_nil;
+        }
+        prev = num;
+    }
+
+    return hll_true;
+}
+
+static HLL_LISP_BIND(builtin_num_lt) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, "< must have at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_lisp_obj_head *prev = CAR(args);
+    if (prev->kind != HLL_LOBJ_INT) {
+        report_error(ctx, "< arguments must be integers");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil;
+         obj = CDR(obj)) {
+        hll_lisp_obj_head *num = CAR(obj);
+        if (num->kind != HLL_LOBJ_INT) {
+            report_error(ctx, "< arguments must be integers");
+            return hll_nil;
+        }
+
+        if (hll_unwrap_int(prev)->value >= hll_unwrap_int(num)->value) {
+            return hll_nil;
+        }
+        prev = num;
+    }
+
+    return hll_true;
+}
+
+static HLL_LISP_BIND(builtin_num_le) {
+    if (args->kind != HLL_LOBJ_CONS) {
+        report_error(ctx, "<= must have at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_lisp_obj_head *prev = CAR(args);
+    if (prev->kind != HLL_LOBJ_INT) {
+        report_error(ctx, "<= arguments must be integers");
+        return hll_nil;
+    }
+
+    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil;
+         obj = CDR(obj)) {
+        hll_lisp_obj_head *num = CAR(obj);
+        if (num->kind != HLL_LOBJ_INT) {
+            report_error(ctx, "<= arguments must be integers");
+            return hll_nil;
+        }
+
+        if (hll_unwrap_int(prev)->value > hll_unwrap_int(num)->value) {
+            return hll_nil;
+        }
+        prev = num;
+    }
+
+    return hll_true;
+}
+
 void
 hll_add_builtins(hll_lisp_ctx *ctx) {
 #define STR_LEN(_str) _str, sizeof(_str) - 1
-    hll_add_binding(ctx, builtin_print, STR_LEN("print"));
-    hll_add_binding(ctx, builtin_add, STR_LEN("+"));
-    hll_add_binding(ctx, builtin_sub, STR_LEN("-"));
-    hll_add_binding(ctx, builtin_div, STR_LEN("/"));
-    hll_add_binding(ctx, builtin_mul, STR_LEN("*"));
-    hll_add_binding(ctx, builtin_quote, STR_LEN("quote"));
-    hll_add_binding(ctx, builtin_eval, STR_LEN("eval"));
+#define BIND(_func, _symb) hll_add_binding(ctx, _func, STR_LEN(_symb))
+    BIND(builtin_print, "print");
+    BIND(builtin_add, "+");
+    BIND(builtin_sub, "-");
+    BIND(builtin_div, "/");
+    BIND(builtin_mul, "*");
+    BIND(builtin_quote, "quote");
+    BIND(builtin_eval, "eval");
+    BIND(builtin_num_eq, "=");
+    BIND(builtin_num_ne, "/=");
+    BIND(builtin_num_lt, "<");
+    BIND(builtin_num_le, "<=");
+    BIND(builtin_num_gt, ">");
+    BIND(builtin_num_ge, ">=");
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, hll_find_symb(ctx, STR_LEN("t")), hll_true,
+                       hll_unwrap_env(ctx->env_stack)->vars);
+#undef BIND
 #undef STR_LEN
 }
 
+hll_lisp_ctx
+hll_default_ctx(void) {
+    hll_lisp_ctx ctx = { 0 };
+
+    ctx.symbols = hll_nil;
+    ctx.file_out = stdout;
+    ctx.file_outerr = stderr;
+    ctx.env_stack = hll_make_env(&ctx, hll_nil);
+
+    return ctx;
+}
+
+void
+hll_dump_object_desc(void *file, hll_lisp_obj_head *obj) {
+    switch (obj->kind) {
+    case HLL_LOBJ_NONE:
+        fprintf(file, "lobj<kind=None>");
+        break;
+    case HLL_LOBJ_TRUE:
+        fprintf(file, "lobj<kind=True>");
+        break;
+    case HLL_LOBJ_CONS:
+        fprintf(file, "lobj<kind=Cons car=");
+        hll_dump_object_desc(file, hll_unwrap_cons(obj)->car);
+        fprintf(file, " cdr=");
+        hll_dump_object_desc(file, hll_unwrap_cons(obj)->cdr);
+        fprintf(file, ">");
+        break;
+    case HLL_LOBJ_SYMB:
+        fprintf(file, "lobj<kind=Symb symb='%s' len=%zu>",
+                hll_unwrap_symb(obj)->symb, hll_unwrap_symb(obj)->length);
+        break;
+    case HLL_LOBJ_INT:
+        fprintf(file, "lobj<kind=Int value=%" PRIi64 ">",
+                hll_unwrap_int(obj)->value);
+        break;
+    case HLL_LOBJ_BIND:
+        fprintf(file, "lobj<kind=Bind ptr=%zu>",
+                (uintptr_t)hll_unwrap_bind(obj)->bind);
+        break;
+    case HLL_LOBJ_ENV:
+        fprintf(file, "lobj<kind=Env vars=");
+        hll_dump_object_desc(file, hll_unwrap_env(obj)->vars);
+        fprintf(file, " up=");
+        hll_dump_object_desc(file, hll_unwrap_env(obj)->up);
+        fprintf(file, ">");
+        break;
+    case HLL_LOBJ_NIL:
+        fprintf(file, "lobj<kind=Nil>");
+        break;
+    }
+}
