@@ -158,4 +158,6 @@ hll_lisp_obj_head *hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj);
 
 void hll_lisp_print(void *file, hll_lisp_obj_head *obj);
 
+void hll_dump_object_desc(void *file, hll_lisp_obj_head *object);
+
 #endif

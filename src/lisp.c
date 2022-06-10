@@ -269,7 +269,8 @@ hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj) {
     case HLL_LOBJ_SYMB: {
         hll_lisp_obj_head *var = hll_find_var(ctx, obj);
         if (var == NULL) {
-            fprintf(stderr, "Undefined variable '%s'\n", hll_unwrap_symb(obj)->symb);
+            fprintf(stderr, "Undefined variable '%s'\n",
+                    hll_unwrap_symb(obj)->symb);
         } else {
             result = hll_unwrap_cons(var)->cdr;
         }
@@ -370,4 +371,45 @@ hll_default_ctx(void) {
     ctx.env_stack = hll_make_env(&ctx, hll_nil);
 
     return ctx;
+}
+
+void
+hll_dump_object_desc(void *file, hll_lisp_obj_head *obj) {
+    switch (obj->kind) {
+    case HLL_LOBJ_NONE:
+        fprintf(file, "lobj<kind=None>");
+        break;
+    case HLL_LOBJ_TRUE:
+        fprintf(file, "lobj<kind=True>");
+        break;
+    case HLL_LOBJ_CONS:
+        fprintf(file, "lobj<kind=Cons car=");
+        hll_dump_object_desc(file, hll_unwrap_cons(obj)->car);
+        fprintf(file, " cdr=");
+        hll_dump_object_desc(file, hll_unwrap_cons(obj)->cdr);
+        fprintf(file, ">");
+        break;
+    case HLL_LOBJ_SYMB:
+        fprintf(file, "lobj<kind=Symb symb='%s' len=%zu>",
+                hll_unwrap_symb(obj)->symb, hll_unwrap_symb(obj)->length);
+        break;
+    case HLL_LOBJ_INT:
+        fprintf(file, "lobj<kind=Int value=%" PRIi64 ">",
+                hll_unwrap_int(obj)->value);
+        break;
+    case HLL_LOBJ_BIND:
+        fprintf(file, "lobj<kind=Bind ptr=%zu>",
+                (uintptr_t)hll_unwrap_bind(obj)->bind);
+        break;
+    case HLL_LOBJ_ENV:
+        fprintf(file, "lobj<kind=Env vars=");
+        hll_dump_object_desc(file, hll_unwrap_env(obj)->vars);
+        fprintf(file, " up=");
+        hll_dump_object_desc(file, hll_unwrap_env(obj)->up);
+        fprintf(file, ">");
+        break;
+    case HLL_LOBJ_NIL:
+        fprintf(file, "lobj<kind=Nil>");
+        break;
+    }
 }
