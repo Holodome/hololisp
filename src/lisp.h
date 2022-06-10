@@ -148,6 +148,7 @@ void hll_add_binding(hll_lisp_ctx *ctx, hll_lisp_bind_func *bind,
                      char const *symbol, size_t length);
 
 hll_lisp_obj_head *hll_reverse_list(hll_lisp_obj_head *obj);
+size_t hll_list_length(hll_lisp_obj_head *obj);
 
 hll_lisp_obj_head *hll_find_symb(hll_lisp_ctx *ctx, char const *symb,
                                  size_t length);
