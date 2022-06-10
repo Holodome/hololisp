@@ -20,6 +20,8 @@ typedef enum {
     HLL_PARSE_MISSING_RPAREN = 0x4,
 } hll_parse_result;
 
+char const *hll_parse_result_str(hll_parse_result res);
+
 hll_parser hll_parser_create(struct hll_lexer *lexer, struct hll_lisp_ctx *ctx);
 
 hll_parse_result hll_parse(hll_parser *parser, struct hll_lisp_obj_head **head)

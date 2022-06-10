@@ -5,6 +5,31 @@
 #include "lexer.h"
 #include "lisp.h"
 
+char const *
+hll_parse_result_str(hll_parse_result res) {
+    char const *str = NULL;
+
+    switch (res) {
+    case HLL_PARSE_OK:
+        str = "ok";
+        break;
+    case HLL_PARSE_EOF:
+        str = "eof";
+        break;
+    case HLL_PARSE_LEX_FAILED:
+        str = "lex failed";
+        break;
+    case HLL_PARSE_UNEXPECTED_TOKEN:
+        str = "unexpected token";
+        break;
+    case HLL_PARSE_MISSING_RPAREN:
+        str = "missing rparen";
+        break;
+    }
+
+    return str;
+}
+
 hll_parser
 hll_parser_create(hll_lexer *lexer, hll_lisp_ctx *ctx) {
     hll_parser parser = { 0 };
