@@ -1,6 +1,5 @@
 #include "../src/lexer.h"
 #include "../src/lisp.h"
-#include "../src/lisp_gcs.h"
 #include "../src/parser.h"
 #include "acutest.h"
 
@@ -10,7 +9,6 @@ test_lisp_print_nil(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -33,7 +31,6 @@ test_lisp_print_number(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -56,7 +53,6 @@ test_lisp_print_symbol(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -79,7 +75,6 @@ test_lisp_print_single_element_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -102,7 +97,6 @@ test_lisp_print_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -125,7 +119,6 @@ test_lisp_eval_int(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -152,7 +145,6 @@ test_lisp_eval_builtin_call(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_binding(&ctx, test_builtin, "test", 4);
 
@@ -175,7 +167,6 @@ test_builtin_print(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
 
@@ -198,8 +189,6 @@ test_builtin_print(void) {
 static void
 test_find_builtins_work(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_add_builtins(&ctx);
 
     hll_lisp_obj_head *obj = hll_find_symb(&ctx, "+", 1);
@@ -217,9 +206,8 @@ test_add(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
-
     hll_add_builtins(&ctx);
+
     char const *source = "(+ 1 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -236,9 +224,7 @@ test_add(void) {
 static void
 test_sub(void) {
     char buffer[4096];
-
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(- 1 2)";
@@ -259,7 +245,6 @@ test_mul(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(* 4 2)";
@@ -280,7 +265,6 @@ test_div(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(/ 100 10)";
@@ -301,7 +285,6 @@ test_add_multiple_args(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(+ 1 2 3 4)";
@@ -322,7 +305,6 @@ test_sub_multiple_args(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(- 1 2 -2)";
@@ -343,7 +325,6 @@ test_mul_multiple_args(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(* 4 2 -1)";
@@ -364,7 +345,6 @@ test_div_multiple_args(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
     char const *source = "(/ 100 10 -1)";
@@ -386,7 +366,6 @@ test_lisp_eval_nested_function_calls(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
 
@@ -412,7 +391,6 @@ test_lisp_prints_dotted_list(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -435,7 +413,6 @@ test_lisp_prints_quote(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -458,7 +435,6 @@ test_lisp_prints_quote_without_evaling(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
@@ -481,7 +457,6 @@ test_lisp_evals_quote(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_add_builtins(&ctx);
 
@@ -499,6 +474,24 @@ test_lisp_evals_quote(void) {
     fseek(f, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), f);
     TEST_ASSERT(strcmp(buffer, "7\n") == 0);
+}
+
+static void
+test_lisp_evals_true(void) {
+    char const *source = "t";
+    char buffer[4096];
+
+    hll_lisp_ctx ctx = hll_default_ctx();
+
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    hll_parser parser = hll_parser_create(&lexer, &ctx);
+
+    hll_lisp_obj_head *obj = NULL;
+    hll_parse_result result = hll_parse(&parser, &obj);
+    TEST_ASSERT(result == HLL_PARSE_OK);
+
+    obj = hll_eval(&ctx, obj);
+    TEST_ASSERT(obj->kind == HLL_LOBJ_TRUE);
 }
 
 #define TCASE(_name) \
@@ -526,4 +519,5 @@ TEST_LIST = { TCASE(test_lisp_print_nil),
               TCASE(test_lisp_prints_dotted_list),
               TCASE(test_lisp_prints_quote_without_evaling),
               TCASE(test_lisp_evals_quote),
+              TCASE(test_lisp_evals_true),
               { NULL, NULL } };

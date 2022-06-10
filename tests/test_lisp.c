@@ -1,11 +1,9 @@
 #include "../src/lisp.h"
-#include "../src/lisp_gcs.h"
 #include "acutest.h"
 
 static void
 test_hll_make_int_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     hll_lisp_obj_head *obj = hll_make_int(&ctx, 100);
     TEST_ASSERT(obj != NULL);
@@ -19,7 +17,6 @@ test_hll_make_int_works(void) {
 static void
 test_hll_make_symb_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     char const symb[] = "hello";
     size_t length = sizeof(symb) - 1;
@@ -37,7 +34,6 @@ test_hll_make_symb_works(void) {
 static void
 test_hll_make_cons_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     char const symb_data[] = "hello";
     size_t length = sizeof(symb_data) - 1;
@@ -55,7 +51,6 @@ test_hll_make_cons_works(void) {
 static void
 test_hll_reverse_list_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     char const symb_data[] = "hello";
     size_t length = sizeof(symb_data) - 1;
@@ -113,7 +108,6 @@ test_hll_reverse_list_works(void) {
 static void
 test_hll_find_symb_works_single_item(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     char const symb[] = "hello";
     size_t length = sizeof(symb) - 1;
@@ -127,7 +121,6 @@ test_hll_find_symb_works_single_item(void) {
 static void
 test_hll_find_symb_works(void) {
     hll_lisp_ctx ctx = hll_default_ctx();
-    hll_init_libc_no_gc(&ctx);
 
     char const symb1[] = "hello";
     size_t length1 = sizeof(symb1) - 1;

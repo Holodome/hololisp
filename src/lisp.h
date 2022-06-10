@@ -59,22 +59,11 @@ typedef struct {
     hll_lisp_bind_func *bind;
 } hll_lisp_bind;
 
-#define HLL_LOBJ_ALLOC(_name) \
-    hll_lisp_obj_head *_name(size_t body_size, hll_lisp_obj_kind kind)
-typedef HLL_LOBJ_ALLOC(hll_lisp_obj_alloc);
-
-#define HLL_LOBJ_FREE(_name) void _name(hll_lisp_obj_head *head)
-typedef HLL_LOBJ_FREE(hll_lisp_obj_free);
-
 typedef struct hll_lisp_ctx {
-    hll_lisp_obj_alloc *alloc;
-    hll_lisp_obj_free *free;
-    void *state;
     void *file_out;
     void *file_outerr;
 
     hll_lisp_obj_head *symbols;
-    hll_lisp_obj_head *globals;
     hll_lisp_obj_head *env_stack;
 } hll_lisp_ctx;
 
