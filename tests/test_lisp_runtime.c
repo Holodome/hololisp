@@ -482,6 +482,7 @@ test_lisp_evals_true(void) {
     char buffer[4096];
 
     hll_lisp_ctx ctx = hll_default_ctx();
+    hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
