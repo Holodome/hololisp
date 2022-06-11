@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "reader.h"
 
 #include <assert.h>
 
@@ -33,24 +33,24 @@ hll_parse_result_str(hll_parse_result res) {
     return str;
 }
 
-hll_parser
-hll_parser_create(hll_lexer *lexer, hll_ctx *ctx) {
-    hll_parser parser = { 0 };
+hll_reader
+hll_reader_create(hll_lexer *lexer, hll_ctx *ctx) {
+    hll_reader reader = { 0 };
 
-    parser.lexer = lexer;
-    parser.ctx = ctx;
+    reader.lexer = lexer;
+    reader.ctx = ctx;
 
-    return parser;
+    return reader;
 }
 
 static hll_parse_result
-read_cons(hll_parser *parser, hll_obj **head) {
+read_cons(hll_reader *reader, hll_obj **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
     // Pull the pointers
 
-    hll_lexer *lexer = parser->lexer;
-    hll_ctx *ctx = parser->ctx;
+    hll_lexer *lexer = reader->lexer;
+    hll_ctx *ctx = reader->ctx;
 
     // Test initial conditions
 
@@ -76,7 +76,7 @@ read_cons(hll_parser *parser, hll_obj **head) {
     }
 
     hll_obj *car = NULL;
-    if ((result = hll_parse(parser, &car)) != HLL_PARSE_OK) {
+    if ((result = hll_parse(reader, &car)) != HLL_PARSE_OK) {
         return result;
     }
 
@@ -95,7 +95,7 @@ read_cons(hll_parser *parser, hll_obj **head) {
         } else if (lexer->token_kind == HLL_LTOK_DOT) {
             hll_lexer_eat(lexer);
             if ((result =
-                     hll_parse(parser, &hll_unwrap_cons(list_tail)->cdr)) !=
+                     hll_parse(reader, &hll_unwrap_cons(list_tail)->cdr)) !=
                 HLL_PARSE_OK) {
                 return result;
             }
@@ -114,7 +114,7 @@ read_cons(hll_parser *parser, hll_obj **head) {
         }
 
         hll_obj *obj = NULL;
-        if ((result = hll_parse(parser, &obj)) != HLL_PARSE_OK) {
+        if ((result = hll_parse(reader, &obj)) != HLL_PARSE_OK) {
             return result;
         }
 
@@ -127,27 +127,27 @@ read_cons(hll_parser *parser, hll_obj **head) {
 }
 
 static hll_parse_result
-read_quote(hll_parser *parser, hll_obj **head) {
+read_quote(hll_reader *reader, hll_obj **head) {
     hll_obj *symb = hll_find_symb(
-        parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
-    hll_lexer_eat(parser->lexer);
+        reader->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
+    hll_lexer_eat(reader->lexer);
 
     hll_obj *car = NULL;
-    hll_parse_result result = hll_parse(parser, &car);
+    hll_parse_result result = hll_parse(reader, &car);
     if (result == HLL_PARSE_OK) {
         assert(car != NULL);
-        *head = hll_make_cons(parser->ctx, symb,
-                              hll_make_cons(parser->ctx, car, hll_nil));
+        *head = hll_make_cons(reader->ctx, symb,
+                              hll_make_cons(reader->ctx, car, hll_nil));
     }
 
     return result;
 }
 
 hll_parse_result
-hll_parse(hll_parser *parser, hll_obj **head) {
+hll_parse(hll_reader *reader, hll_obj **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
-    hll_lexer *lexer = parser->lexer;
+    hll_lexer *lexer = reader->lexer;
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     if (lex_result != HLL_LEX_OK) {
         result = HLL_PARSE_LEX_FAILED;
@@ -160,19 +160,19 @@ hll_parse(hll_parser *parser, hll_obj **head) {
             result = HLL_PARSE_EOF;
             break;
         case HLL_LTOK_NUMI:
-            *head = hll_make_int(parser->ctx, lexer->token_int);
+            *head = hll_make_int(reader->ctx, lexer->token_int);
             hll_lexer_eat(lexer);
             break;
         case HLL_LTOK_SYMB:
             *head =
-                hll_find_symb(parser->ctx, lexer->buffer, lexer->token_length);
+                hll_find_symb(reader->ctx, lexer->buffer, lexer->token_length);
             hll_lexer_eat(lexer);
             break;
         case HLL_LTOK_LPAREN:
-            result = read_cons(parser, head);
+            result = read_cons(reader, head);
             break;
         case HLL_LTOK_QUOTE:
-            result = read_quote(parser, head);
+            result = read_quote(reader, head);
             break;
         }
     }

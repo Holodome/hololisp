@@ -6,7 +6,7 @@
 
 #include "lexer.h"
 #include "lisp.h"
-#include "parser.h"
+#include "reader.h"
 #include "utils.h"
 
 typedef struct {
@@ -85,11 +85,11 @@ execute_file(char const *filename) {
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
     hll_lexer lexer = hll_lexer_create(file_contents, buffer, BUFFER_SIZE);
-    hll_parser parser = hll_parser_create(&lexer, &ctx);
+    hll_reader reader = hll_reader_create(&lexer, &ctx);
 
     for (;;) {
         hll_obj *obj;
-        hll_parse_result parse_result = hll_parse(&parser, &obj);
+        hll_parse_result parse_result = hll_parse(&reader, &obj);
 
         if (parse_result == HLL_PARSE_EOF) {
             break;
@@ -128,11 +128,11 @@ execute_repl(void) {
         }
 
         hll_lexer lexer = hll_lexer_create(line_buffer, buffer, BUFFER_SIZE);
-        hll_parser parser = hll_parser_create(&lexer, &ctx);
+        hll_reader reader = hll_reader_create(&lexer, &ctx);
 
         for (;;) {
             hll_obj *obj;
-            hll_parse_result parse_result = hll_parse(&parser, &obj);
+            hll_parse_result parse_result = hll_parse(&reader, &obj);
 
             if (parse_result == HLL_PARSE_EOF) {
                 break;

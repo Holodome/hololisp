@@ -1,5 +1,5 @@
-#ifndef __PARSER_H__
-#define __PARSER_H__
+#ifndef __READER_H__
+#define __READER_H__
 
 #include <stdint.h>
 
@@ -7,10 +7,10 @@ struct hll_lexer;
 struct hll_ctx;
 struct hll_obj;
 
-typedef struct hll_parser {
+typedef struct hll_reader {
     struct hll_lexer *lexer;
     struct hll_ctx *ctx;
-} hll_parser;
+} hll_reader;
 
 typedef enum {
     HLL_PARSE_OK = 0x0,
@@ -23,9 +23,9 @@ typedef enum {
 
 char const *hll_parse_result_str(hll_parse_result res);
 
-hll_parser hll_parser_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
+hll_reader hll_reader_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
 
-hll_parse_result hll_parse(hll_parser *parser, struct hll_obj **head)
+hll_parse_result hll_parse(hll_reader *reader, struct hll_obj **head)
 #if defined(__GNUC__) || defined(__clang__)
     __attribute__((__warn_unused_result__))
 #endif
