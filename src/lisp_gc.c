@@ -3,9 +3,9 @@
 #include "lisp.h"
 #include "lisp_gc.h"
 
-struct hll_lisp_obj_head *
+struct hll_obj *
 hll_alloc(size_t body_size, uint32_t kind) {
-    hll_lisp_obj_head *head = malloc(sizeof(hll_lisp_obj_head) + body_size);
+    hll_obj *head = malloc(sizeof(hll_obj) + body_size);
     head->kind = kind;
     head->size = body_size;
 
@@ -13,7 +13,7 @@ hll_alloc(size_t body_size, uint32_t kind) {
 }
 
 void
-hll_free(hll_lisp_obj_head *head) {
+hll_free(hll_obj *head) {
     free(head);
 }
 

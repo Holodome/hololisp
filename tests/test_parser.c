@@ -8,11 +8,11 @@ test_parser_reports_eof(void) {
     char const *source = "";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
 
     TEST_ASSERT(result == HLL_PARSE_EOF);
@@ -24,11 +24,11 @@ test_parser_parses_num(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
 
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
@@ -45,11 +45,11 @@ test_parser_parses_symbol(void) {
     char const *source = "hello-world";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
 
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
@@ -66,20 +66,20 @@ test_parser_parses_one_element_list(void) {
     char const *source = "(100)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
 
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
-    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    hll_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->cdr == hll_nil);
 
-    hll_lisp_obj_head *car = cons->car;
+    hll_obj *car = cons->car;
     TEST_ASSERT(car->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == 100);
 
@@ -92,19 +92,19 @@ test_parser_parses_list(void) {
     char const *source = "(-100 100 abc)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
 
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
-    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    hll_cons *cons = hll_unwrap_cons(obj);
 
-    hll_lisp_obj_head *car = cons->car;
+    hll_obj *car = cons->car;
     TEST_ASSERT(car->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == -100);
 
@@ -137,19 +137,19 @@ test_parser_parses_nested_lists(void) {
     char const *source = "(+ (* 3 2) hello)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
 
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
     {
         TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
-        hll_lisp_cons *cons = hll_unwrap_cons(obj);
-        hll_lisp_obj_head *car = cons->car;
+        hll_cons *cons = hll_unwrap_cons(obj);
+        hll_obj *car = cons->car;
         TEST_ASSERT(car->kind == HLL_LOBJ_SYMB);
         TEST_ASSERT(strcmp(hll_unwrap_symb(car)->symb, "+") == 0);
 
@@ -158,7 +158,7 @@ test_parser_parses_nested_lists(void) {
         cons = hll_unwrap_cons(obj);
         car = cons->car;
 
-        hll_lisp_cons *old_cons = cons;
+        hll_cons *old_cons = cons;
 
         {
             TEST_ASSERT(car->kind == HLL_LOBJ_CONS);
@@ -211,11 +211,11 @@ test_parser_reports_unclosed_list(void) {
     char const *source = "(";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_MISSING_RPAREN);
     TEST_ASSERT(obj == NULL);
@@ -229,12 +229,12 @@ test_parser_returns_eof_arbitrary_amount_of_times(void) {
     char const *source = "";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_EOF);
@@ -249,12 +249,12 @@ test_parser_reports_stary_rparen(void) {
     char const *source = ")";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_UNEXPECTED_TOKEN);
@@ -265,12 +265,12 @@ test_parser_parses_nil(void) {
     char const *source = "()";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
@@ -283,18 +283,18 @@ test_parser_parses_simple_dotted_cons(void) {
     char const *source = "(abc . 123)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
 
-    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    hll_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
     TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_INT);
 }
@@ -304,18 +304,18 @@ test_parser_parses_dotted_list(void) {
     char const *source = "(a b c . 123)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
 
-    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    hll_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
     cons = hll_unwrap_cons(cons->cdr);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
@@ -329,19 +329,19 @@ test_parser_parses_quote(void) {
     char const *source = "'1";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     hll_parse_result result;
-    hll_lisp_obj_head *obj;
+    hll_obj *obj;
 
     result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
 
-    hll_lisp_cons *cons = hll_unwrap_cons(obj);
+    hll_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
     TEST_ASSERT(strcmp(hll_unwrap_symb(cons->car)->symb, "quote") == 0);
 

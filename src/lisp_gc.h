@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-struct hll_lisp_obj_head *hll_alloc(size_t body_size, uint32_t kind);
-void hll_free(hll_lisp_obj_head *head);
+struct hll_obj *hll_alloc(size_t body_size, uint32_t kind);
+void hll_free(hll_obj *head);
 
 #endif

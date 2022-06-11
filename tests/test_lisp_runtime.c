@@ -8,21 +8,21 @@ test_lisp_print_nil(void) {
     char const *source = "()";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -34,21 +34,21 @@ test_lisp_print_number(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -60,21 +60,21 @@ test_lisp_print_symbol(void) {
     char const *source = "hello-world";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -86,21 +86,21 @@ test_lisp_print_single_element_list(void) {
     char const *source = "(123)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -112,21 +112,21 @@ test_lisp_print_list(void) {
     char const *source = "(+ 1 2)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -138,20 +138,20 @@ test_lisp_eval_int(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result == obj);
 }
 
@@ -168,23 +168,23 @@ test_lisp_eval_builtin_call(void) {
     char const *source = "(test)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_binding(&ctx, test_builtin, "test", 4);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     test_builtin_var = 0;
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(test_builtin_var == 100);
     TEST_ASSERT(eval_result == hll_nil);
 }
@@ -194,18 +194,18 @@ test_builtin_print(void) {
     char const *source = "(print 1)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
@@ -220,10 +220,10 @@ test_builtin_print(void) {
 
 static void
 test_find_builtins_work(void) {
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_add_builtins(&ctx);
 
-    hll_lisp_obj_head *obj = hll_find_symb(&ctx, "+", 1);
+    hll_obj *obj = hll_find_symb(&ctx, "+", 1);
     TEST_ASSERT(obj != NULL);
     obj = hll_find_symb(&ctx, "-", 1);
     TEST_ASSERT(obj != NULL);
@@ -237,22 +237,22 @@ static void
 test_add(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_add_builtins(&ctx);
 
     char const *source = "(+ 1 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 3);
 }
@@ -260,22 +260,22 @@ test_add(void) {
 static void
 test_sub(void) {
     char buffer[4096];
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(- 1 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -1);
 }
@@ -284,22 +284,22 @@ static void
 test_mul(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(* 4 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 8);
 }
@@ -308,22 +308,22 @@ static void
 test_div(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(/ 100 10)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 10);
 }
@@ -332,18 +332,18 @@ static void
 test_add_multiple_args(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(+ 1 2 3 4)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 10);
 }
@@ -352,22 +352,22 @@ static void
 test_sub_multiple_args(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(- 1 2 -2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 1);
 }
@@ -376,22 +376,22 @@ static void
 test_mul_multiple_args(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(* 4 2 -1)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -8);
 }
@@ -400,22 +400,22 @@ static void
 test_div_multiple_args(void) {
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
     char const *source = "(/ 100 10 -1)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
-    hll_lisp_obj_head *eval_result = hll_eval(&ctx, obj);
+    hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -10);
 }
@@ -425,18 +425,18 @@ test_lisp_eval_nested_function_calls(void) {
     char const *source = "(print (+ (* 3 2) (/ 8 1)))";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
@@ -454,22 +454,22 @@ test_lisp_prints_dotted_list(void) {
     char const *source = "(a b 1 . (c d 2))";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -481,21 +481,21 @@ test_lisp_prints_quote(void) {
     char const *source = "'(the magic quote hack)";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -507,21 +507,21 @@ test_lisp_prints_quote_without_evaling(void) {
     char const *source = "'(+ 1 (* 2 3))";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     FILE *out = tmpfile();
-    hll_lisp_print(out, obj);
+    hll_print(out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -533,18 +533,18 @@ test_lisp_evals_quote(void) {
     char const *source = "(print (eval '(+ 1 (* 2 3))))";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
 
     hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 
-    hll_lisp_obj_head *temp;
+    hll_obj *temp;
     result = hll_parse(&parser, &temp);
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
@@ -562,13 +562,13 @@ test_lisp_evals_true(void) {
     char const *source = "t";
     char buffer[4096];
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
-    hll_lisp_obj_head *obj = NULL;
+    hll_obj *obj = NULL;
     hll_parse_result result = hll_parse(&parser, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
 

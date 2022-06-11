@@ -34,7 +34,7 @@ hll_parse_result_str(hll_parse_result res) {
 }
 
 hll_parser
-hll_parser_create(hll_lexer *lexer, hll_lisp_ctx *ctx) {
+hll_parser_create(hll_lexer *lexer, hll_ctx *ctx) {
     hll_parser parser = { 0 };
 
     parser.lexer = lexer;
@@ -44,13 +44,13 @@ hll_parser_create(hll_lexer *lexer, hll_lisp_ctx *ctx) {
 }
 
 static hll_parse_result
-read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
+read_cons(hll_parser *parser, hll_obj **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
     // Pull the pointers
 
     hll_lexer *lexer = parser->lexer;
-    hll_lisp_ctx *ctx = parser->ctx;
+    hll_ctx *ctx = parser->ctx;
 
     // Test initial conditions
 
@@ -75,13 +75,13 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
         return HLL_PARSE_MISSING_RPAREN;
     }
 
-    hll_lisp_obj_head *car = NULL;
+    hll_obj *car = NULL;
     if ((result = hll_parse(parser, &car)) != HLL_PARSE_OK) {
         return result;
     }
 
-    hll_lisp_obj_head *list_head;
-    hll_lisp_obj_head *list_tail;
+    hll_obj *list_head;
+    hll_obj *list_tail;
     list_head = list_tail = hll_make_cons(ctx, car, hll_nil);
 
     for (;;) {
@@ -113,7 +113,7 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
             break;
         }
 
-        hll_lisp_obj_head *obj = NULL;
+        hll_obj *obj = NULL;
         if ((result = hll_parse(parser, &obj)) != HLL_PARSE_OK) {
             return result;
         }
@@ -127,12 +127,12 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
 }
 
 static hll_parse_result
-read_quote(hll_parser *parser, hll_lisp_obj_head **head) {
-    hll_lisp_obj_head *symb = hll_find_symb(
+read_quote(hll_parser *parser, hll_obj **head) {
+    hll_obj *symb = hll_find_symb(
         parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
     hll_lexer_eat(parser->lexer);
 
-    hll_lisp_obj_head *car = NULL;
+    hll_obj *car = NULL;
     hll_parse_result result = hll_parse(parser, &car);
     if (result == HLL_PARSE_OK) {
         assert(car != NULL);
@@ -144,7 +144,7 @@ read_quote(hll_parser *parser, hll_lisp_obj_head **head) {
 }
 
 hll_parse_result
-hll_parse(hll_parser *parser, hll_lisp_obj_head **head) {
+hll_parse(hll_parser *parser, hll_obj **head) {
     hll_parse_result result = HLL_PARSE_OK;
 
     hll_lexer *lexer = parser->lexer;

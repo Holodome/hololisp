@@ -7,14 +7,14 @@
 
 static HLL_LISP_BIND(builtin_print) {
     FILE *f = ctx->file_out;
-    hll_lisp_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
     fprintf(f, "\n");
     return hll_nil;
 }
 
 static HLL_LISP_BIND(builtin_add) {
     int64_t result = 0;
-    for (hll_lisp_obj_head *obj = args; obj != hll_nil;
+    for (hll_obj *obj = args; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
         result +=
             hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
@@ -25,7 +25,7 @@ static HLL_LISP_BIND(builtin_add) {
 static HLL_LISP_BIND(builtin_sub) {
     int64_t result =
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
-    for (hll_lisp_obj_head *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
+    for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
         result -=
             hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
@@ -37,7 +37,7 @@ static HLL_LISP_BIND(builtin_div) {
     int64_t result =
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
 
-    for (hll_lisp_obj_head *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
+    for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
         result /=
             hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
@@ -47,7 +47,7 @@ static HLL_LISP_BIND(builtin_div) {
 
 static HLL_LISP_BIND(builtin_mul) {
     int64_t result = 1;
-    for (hll_lisp_obj_head *obj = args; obj != hll_nil;
+    for (hll_obj *obj = args; obj != hll_nil;
          obj = hll_unwrap_cons(obj)->cdr) {
         result *=
             hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(obj)->car))->value;
@@ -70,20 +70,20 @@ static HLL_LISP_BIND(builtin_num_ne) {
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
-        hll_lisp_obj_head *num1 = CAR(obj1);
+    for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
+        hll_obj *num1 = CAR(obj1);
         if (num1->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, "/= arguments must be integers");
             return hll_nil;
         }
 
-        for (hll_lisp_obj_head *obj2 = CDR(obj1); obj2 != hll_nil;
+        for (hll_obj *obj2 = CDR(obj1); obj2 != hll_nil;
              obj2 = CDR(obj2)) {
             if (obj1 == obj2) {
                 continue;
             }
 
-            hll_lisp_obj_head *num2 = CAR(obj2);
+            hll_obj *num2 = CAR(obj2);
             if (num2->kind != HLL_LOBJ_INT) {
                 hll_report_error(ctx, "/= arguments must be integers");
                 return hll_nil;
@@ -104,20 +104,20 @@ static HLL_LISP_BIND(builtin_num_eq) {
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
-        hll_lisp_obj_head *num1 = CAR(obj1);
+    for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
+        hll_obj *num1 = CAR(obj1);
         if (num1->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, "= arguments must be integers");
             return hll_nil;
         }
 
-        for (hll_lisp_obj_head *obj2 = CDR(obj1); obj2 != hll_nil;
+        for (hll_obj *obj2 = CDR(obj1); obj2 != hll_nil;
              obj2 = CDR(obj2)) {
             if (obj1 == obj2) {
                 continue;
             }
 
-            hll_lisp_obj_head *num2 = CAR(obj2);
+            hll_obj *num2 = CAR(obj2);
             if (num2->kind != HLL_LOBJ_INT) {
                 hll_report_error(ctx, "= arguments must be integers");
                 return hll_nil;
@@ -138,14 +138,14 @@ static HLL_LISP_BIND(builtin_num_gt) {
         return hll_nil;
     }
 
-    hll_lisp_obj_head *prev = CAR(args);
+    hll_obj *prev = CAR(args);
     if (prev->kind != HLL_LOBJ_INT) {
         hll_report_error(ctx, "> arguments must be integers");
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
-        hll_lisp_obj_head *num = CAR(obj);
+    for (hll_obj *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_obj *num = CAR(obj);
         if (num->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, "> arguments must be integers");
             return hll_nil;
@@ -167,14 +167,14 @@ static HLL_LISP_BIND(builtin_num_ge) {
         return hll_nil;
     }
 
-    hll_lisp_obj_head *prev = CAR(args);
+    hll_obj *prev = CAR(args);
     if (prev->kind != HLL_LOBJ_INT) {
         hll_report_error(ctx, ">= arguments must be integers");
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
-        hll_lisp_obj_head *num = CAR(obj);
+    for (hll_obj *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_obj *num = CAR(obj);
         if (num->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, ">= arguments must be integers");
             return hll_nil;
@@ -195,14 +195,14 @@ static HLL_LISP_BIND(builtin_num_lt) {
         return hll_nil;
     }
 
-    hll_lisp_obj_head *prev = CAR(args);
+    hll_obj *prev = CAR(args);
     if (prev->kind != HLL_LOBJ_INT) {
         hll_report_error(ctx, "< arguments must be integers");
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
-        hll_lisp_obj_head *num = CAR(obj);
+    for (hll_obj *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_obj *num = CAR(obj);
         if (num->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, "< arguments must be integers");
             return hll_nil;
@@ -223,14 +223,14 @@ static HLL_LISP_BIND(builtin_num_le) {
         return hll_nil;
     }
 
-    hll_lisp_obj_head *prev = CAR(args);
+    hll_obj *prev = CAR(args);
     if (prev->kind != HLL_LOBJ_INT) {
         hll_report_error(ctx, "<= arguments must be integers");
         return hll_nil;
     }
 
-    for (hll_lisp_obj_head *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
-        hll_lisp_obj_head *num = CAR(obj);
+    for (hll_obj *obj = CDR(args); obj != hll_nil; obj = CDR(obj)) {
+        hll_obj *num = CAR(obj);
         if (num->kind != HLL_LOBJ_INT) {
             hll_report_error(ctx, "<= arguments must be integers");
             return hll_nil;
@@ -246,7 +246,7 @@ static HLL_LISP_BIND(builtin_num_le) {
 }
 
 void
-hll_add_builtins(hll_lisp_ctx *ctx) {
+hll_add_builtins(hll_ctx *ctx) {
 #define STR_LEN(_str) _str, sizeof(_str) - 1
 #define BIND(_func, _symb) hll_add_binding(ctx, _func, STR_LEN(_symb))
     BIND(builtin_print, "print");

@@ -79,7 +79,7 @@ execute_file(char const *filename) {
         goto error;
     }
 
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_add_builtins(&ctx);
 
     enum { BUFFER_SIZE = 4096 };
@@ -88,7 +88,7 @@ execute_file(char const *filename) {
     hll_parser parser = hll_parser_create(&lexer, &ctx);
 
     for (;;) {
-        hll_lisp_obj_head *obj;
+        hll_obj *obj;
         hll_parse_result parse_result = hll_parse(&parser, &obj);
 
         if (parse_result == HLL_PARSE_EOF) {
@@ -97,7 +97,7 @@ execute_file(char const *filename) {
             fprintf(stderr, "Invalid syntax: %s\n", hll_parse_result_str(parse_result));
             break;
         } else {
-            hll_lisp_print(stdout, hll_eval(&ctx, obj));
+            hll_print(stdout, hll_eval(&ctx, obj));
             printf("\n");
         }
     }
@@ -113,7 +113,7 @@ error:
 
 static int
 execute_repl(void) {
-    hll_lisp_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_default_ctx();
     hll_add_builtins(&ctx);
 
     enum { BUFFER_SIZE = 4096 };
@@ -131,7 +131,7 @@ execute_repl(void) {
         hll_parser parser = hll_parser_create(&lexer, &ctx);
 
         for (;;) {
-            hll_lisp_obj_head *obj;
+            hll_obj *obj;
             hll_parse_result parse_result = hll_parse(&parser, &obj);
 
             if (parse_result == HLL_PARSE_EOF) {
@@ -140,7 +140,7 @@ execute_repl(void) {
                 fprintf(stderr, "Invalid syntax: %s\n", hll_parse_result_str(parse_result));
                 break;
             } else {
-                hll_lisp_print(stdout, hll_eval(&ctx, obj));
+                hll_print(stdout, hll_eval(&ctx, obj));
                 printf("\n");
             }
         }
