@@ -1,17 +1,21 @@
+#include "lisp_std.h"
+
+#include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "lisp.h"
 
-struct hll_obj *
-hll_std_print(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_print(hll_ctx *ctx, hll_obj *args) {
     FILE *f = ctx->file_out;
     hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
     fprintf(f, "\n");
     return hll_nil;
 }
 
-struct hll_obj *
-hll_std_add(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_add(hll_ctx *ctx, hll_obj *args) {
     int64_t result = 0;
     for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         result += hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
@@ -19,8 +23,8 @@ hll_std_add(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_make_int(ctx, result);
 }
 
-struct hll_obj *
-hll_std_sub(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_sub(hll_ctx *ctx, hll_obj *args) {
     int64_t result =
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
     for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
@@ -30,8 +34,8 @@ hll_std_sub(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_make_int(ctx, result);
 }
 
-struct hll_obj *
-hll_std_div(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_div(hll_ctx *ctx, hll_obj *args) {
     int64_t result =
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
 
@@ -42,8 +46,8 @@ hll_std_div(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_make_int(ctx, result);
 }
 
-struct hll_obj *
-hll_std_mul(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_mul(hll_ctx *ctx, hll_obj *args) {
     int64_t result = 1;
     for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         result *= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
@@ -51,19 +55,19 @@ hll_std_mul(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_make_int(ctx, result);
 }
 
-struct hll_obj *
-hll_std_quote(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_quote(hll_ctx *ctx, hll_obj *args) {
     (void)ctx;
     return hll_unwrap_cons(args)->car;
 }
 
-struct hll_obj *
-hll_std_eval(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_eval(hll_ctx *ctx, hll_obj *args) {
     return hll_eval(ctx, hll_eval(ctx, hll_unwrap_cons(args)->car));
 }
 
-struct hll_obj *
-hll_std_int_ne(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, "/= must have at least 1 argument");
         return hll_nil;
@@ -97,8 +101,8 @@ hll_std_int_ne(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
-struct hll_obj *
-hll_std_int_eq(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, "= must have at least 1 argument");
         return hll_nil;
@@ -132,8 +136,8 @@ hll_std_int_eq(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
-struct hll_obj *
-hll_std_int_gt(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, "> must have at least 1 argument");
         return hll_nil;
@@ -163,8 +167,8 @@ hll_std_int_gt(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
-struct hll_obj *
-hll_std_int_ge(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, ">= must have at least 1 argument");
         return hll_nil;
@@ -193,8 +197,8 @@ hll_std_int_ge(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
-struct hll_obj *
-hll_std_int_lt(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, "< must have at least 1 argument");
         return hll_nil;
@@ -223,8 +227,8 @@ hll_std_int_lt(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
-struct hll_obj *
-hll_std_int_le(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
         hll_report_error(ctx, "<= must have at least 1 argument");
         return hll_nil;
@@ -253,6 +257,38 @@ hll_std_int_le(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_true;
 }
 
+static hll_obj *
+uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "c%sr must have exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_unwrap_car(args);
+
+    char const *op = ops + strlen(ops);
+    while (op >= ops) {
+        if (*op == 'a') {
+            // TODO: Error checking here
+            result = hll_unwrap_car(result);
+        } else if (*op == 'd') {
+            // TODO: Error checking here
+            result = hll_unwrap_cdr(result);
+        } else {
+            assert(0);
+        }
+    }
+
+    return result;
+}
+
+#define HLL_CAR_CDR(_letters)                                      \
+    hll_obj *hll_std_c##_letters##r(hll_ctx *ctx, hll_obj *args) { \
+        return uber_car_cdr(ctx, args, #_letters);                 \
+    }
+HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
+
 void
 hll_init_std(hll_ctx *ctx) {
 #define STR_LEN(_str) _str, (sizeof(_str) - 1)
@@ -273,6 +309,11 @@ hll_init_std(hll_ctx *ctx) {
     hll_unwrap_env(ctx->env_stack)->vars =
         hll_make_acons(ctx, hll_find_symb(ctx, STR_LEN("t")), hll_true,
                        hll_unwrap_env(ctx->env_stack)->vars);
+
+#define HLL_CAR_CDR(_letters) BIND(hll_std_c##_letters##r, "c" #_letters "r");
+    HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
+
 #undef BIND
 #undef STR_LEN
 }
