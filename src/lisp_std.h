@@ -83,6 +83,13 @@ struct hll_obj *hll_std_int_ge(struct hll_ctx *ctx, struct hll_obj *args);
 HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 
+// (if <cond> <then> [<else>])
 struct hll_obj *hll_std_if(struct hll_ctx *ctx, struct hll_obj *args);
+
+// (cons <car> <cdr>)
+struct hll_obj *hll_std_cons(struct hll_ctx *ctx, struct hll_obj *args);
+
+// (list <args>*)
+struct hll_obj *hll_std_list(struct hll_ctx *ctx, struct hll_obj *args);
 
 #endif

@@ -346,6 +346,8 @@ hll_create_ctx(void) {
                        hll_unwrap_env(ctx.env_stack)->vars);
 
     BIND(hll_std_if, "if");
+    BIND(hll_std_cons, "cons");
+    BIND(hll_std_list, "list");
 #undef BIND
 #undef STR_LEN
 
