@@ -291,3 +291,26 @@ uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
 HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 
+struct hll_obj *
+hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
+    if (hll_list_length(args) < 2) {
+        hll_report_error(ctx, "If expects at least 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+
+    hll_obj *cond = hll_eval(ctx, hll_unwrap_car(args));
+    if (cond != hll_nil) {
+        hll_obj *then = hll_unwrap_car(hll_unwrap_cdr(args));
+        result = hll_eval(ctx, then);
+    } else {
+        hll_obj *else_ = hll_unwrap_cdr(hll_unwrap_cdr(args));
+        if (else_ != hll_nil) {
+            result = hll_eval(ctx, hll_unwrap_car(else_));
+        }
+    }
+
+    return result;
+}
+
