@@ -344,6 +344,8 @@ hll_create_ctx(void) {
     hll_unwrap_env(ctx.env_stack)->vars =
         hll_make_acons(&ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_true,
                        hll_unwrap_env(ctx.env_stack)->vars);
+
+    BIND(hll_std_if, "if");
 #undef BIND
 #undef STR_LEN
 
