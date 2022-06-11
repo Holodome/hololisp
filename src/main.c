@@ -6,6 +6,7 @@
 
 #include "lexer.h"
 #include "lisp.h"
+#include "lisp_std.h"
 #include "reader.h"
 #include "utils.h"
 
@@ -79,8 +80,7 @@ execute_file(char const *filename) {
         goto error;
     }
 
-    hll_ctx ctx = hll_default_ctx();
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
@@ -114,8 +114,7 @@ error:
 
 static int
 execute_repl(void) {
-    hll_ctx ctx = hll_default_ctx();
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];

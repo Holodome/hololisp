@@ -129,9 +129,7 @@ hll_bind *hll_unwrap_bind(hll_obj *obj);
 
 hll_env *hll_unwrap_env(hll_obj *obj);
 
-hll_ctx hll_default_ctx(void);
-
-void hll_add_builtins(hll_ctx *ctx);
+hll_ctx hll_create_ctx(void);
 
 hll_obj *hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr);
 

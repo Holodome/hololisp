@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "lisp_gc.h"
+#include "lisp_std.h"
 
 typedef struct {
     hll_obj head;
@@ -313,13 +314,34 @@ hll_list_length(hll_obj *obj) {
 }
 
 hll_ctx
-hll_default_ctx(void) {
+hll_create_ctx(void) {
     hll_ctx ctx = { 0 };
 
     ctx.symbols = hll_nil;
     ctx.file_out = stdout;
     ctx.file_outerr = stderr;
     ctx.env_stack = hll_make_env(&ctx, hll_nil);
+
+#define STR_LEN(_str) _str, (sizeof(_str) - 1)
+#define BIND(_func, _symb) hll_add_binding(&ctx, _func, STR_LEN(_symb))
+    BIND(hll_std_print, "print");
+    BIND(hll_std_add, "+");
+    BIND(hll_std_sub, "-");
+    BIND(hll_std_div, "/");
+    BIND(hll_std_mul, "*");
+    BIND(hll_std_quote, "quote");
+    BIND(hll_std_eval, "eval");
+    BIND(hll_std_int_eq, "=");
+    BIND(hll_std_int_ne, "/=");
+    BIND(hll_std_int_lt, "<");
+    BIND(hll_std_int_le, "<=");
+    BIND(hll_std_int_gt, ">");
+    BIND(hll_std_int_ge, ">=");
+    hll_unwrap_env(ctx.env_stack)->vars =
+        hll_make_acons(&ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_true,
+                       hll_unwrap_env(ctx.env_stack)->vars);
+#undef BIND
+#undef STR_LEN
 
     return ctx;
 }

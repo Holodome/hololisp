@@ -3,7 +3,7 @@
 
 static void
 test_hll_make_int_works(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_obj *obj = hll_make_int(&ctx, 100);
     TEST_ASSERT(obj != NULL);
@@ -16,7 +16,7 @@ test_hll_make_int_works(void) {
 
 static void
 test_hll_make_symb_works(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     char const symb[] = "hello";
     size_t length = sizeof(symb) - 1;
@@ -33,7 +33,7 @@ test_hll_make_symb_works(void) {
 
 static void
 test_hll_make_cons_works(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     char const symb_data[] = "hello";
     size_t length = sizeof(symb_data) - 1;
@@ -50,7 +50,7 @@ test_hll_make_cons_works(void) {
 
 static void
 test_hll_reverse_list_works(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     char const symb_data[] = "hello";
     size_t length = sizeof(symb_data) - 1;
@@ -107,7 +107,7 @@ test_hll_reverse_list_works(void) {
 
 static void
 test_hll_find_symb_works_single_item(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     char const symb[] = "hello";
     size_t length = sizeof(symb) - 1;
@@ -120,7 +120,7 @@ test_hll_find_symb_works_single_item(void) {
 
 static void
 test_hll_find_symb_works(void) {
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     char const symb1[] = "hello";
     size_t length1 = sizeof(symb1) - 1;

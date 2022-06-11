@@ -1,5 +1,6 @@
 #include "../src/lexer.h"
 #include "../src/lisp.h"
+#include "../src/lisp_std.h"
 #include "../src/reader.h"
 #include "acutest.h"
 
@@ -8,7 +9,7 @@ test_lisp_print_nil(void) {
     char const *source = "()";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -34,7 +35,7 @@ test_lisp_print_number(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -60,7 +61,7 @@ test_lisp_print_symbol(void) {
     char const *source = "hello-world";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -86,7 +87,7 @@ test_lisp_print_single_element_list(void) {
     char const *source = "(123)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -112,7 +113,7 @@ test_lisp_print_list(void) {
     char const *source = "(+ 1 2)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -138,7 +139,7 @@ test_lisp_eval_int(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -170,8 +171,7 @@ test_lisp_eval_builtin_call(void) {
     char const *source = "(test)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
-
+    hll_ctx ctx = hll_create_ctx();
     hll_add_binding(&ctx, test_binding, "test", 4);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
@@ -196,9 +196,7 @@ test_builtin_print(void) {
     char const *source = "(print 1)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
-
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -222,8 +220,7 @@ test_builtin_print(void) {
 
 static void
 test_find_builtins_work(void) {
-    hll_ctx ctx = hll_default_ctx();
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     hll_obj *obj = hll_find_symb(&ctx, "+", 1);
     TEST_ASSERT(obj != NULL);
@@ -239,9 +236,7 @@ static void
 test_add(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
-    hll_add_builtins(&ctx);
-
+    hll_ctx ctx = hll_create_ctx();
     char const *source = "(+ 1 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -262,9 +257,8 @@ test_add(void) {
 static void
 test_sub(void) {
     char buffer[4096];
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(- 1 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -286,9 +280,8 @@ static void
 test_mul(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(* 4 2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -310,9 +303,8 @@ static void
 test_div(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(/ 100 10)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -334,9 +326,8 @@ static void
 test_add_multiple_args(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(+ 1 2 3 4)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -354,9 +345,8 @@ static void
 test_sub_multiple_args(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(- 1 2 -2)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -378,9 +368,8 @@ static void
 test_mul_multiple_args(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(* 4 2 -1)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -402,9 +391,8 @@ static void
 test_div_multiple_args(void) {
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
     char const *source = "(/ 100 10 -1)";
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -427,9 +415,8 @@ test_lisp_eval_nested_function_calls(void) {
     char const *source = "(print (+ (* 3 2) (/ 8 1)))";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
-    hll_add_builtins(&ctx);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -456,7 +443,7 @@ test_lisp_prints_dotted_list(void) {
     char const *source = "(a b 1 . (c d 2))";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -483,7 +470,7 @@ test_lisp_prints_quote(void) {
     char const *source = "'(the magic quote hack)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -509,7 +496,7 @@ test_lisp_prints_quote_without_evaling(void) {
     char const *source = "'(+ 1 (* 2 3))";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -535,9 +522,7 @@ test_lisp_evals_quote(void) {
     char const *source = "(print (eval '(+ 1 (* 2 3))))";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
-
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -564,8 +549,7 @@ test_lisp_evals_true(void) {
     char const *source = "t";
     char buffer[4096];
 
-    hll_ctx ctx = hll_default_ctx();
-    hll_add_builtins(&ctx);
+    hll_ctx ctx = hll_create_ctx();
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);

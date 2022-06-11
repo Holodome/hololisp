@@ -254,8 +254,8 @@ hll_std_int_le(struct hll_ctx *ctx, struct hll_obj *args) {
 }
 
 void
-hll_add_builtins(hll_ctx *ctx) {
-#define STR_LEN(_str) _str, sizeof(_str) - 1
+hll_init_std(hll_ctx *ctx) {
+#define STR_LEN(_str) _str, (sizeof(_str) - 1)
 #define BIND(_func, _symb) hll_add_binding(ctx, _func, STR_LEN(_symb))
     BIND(hll_std_print, "print");
     BIND(hll_std_add, "+");

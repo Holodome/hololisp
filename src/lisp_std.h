@@ -45,6 +45,4 @@ struct hll_obj *hll_std_int_gt(struct hll_ctx *ctx, struct hll_obj *args);
 // (>= <num: int>+)
 struct hll_obj *hll_std_int_ge(struct hll_ctx *ctx, struct hll_obj *args);
 
-void hll_init_std(hll_ctx *ctx);
-
 #endif
