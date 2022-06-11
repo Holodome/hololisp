@@ -100,6 +100,7 @@ hll_make_env(hll_ctx *ctx, hll_obj *up) {
     hll_obj *env = hll_alloc(sizeof(hll_env), HLL_OBJ_ENV);
 
     hll_unwrap_env(env)->up = up;
+    hll_unwrap_env(env)->vars = hll_nil;
 
     return env;
 }
@@ -337,6 +338,9 @@ hll_create_ctx(void) {
     BIND(hll_std_int_le, "<=");
     BIND(hll_std_int_gt, ">");
     BIND(hll_std_int_ge, ">=");
+#define HLL_CAR_CDR(_letters) BIND(hll_std_c##_letters##r, "c" #_letters "r");
+    HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
     hll_unwrap_env(ctx.env_stack)->vars =
         hll_make_acons(&ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_true,
                        hll_unwrap_env(ctx.env_stack)->vars);
