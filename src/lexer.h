@@ -12,7 +12,7 @@ typedef enum {
     HLL_TOK_LPAREN = 0x4, /**< ( */
     HLL_TOK_RPAREN = 0x5, /**< ) */
     HLL_TOK_QUOTE = 0x6,  /**< ' */
-} hll_ltoken_kind;
+} hll_token_kind;
 
 /** Structure storing data related to performing lexical analysis on lisp code.
  */
@@ -28,7 +28,7 @@ typedef struct hll_lexer {
     /** Size of buffer defined earlier. When overflowed, report error. */
     uint32_t buffer_size;
     /** Token info */
-    hll_ltoken_kind token_kind;
+    hll_token_kind token_kind;
     int64_t token_int;
     uint32_t token_length;
     char const *token_start;
