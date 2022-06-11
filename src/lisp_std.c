@@ -13,7 +13,7 @@ hll_std_print(struct hll_ctx *ctx, struct hll_obj *args) {
 struct hll_obj *
 hll_std_add(struct hll_ctx *ctx, struct hll_obj *args) {
     int64_t result = 0;
-    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_car(obj)) {
+    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         result += hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
     }
     return hll_make_int(ctx, result);
@@ -24,7 +24,7 @@ hll_std_sub(struct hll_ctx *ctx, struct hll_obj *args) {
     int64_t result =
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
     for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
-         obj = hll_unwrap_car(obj)) {
+         obj = hll_unwrap_cdr(obj)) {
         result -= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
     }
     return hll_make_int(ctx, result);
@@ -36,7 +36,7 @@ hll_std_div(struct hll_ctx *ctx, struct hll_obj *args) {
         hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
 
     for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj != hll_nil;
-         obj = hll_unwrap_car(obj)) {
+         obj = hll_unwrap_cdr(obj)) {
         result /= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
     }
     return hll_make_int(ctx, result);
@@ -45,7 +45,7 @@ hll_std_div(struct hll_ctx *ctx, struct hll_obj *args) {
 struct hll_obj *
 hll_std_mul(struct hll_ctx *ctx, struct hll_obj *args) {
     int64_t result = 1;
-    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_car(obj)) {
+    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         result *= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
     }
     return hll_make_int(ctx, result);
