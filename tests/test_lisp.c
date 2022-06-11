@@ -7,7 +7,7 @@ test_hll_make_int_works(void) {
 
     hll_obj *obj = hll_make_int(&ctx, 100);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(obj->kind == HLL_OBJ_INT);
     TEST_ASSERT(obj->size == sizeof(hll_int));
 
     hll_int *val = hll_unwrap_int(obj);
@@ -23,7 +23,7 @@ test_hll_make_symb_works(void) {
 
     hll_obj *obj = hll_make_symb(&ctx, symb, length);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(obj->kind == HLL_OBJ_SYMB);
     TEST_ASSERT(obj->size == sizeof(hll_symb) + length + 1);
 
     hll_symb *val = hll_unwrap_symb(obj);

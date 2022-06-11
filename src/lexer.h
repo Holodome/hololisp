@@ -5,13 +5,13 @@
 
 /** Lisp lexer token kind. */
 typedef enum {
-    HLL_LTOK_EOF = 0x0,    /**< End of file */
-    HLL_LTOK_NUMI = 0x1,   /**< Integer */
-    HLL_LTOK_SYMB = 0x2,   /**< lisp symbol */
-    HLL_LTOK_DOT = 0x3,    /**< . */
-    HLL_LTOK_LPAREN = 0x4, /**< ( */
-    HLL_LTOK_RPAREN = 0x5, /**< ) */
-    HLL_LTOK_QUOTE = 0x6,  /**< ' */
+    HLL_TOK_EOF = 0x0,    /**< End of file */
+    HLL_TOK_NUMI = 0x1,   /**< Integer */
+    HLL_TOK_SYMB = 0x2,   /**< lisp symbol */
+    HLL_TOK_DOT = 0x3,    /**< . */
+    HLL_TOK_LPAREN = 0x4, /**< ( */
+    HLL_TOK_RPAREN = 0x5, /**< ) */
+    HLL_TOK_QUOTE = 0x6,  /**< ' */
 } hll_ltoken_kind;
 
 /** Structure storing data related to performing lexical analysis on lisp code.

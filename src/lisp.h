@@ -13,21 +13,21 @@ struct hll_ctx;
 /// Enumeration describing different lisp object kinds.
 typedef enum {
     /// Reserve 0 to make sure we don't forget to initialize kind.
-    HLL_LOBJ_NONE = 0x0,
+    HLL_OBJ_NONE = 0x0,
     /// Cons
-    HLL_LOBJ_CONS = 0x1,
+    HLL_OBJ_CONS = 0x1,
     /// Symbol
-    HLL_LOBJ_SYMB = 0x2,
+    HLL_OBJ_SYMB = 0x2,
     /// NIL
-    HLL_LOBJ_NIL = 0x3,
+    HLL_OBJ_NIL = 0x3,
     /// Integer
-    HLL_LOBJ_INT = 0x4,
+    HLL_OBJ_INT = 0x4,
     /// C binding function
-    HLL_LOBJ_BIND = 0x5,
+    HLL_OBJ_BIND = 0x5,
     /// Env frame
-    HLL_LOBJ_ENV = 0x6,
+    HLL_OBJ_ENV = 0x6,
     /// True
-    HLL_LOBJ_TRUE = 0x7,
+    HLL_OBJ_TRUE = 0x7,
 } hll_obj_kind;
 
 /// All lisp objects are represented in abstract hierarchy, similar to

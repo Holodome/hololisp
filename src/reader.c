@@ -56,14 +56,14 @@ read_cons(hll_reader *reader, hll_obj **head) {
 
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     assert(lex_result == HLL_LEX_OK);
-    assert(lexer->token_kind == HLL_LTOK_LPAREN);
+    assert(lexer->token_kind == HLL_TOK_LPAREN);
     lex_result = hll_lexer_eat_peek(lexer);
 
     if (lex_result != HLL_LEX_OK) {
         return HLL_PARSE_LEX_FAILED;
-    } else if (lexer->token_kind == HLL_LTOK_DOT) {
+    } else if (lexer->token_kind == HLL_TOK_DOT) {
         return HLL_PARSE_STRAY_DOT;
-    } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
+    } else if (lexer->token_kind == HLL_TOK_RPAREN) {
         *head = hll_nil;
         hll_lexer_eat(lexer);
         return HLL_PARSE_OK;
@@ -71,7 +71,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
 
     if ((lex_result = hll_lexer_peek(lexer)) != HLL_LEX_OK) {
         return HLL_PARSE_LEX_FAILED;
-    } else if (lexer->token_kind == HLL_LTOK_EOF) {
+    } else if (lexer->token_kind == HLL_TOK_EOF) {
         return HLL_PARSE_MISSING_RPAREN;
     }
 
@@ -88,11 +88,11 @@ read_cons(hll_reader *reader, hll_obj **head) {
         lex_result = hll_lexer_peek(lexer);
         if (lex_result != HLL_LEX_OK) {
             return HLL_PARSE_LEX_FAILED;
-        } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
+        } else if (lexer->token_kind == HLL_TOK_RPAREN) {
             hll_lexer_eat(lexer);
             *head = list_head;
             break;
-        } else if (lexer->token_kind == HLL_LTOK_DOT) {
+        } else if (lexer->token_kind == HLL_TOK_DOT) {
             hll_lexer_eat(lexer);
             if ((result =
                      hll_parse(reader, &hll_unwrap_cons(list_tail)->cdr)) !=
@@ -105,7 +105,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
                 return HLL_PARSE_LEX_FAILED;
             }
 
-            if (lexer->token_kind != HLL_LTOK_RPAREN) {
+            if (lexer->token_kind != HLL_TOK_RPAREN) {
                 return HLL_PARSE_MISSING_RPAREN;
             }
             hll_lexer_eat(lexer);
@@ -156,22 +156,22 @@ hll_parse(hll_reader *reader, hll_obj **head) {
         default:
             result = HLL_PARSE_UNEXPECTED_TOKEN;
             break;
-        case HLL_LTOK_EOF:
+        case HLL_TOK_EOF:
             result = HLL_PARSE_EOF;
             break;
-        case HLL_LTOK_NUMI:
+        case HLL_TOK_NUMI:
             *head = hll_make_int(reader->ctx, lexer->token_int);
             hll_lexer_eat(lexer);
             break;
-        case HLL_LTOK_SYMB:
+        case HLL_TOK_SYMB:
             *head =
                 hll_find_symb(reader->ctx, lexer->buffer, lexer->token_length);
             hll_lexer_eat(lexer);
             break;
-        case HLL_LTOK_LPAREN:
+        case HLL_TOK_LPAREN:
             result = read_cons(reader, head);
             break;
-        case HLL_LTOK_QUOTE:
+        case HLL_TOK_QUOTE:
             result = read_quote(reader, head);
             break;
         }

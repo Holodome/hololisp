@@ -253,7 +253,7 @@ test_add(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 3);
 }
 
@@ -276,7 +276,7 @@ test_sub(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -1);
 }
 
@@ -300,7 +300,7 @@ test_mul(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 8);
 }
 
@@ -324,7 +324,7 @@ test_div(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 10);
 }
 
@@ -344,7 +344,7 @@ test_add_multiple_args(void) {
     TEST_ASSERT(result == HLL_PARSE_OK);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 10);
 }
 
@@ -368,7 +368,7 @@ test_sub_multiple_args(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == 1);
 }
 
@@ -392,7 +392,7 @@ test_mul_multiple_args(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -8);
 }
 
@@ -416,7 +416,7 @@ test_div_multiple_args(void) {
     TEST_ASSERT(result == HLL_PARSE_EOF);
 
     hll_obj *eval_result = hll_eval(&ctx, obj);
-    TEST_ASSERT(eval_result->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(eval_result)->value == -10);
 }
 
@@ -573,7 +573,7 @@ test_lisp_evals_true(void) {
     TEST_ASSERT(result == HLL_PARSE_OK);
 
     obj = hll_eval(&ctx, obj);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_TRUE);
+    TEST_ASSERT(obj->kind == HLL_OBJ_TRUE);
 }
 
 #define TCASE(_name) \

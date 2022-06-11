@@ -21,12 +21,12 @@ typedef struct {
 } lisp_obj;
 
 static lisp_obj hll_nil_ = { .head = {
-                                 .kind = HLL_LOBJ_NIL,
+                                 .kind = HLL_OBJ_NIL,
                                  .size = 0,
                              } };
 hll_obj *hll_nil = &hll_nil_.head;
 
-static lisp_obj hll_true_ = { .head = { .kind = HLL_LOBJ_TRUE, .size = 0 } };
+static lisp_obj hll_true_ = { .head = { .kind = HLL_OBJ_TRUE, .size = 0 } };
 hll_obj *hll_true = &hll_true_.head;
 
 void
@@ -40,35 +40,35 @@ hll_report_error(hll_ctx *ctx, char const *format, ...) {
 hll_cons *
 hll_unwrap_cons(hll_obj *head) {
     lisp_obj *obj = (void *)head;
-    assert(head->kind == HLL_LOBJ_CONS);
+    assert(head->kind == HLL_OBJ_CONS);
     return &obj->body.cons;
 }
 
 hll_symb *
 hll_unwrap_symb(hll_obj *head) {
     lisp_obj *obj = (void *)head;
-    assert(head->kind == HLL_LOBJ_SYMB);
+    assert(head->kind == HLL_OBJ_SYMB);
     return &obj->body.symb;
 }
 
 hll_int *
 hll_unwrap_int(hll_obj *head) {
     lisp_obj *obj = (void *)head;
-    assert(head->kind == HLL_LOBJ_INT);
+    assert(head->kind == HLL_OBJ_INT);
     return &obj->body.integer;
 }
 
 hll_bind *
 hll_unwrap_bind(hll_obj *head) {
     lisp_obj *obj = (void *)head;
-    assert(head->kind == HLL_LOBJ_BIND);
+    assert(head->kind == HLL_OBJ_BIND);
     return &obj->body.bind;
 }
 
 hll_env *
 hll_unwrap_env(hll_obj *head) {
     lisp_obj *obj = (void *)head;
-    assert(head->kind == HLL_LOBJ_ENV);
+    assert(head->kind == HLL_OBJ_ENV);
     return &obj->body.env;
 }
 
@@ -76,7 +76,7 @@ hll_obj *
 hll_make_cons(hll_ctx *ctx, hll_obj *car,
               hll_obj *cdr) {
     (void)ctx;
-    hll_obj *cons = hll_alloc(sizeof(hll_cons), HLL_LOBJ_CONS);
+    hll_obj *cons = hll_alloc(sizeof(hll_cons), HLL_OBJ_CONS);
 
     hll_unwrap_cons(cons)->car = car;
     hll_unwrap_cons(cons)->cdr = cdr;
@@ -87,7 +87,7 @@ hll_make_cons(hll_ctx *ctx, hll_obj *car,
 hll_obj *
 hll_make_env(hll_ctx *ctx, hll_obj *up) {
     (void)ctx;
-    hll_obj *env = hll_alloc(sizeof(hll_env), HLL_LOBJ_ENV);
+    hll_obj *env = hll_alloc(sizeof(hll_env), HLL_OBJ_ENV);
 
     hll_unwrap_env(env)->up = up;
 
@@ -104,7 +104,7 @@ hll_obj *
 hll_make_symb(hll_ctx *ctx, char const *data, size_t length) {
     (void)ctx;
     hll_obj *symb =
-        hll_alloc(sizeof(hll_symb) + length + 1, HLL_LOBJ_SYMB);
+        hll_alloc(sizeof(hll_symb) + length + 1, HLL_OBJ_SYMB);
 
     char *string =
         (char *)symb + sizeof(hll_obj) + sizeof(hll_symb);
@@ -118,7 +118,7 @@ hll_make_symb(hll_ctx *ctx, char const *data, size_t length) {
 hll_obj *
 hll_make_int(hll_ctx *ctx, int64_t value) {
     (void)ctx;
-    hll_obj *integer = hll_alloc(sizeof(hll_int), HLL_LOBJ_INT);
+    hll_obj *integer = hll_alloc(sizeof(hll_int), HLL_OBJ_INT);
     hll_unwrap_int(integer)->value = value;
     return integer;
 }
@@ -127,7 +127,7 @@ static hll_obj *
 hll_make_binding(hll_ctx *ctx, hll_bind_func *bind) {
     (void)ctx;
     hll_obj *binding =
-        hll_alloc(sizeof(hll_obj), HLL_LOBJ_BIND);
+        hll_alloc(sizeof(hll_obj), HLL_OBJ_BIND);
     hll_unwrap_bind(binding)->bind = bind;
     return binding;
 }
@@ -147,7 +147,7 @@ hll_reverse_list(hll_obj *obj) {
     hll_obj *result = hll_nil;
 
     while (obj != hll_nil) {
-        assert(obj->kind == HLL_LOBJ_CONS);
+        assert(obj->kind == HLL_OBJ_CONS);
         hll_obj *head = obj;
         obj = hll_unwrap_cons(obj)->cdr;
         hll_unwrap_cons(head)->cdr = result;
@@ -163,7 +163,7 @@ hll_find_symb(hll_ctx *ctx, char const *data, size_t length) {
 
     for (hll_obj *obj = ctx->symbols; obj != hll_nil && found == NULL;
          obj = hll_unwrap_cons(obj)->cdr) {
-        assert(obj->kind == HLL_LOBJ_CONS);
+        assert(obj->kind == HLL_OBJ_CONS);
         hll_obj *symb = hll_unwrap_cons(obj)->car;
 
         if (strcmp(hll_unwrap_symb(symb)->symb, data) == 0) {
@@ -209,14 +209,14 @@ hll_print(void *file_, hll_obj *obj) {
     default:
         assert(0);
         break;
-    case HLL_LOBJ_CONS:
+    case HLL_OBJ_CONS:
         fprintf(file, "(");
         while (obj != hll_nil) {
-            assert(obj->kind == HLL_LOBJ_CONS);
+            assert(obj->kind == HLL_OBJ_CONS);
             hll_print(file, hll_unwrap_cons(obj)->car);
 
             hll_obj *cdr = hll_unwrap_cons(obj)->cdr;
-            if (cdr != hll_nil && cdr->kind != HLL_LOBJ_CONS) {
+            if (cdr != hll_nil && cdr->kind != HLL_OBJ_CONS) {
                 fprintf(file, " . ");
                 hll_print(file, cdr);
                 cdr = hll_nil;
@@ -228,19 +228,19 @@ hll_print(void *file_, hll_obj *obj) {
         }
         fprintf(file, ")");
         break;
-    case HLL_LOBJ_SYMB: {
+    case HLL_OBJ_SYMB: {
         fprintf(file, "%s", hll_unwrap_symb(obj)->symb);
     } break;
-    case HLL_LOBJ_INT:
+    case HLL_OBJ_INT:
         fprintf(file, "%" PRId64 "", hll_unwrap_int(obj)->value);
         break;
-    case HLL_LOBJ_BIND:
+    case HLL_OBJ_BIND:
         fprintf(file, "<c-binding>");
         break;
-    case HLL_LOBJ_NIL:
+    case HLL_OBJ_NIL:
         fprintf(file, "()");
         break;
-    case HLL_LOBJ_TRUE:
+    case HLL_OBJ_TRUE:
         fprintf(file, "t");
         break;
     }
@@ -254,7 +254,7 @@ call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
     default:
         fprintf(stderr, "Unsupported callable type\n");
         break;
-    case HLL_LOBJ_BIND:
+    case HLL_OBJ_BIND:
         result = hll_unwrap_bind(fn)->bind(ctx, args);
         break;
     }
@@ -270,12 +270,12 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
     default:
         assert(0);
         break;
-    case HLL_LOBJ_BIND:
-    case HLL_LOBJ_NIL:
-    case HLL_LOBJ_INT:
+    case HLL_OBJ_BIND:
+    case HLL_OBJ_NIL:
+    case HLL_OBJ_INT:
         result = obj;
         break;
-    case HLL_LOBJ_SYMB: {
+    case HLL_OBJ_SYMB: {
         hll_obj *var = hll_find_var(ctx, obj);
         if (var == NULL) {
             fprintf(stderr, "Undefined variable '%s'\n",
@@ -284,7 +284,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
             result = hll_unwrap_cons(var)->cdr;
         }
     } break;
-    case HLL_LOBJ_CONS: {
+    case HLL_OBJ_CONS: {
         // Car should be function
         hll_obj *fn = hll_eval(ctx, hll_unwrap_cons(obj)->car);
         hll_obj *args = hll_unwrap_cons(obj)->cdr;
@@ -299,7 +299,7 @@ size_t
 hll_list_length(hll_obj *obj) {
     size_t result = 0;
 
-    while (obj->kind == HLL_LOBJ_CONS) {
+    while (obj->kind == HLL_OBJ_CONS) {
         ++result;
         obj = hll_unwrap_cons(obj)->cdr;
     }
@@ -323,39 +323,39 @@ hll_default_ctx(void) {
 void
 hll_dump_object_desc(void *file, hll_obj *obj) {
     switch (obj->kind) {
-    case HLL_LOBJ_NONE:
+    case HLL_OBJ_NONE:
         fprintf(file, "lobj<kind=None>");
         break;
-    case HLL_LOBJ_TRUE:
+    case HLL_OBJ_TRUE:
         fprintf(file, "lobj<kind=True>");
         break;
-    case HLL_LOBJ_CONS:
+    case HLL_OBJ_CONS:
         fprintf(file, "lobj<kind=Cons car=");
         hll_dump_object_desc(file, hll_unwrap_cons(obj)->car);
         fprintf(file, " cdr=");
         hll_dump_object_desc(file, hll_unwrap_cons(obj)->cdr);
         fprintf(file, ">");
         break;
-    case HLL_LOBJ_SYMB:
+    case HLL_OBJ_SYMB:
         fprintf(file, "lobj<kind=Symb symb='%s' len=%zu>",
                 hll_unwrap_symb(obj)->symb, hll_unwrap_symb(obj)->length);
         break;
-    case HLL_LOBJ_INT:
+    case HLL_OBJ_INT:
         fprintf(file, "lobj<kind=Int value=%" PRIi64 ">",
                 hll_unwrap_int(obj)->value);
         break;
-    case HLL_LOBJ_BIND:
+    case HLL_OBJ_BIND:
         fprintf(file, "lobj<kind=Bind ptr=%zu>",
                 (uintptr_t)hll_unwrap_bind(obj)->bind);
         break;
-    case HLL_LOBJ_ENV:
+    case HLL_OBJ_ENV:
         fprintf(file, "lobj<kind=Env vars=");
         hll_dump_object_desc(file, hll_unwrap_env(obj)->vars);
         fprintf(file, " up=");
         hll_dump_object_desc(file, hll_unwrap_env(obj)->up);
         fprintf(file, ">");
         break;
-    case HLL_LOBJ_NIL:
+    case HLL_OBJ_NIL:
         fprintf(file, "lobj<kind=Nil>");
         break;
     }

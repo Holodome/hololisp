@@ -7,7 +7,7 @@ test_lexer_accepts_null_and_returns_eof(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -16,12 +16,12 @@ test_lexer_eats_simple_symbol(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 5);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -31,13 +31,13 @@ test_lexer_returns_simple_symbol(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 5);
     TEST_ASSERT(strcmp(lexer.buffer, "hello") == 0);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -46,12 +46,12 @@ test_lexer_eats_number(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -61,14 +61,14 @@ test_lexer_returns_number(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
     TEST_ASSERT(lexer.token_length == 3);
     TEST_ASSERT(strcmp(lexer.buffer, "123") == 0);
     TEST_ASSERT(lexer.token_int == 123);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -79,63 +79,63 @@ test_lexer_parse_basic_syntax_multiple_tokens(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_LPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 4);
     TEST_ASSERT(strcmp(lexer.buffer, "cons") == 0);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
     TEST_ASSERT(lexer.token_length == 2);
     TEST_ASSERT(strcmp(lexer.buffer, "-6") == 0);
     TEST_ASSERT(lexer.token_int == -6);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
     TEST_ASSERT(lexer.token_length == 2);
     TEST_ASSERT(strcmp(lexer.buffer, "+7") == 0);
     TEST_ASSERT(lexer.token_int == 7);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_RPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_RPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_LPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 10);
     TEST_ASSERT(strcmp(lexer.buffer, "wha-te!ver") == 0);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_DOT);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_DOT);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_QUOTE);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_QUOTE);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 1);
     TEST_ASSERT(strcmp(lexer.buffer, "-") == 0);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_RPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_RPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -145,31 +145,31 @@ test_lexer_eats_and_peeks(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
     // Nothing should change
     result = hll_lexer_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_NUMI);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     // Nothing should change
     result = hll_lexer_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
     // Nothing should change
     result = hll_lexer_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
     // The same way, eating EOF should do nothing
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -180,11 +180,11 @@ test_lexer_skips_whitespace_symbols(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -194,23 +194,23 @@ test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -221,12 +221,12 @@ test_lexer_handles_buffer_overflow(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_BUF_OVERFLOW);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 11);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -240,15 +240,15 @@ test_lexer_skips_comments(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -258,21 +258,21 @@ test_lexer_parses_dot(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 4);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_DOT);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_DOT);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 4);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -282,29 +282,29 @@ test_lexer_parses_lparen(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_LPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_LPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_LPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_LPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -314,29 +314,29 @@ test_lexer_parses_rparen(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_RPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_RPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_RPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_RPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_RPAREN);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_RPAREN);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -346,11 +346,11 @@ test_lexer_reports_symbol_consisting_of_only_dots(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_ALL_DOT_SYMB);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_DOT);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_DOT);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 static void
@@ -360,15 +360,15 @@ test_lexer_parses_quote(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_QUOTE);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_QUOTE);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
 
     result = hll_lexer_eat_peek(&lexer);
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_LTOK_EOF);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
 #define TCASE(_name) \

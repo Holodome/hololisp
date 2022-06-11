@@ -107,7 +107,7 @@ hll_lexer_peek(hll_lexer *lexer) {
     int is_finished = lexer->cursor == NULL ||
                       (lexer->already_met_eof && !lexer->should_return_old);
     if (is_finished) {
-        lexer->token_kind = HLL_LTOK_EOF;
+        lexer->token_kind = HLL_TOK_EOF;
     } else {
         is_finished = lexer->should_return_old;
     }
@@ -120,7 +120,7 @@ hll_lexer_peek(hll_lexer *lexer) {
         // EOF
         //
         if (!cp) {
-            lexer->token_kind = HLL_LTOK_EOF;
+            lexer->token_kind = HLL_TOK_EOF;
             lexer->already_met_eof = 1;
             is_finished = 1;
         }
@@ -149,15 +149,15 @@ hll_lexer_peek(hll_lexer *lexer) {
         //
         else if (cp == '(') {
             ++lexer->cursor;
-            lexer->token_kind = HLL_LTOK_LPAREN;
+            lexer->token_kind = HLL_TOK_LPAREN;
             is_finished = 1;
         } else if (cp == ')') {
             ++lexer->cursor;
-            lexer->token_kind = HLL_LTOK_RPAREN;
+            lexer->token_kind = HLL_TOK_RPAREN;
             is_finished = 1;
         } else if (cp == '\'') {
             ++lexer->cursor;
-            lexer->token_kind = HLL_LTOK_QUOTE;
+            lexer->token_kind = HLL_TOK_QUOTE;
             is_finished = 1;
         }
         //
@@ -169,12 +169,12 @@ hll_lexer_peek(hll_lexer *lexer) {
 
             // TODO: Don't like that error code is taken from eat_symb_res
             if ((result = eat_symb_res.result) != HLL_LEX_OK) {
-                lexer->token_kind = HLL_LTOK_SYMB;
+                lexer->token_kind = HLL_TOK_SYMB;
             } else {
                 // Now we perform checks
                 // TODO: don't like that we have to parse multpile times
                 if (try_to_parse_number(lexer->buffer, &lexer->token_int)) {
-                    lexer->token_kind = HLL_LTOK_NUMI;
+                    lexer->token_kind = HLL_TOK_NUMI;
                 } else {
                     int is_all_dots = 1;
                     for (size_t i = 0; i < eat_symb_res.length && is_all_dots;
@@ -185,12 +185,12 @@ hll_lexer_peek(hll_lexer *lexer) {
                     }
 
                     if (is_all_dots && eat_symb_res.length == 1) {
-                        lexer->token_kind = HLL_LTOK_DOT;
+                        lexer->token_kind = HLL_TOK_DOT;
                     } else if (is_all_dots) {
-                        lexer->token_kind = HLL_LTOK_DOT;
+                        lexer->token_kind = HLL_TOK_DOT;
                         result = HLL_LEX_ALL_DOT_SYMB;
                     } else {
-                        lexer->token_kind = HLL_LTOK_SYMB;
+                        lexer->token_kind = HLL_TOK_SYMB;
                     }
                 }
             }
@@ -209,7 +209,7 @@ hll_lexer_peek(hll_lexer *lexer) {
 void
 hll_lexer_eat(hll_lexer *lexer) {
     /* Forbid eating EOF. This should not be done anyway (and has no sense). */
-    if (lexer->token_kind != HLL_LTOK_EOF) {
+    if (lexer->token_kind != HLL_TOK_EOF) {
         lexer->should_return_old = 0;
     }
 }

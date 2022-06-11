@@ -33,7 +33,7 @@ test_reader_parses_num(void) {
     hll_parse_result result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(obj->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(obj)->value == 123);
 
     result = hll_parse(&reader, &obj);
@@ -54,7 +54,7 @@ test_reader_parses_symbol(void) {
     hll_parse_result result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(obj->kind == HLL_OBJ_SYMB);
     TEST_ASSERT(strcmp(hll_unwrap_symb(obj)->symb, source) == 0);
 
     result = hll_parse(&reader, &obj);
@@ -75,12 +75,12 @@ test_reader_parses_one_element_list(void) {
     hll_parse_result result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     hll_cons *cons = hll_unwrap_cons(obj);
     TEST_ASSERT(cons->cdr == hll_nil);
 
     hll_obj *car = cons->car;
-    TEST_ASSERT(car->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(car->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == 100);
 
     result = hll_parse(&reader, &obj);
@@ -101,29 +101,29 @@ test_reader_parses_list(void) {
     hll_parse_result result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     hll_cons *cons = hll_unwrap_cons(obj);
 
     hll_obj *car = cons->car;
-    TEST_ASSERT(car->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(car->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == -100);
 
     TEST_ASSERT(cons->cdr != hll_nil);
     obj = cons->cdr;
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     cons = hll_unwrap_cons(obj);
 
     car = cons->car;
-    TEST_ASSERT(car->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(car->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == 100);
 
     TEST_ASSERT(cons->cdr != hll_nil);
     obj = cons->cdr;
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     cons = hll_unwrap_cons(obj);
 
     car = cons->car;
-    TEST_ASSERT(car->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(car->kind == HLL_OBJ_SYMB);
     TEST_ASSERT(strcmp(hll_unwrap_symb(car)->symb, "abc") == 0);
 
     TEST_ASSERT(cons->cdr == hll_nil);
@@ -147,43 +147,43 @@ test_reader_parses_nested_lists(void) {
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
     {
-        TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+        TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
         hll_cons *cons = hll_unwrap_cons(obj);
         hll_obj *car = cons->car;
-        TEST_ASSERT(car->kind == HLL_LOBJ_SYMB);
+        TEST_ASSERT(car->kind == HLL_OBJ_SYMB);
         TEST_ASSERT(strcmp(hll_unwrap_symb(car)->symb, "+") == 0);
 
         obj = cons->cdr;
-        TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+        TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
         cons = hll_unwrap_cons(obj);
         car = cons->car;
 
         hll_cons *old_cons = cons;
 
         {
-            TEST_ASSERT(car->kind == HLL_LOBJ_CONS);
+            TEST_ASSERT(car->kind == HLL_OBJ_CONS);
             cons = hll_unwrap_cons(car);
 
             car = cons->car;
-            TEST_ASSERT(car->kind == HLL_LOBJ_SYMB);
+            TEST_ASSERT(car->kind == HLL_OBJ_SYMB);
             TEST_ASSERT(strcmp(hll_unwrap_symb(car)->symb, "*") == 0);
 
             TEST_ASSERT(cons->cdr != hll_nil);
             obj = cons->cdr;
-            TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+            TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
             cons = hll_unwrap_cons(obj);
 
             car = cons->car;
-            TEST_ASSERT(car->kind == HLL_LOBJ_INT);
+            TEST_ASSERT(car->kind == HLL_OBJ_INT);
             TEST_ASSERT(hll_unwrap_int(car)->value == 3);
 
             TEST_ASSERT(cons->cdr != hll_nil);
             obj = cons->cdr;
-            TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+            TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
             cons = hll_unwrap_cons(obj);
 
             car = cons->car;
-            TEST_ASSERT(car->kind == HLL_LOBJ_INT);
+            TEST_ASSERT(car->kind == HLL_OBJ_INT);
             TEST_ASSERT(hll_unwrap_int(car)->value == 2);
 
             TEST_ASSERT(cons->cdr == hll_nil);
@@ -192,11 +192,11 @@ test_reader_parses_nested_lists(void) {
         cons = old_cons;
         TEST_ASSERT(cons->cdr != hll_nil);
         obj = cons->cdr;
-        TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+        TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
         cons = hll_unwrap_cons(obj);
 
         car = cons->car;
-        TEST_ASSERT(car->kind == HLL_LOBJ_SYMB);
+        TEST_ASSERT(car->kind == HLL_OBJ_SYMB);
         TEST_ASSERT(strcmp(hll_unwrap_symb(car)->symb, "hello") == 0);
 
         TEST_ASSERT(cons->cdr == hll_nil);
@@ -275,7 +275,7 @@ test_reader_parses_nil(void) {
     result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_NIL);
+    TEST_ASSERT(obj->kind == HLL_OBJ_NIL);
 }
 
 static void
@@ -292,11 +292,11 @@ test_reader_parses_simple_dotted_cons(void) {
 
     result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 
     hll_cons *cons = hll_unwrap_cons(obj);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
-    TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_SYMB);
+    TEST_ASSERT(cons->cdr->kind == HLL_OBJ_INT);
 }
 
 static void
@@ -313,15 +313,15 @@ test_reader_parses_dotted_list(void) {
 
     result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 
     hll_cons *cons = hll_unwrap_cons(obj);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_SYMB);
     cons = hll_unwrap_cons(cons->cdr);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_SYMB);
     cons = hll_unwrap_cons(cons->cdr);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
-    TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_SYMB);
+    TEST_ASSERT(cons->cdr->kind == HLL_OBJ_INT);
 }
 
 static void
@@ -339,15 +339,15 @@ test_reader_parses_quote(void) {
     result = hll_parse(&reader, &obj);
     TEST_ASSERT(result == HLL_PARSE_OK);
     TEST_ASSERT(obj != NULL);
-    TEST_ASSERT(obj->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 
     hll_cons *cons = hll_unwrap_cons(obj);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_SYMB);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_SYMB);
     TEST_ASSERT(strcmp(hll_unwrap_symb(cons->car)->symb, "quote") == 0);
 
-    TEST_ASSERT(cons->cdr->kind == HLL_LOBJ_CONS);
+    TEST_ASSERT(cons->cdr->kind == HLL_OBJ_CONS);
     cons = hll_unwrap_cons(cons->cdr);
-    TEST_ASSERT(cons->car->kind == HLL_LOBJ_INT);
+    TEST_ASSERT(cons->car->kind == HLL_OBJ_INT);
     TEST_ASSERT(cons->cdr == hll_nil);
 }
 
