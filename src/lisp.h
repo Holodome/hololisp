@@ -14,7 +14,7 @@ struct hll_lisp_ctx;
 typedef enum {
     /// Reserve 0 to make sure we don't forget to initialize kind.
     HLL_LOBJ_NONE = 0x0,
-    /// Cons 
+    /// Cons
     HLL_LOBJ_CONS = 0x1,
     /// Symbol
     HLL_LOBJ_SYMB = 0x2,
@@ -30,20 +30,22 @@ typedef enum {
     HLL_LOBJ_TRUE = 0x7,
 } hll_lisp_obj_kind;
 
-/// All lisp objects are represented in abstract hierarchy, similar to inheritance.
-/// Internally lisp object are located in memory as *hll_lisp_obj_head* and body right after that,
-/// whilst total size of object being sum of head and body sizes.
-/// Allocaing objects this way lets us manage their memory more freely and not worrying about fragmentation 
-/// too much because that is a job of garbage collector. Because we have enumeration of all possible kinds we are 
-/// free to make our own memory-efficient allocator.
-/// 
-/// Object head contains information sufficient for identifying lisp object in terms of language runtime.
-/// All private data is left unseen and is managed internally via pointer arithmetic. If we want to lisp object 
-/// according to its kind we can use hll_unwrap_... functions.
+/// All lisp objects are represented in abstract hierarchy, similar to
+/// inheritance. Internally lisp object are located in memory as
+/// *hll_lisp_obj_head* and body right after that, whilst total size of object
+/// being sum of head and body sizes. Allocaing objects this way lets us manage
+/// their memory more freely and not worrying about fragmentation too much
+/// because that is a job of garbage collector. Because we have enumeration of
+/// all possible kinds we are free to make our own memory-efficient allocator.
+///
+/// Object head contains information sufficient for identifying lisp object in
+/// terms of language runtime. All private data is left unseen and is managed
+/// internally via pointer arithmetic. If we want to lisp object according to
+/// its kind we can use hll_unwrap_... functions.
 typedef struct hll_lisp_obj_head {
     /// Kind of object for identifying it.
     hll_lisp_obj_kind kind;
-    /// Size of body. 
+    /// Size of body.
     /// TODO: Do we need it here?
     size_t size;
 } hll_lisp_obj_head;
@@ -70,7 +72,8 @@ typedef struct {
     hll_lisp_obj_head *params;
     /// Body statement list.
     hll_lisp_obj_head *body;
-    /// Environment in which function is defined and which is used when executing it.
+    /// Environment in which function is defined and which is used when
+    /// executing it.
     hll_lisp_obj_head *env;
 } hll_lisp_func;
 
@@ -129,6 +132,8 @@ hll_lisp_int *hll_unwrap_int(hll_lisp_obj_head *obj);
 
 hll_lisp_bind *hll_unwrap_bind(hll_lisp_obj_head *obj);
 
+hll_lisp_env *hll_unwrap_env(hll_lisp_obj_head *obj);
+
 hll_lisp_ctx hll_default_ctx(void);
 
 void hll_add_builtins(hll_lisp_ctx *ctx);
@@ -160,5 +165,7 @@ hll_lisp_obj_head *hll_eval(hll_lisp_ctx *ctx, hll_lisp_obj_head *obj);
 void hll_lisp_print(void *file, hll_lisp_obj_head *obj);
 
 void hll_dump_object_desc(void *file, hll_lisp_obj_head *object);
+
+void hll_report_error(hll_lisp_ctx *ctx, char const *format, ...);
 
 #endif

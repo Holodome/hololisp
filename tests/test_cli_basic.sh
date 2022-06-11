@@ -38,6 +38,9 @@ run_test comment 5 "
 run_test integer 1 1
 run_test integer -1 -1
 
+run_test nil "()" "()"
+run_test "true" "t" "t"
+
 run_test "+" 3 "(+ 1 2)"
 run_test "+" -2 "(+ 1 -3)"
 
@@ -70,3 +73,11 @@ run_test ">=" "t" "(>= 1 1)"
 run_test ">=" "()" "(>= -2 1)"
 run_test ">=" "t" "(>= 4 2 2 1)"
 run_test ">=" "()" "(>= -1 1 1 1)"
+
+run_test "'" "1" "'1"
+run_test "'" "abc" "'abc"
+run_test "'" "(a b c)" "'(a b c)"
+
+run_test "+ '" 10 "(+ 1 2 . (3 4))"
+
+run_test ". '" "(1 . 2)" "'(1 . 2)"
