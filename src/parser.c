@@ -25,6 +25,9 @@ hll_parse_result_str(hll_parse_result res) {
     case HLL_PARSE_MISSING_RPAREN:
         str = "missing rparen";
         break;
+    case HLL_PARSE_STRAY_DOT:
+        str = "stray dot";
+        break;
     }
 
     return str;
@@ -56,55 +59,81 @@ read_cons(hll_parser *parser, hll_lisp_obj_head **head) {
     assert(lexer->token_kind == HLL_LTOK_LPAREN);
     lex_result = hll_lexer_eat_peek(lexer);
 
-    // Accumulate list
-
-    hll_lisp_obj_head *expr = hll_nil;
-    while (result == HLL_PARSE_OK && lex_result == HLL_LEX_OK &&
-           lexer->token_kind != HLL_LTOK_RPAREN &&
-           lexer->token_kind != HLL_LTOK_EOF &&
-           lexer->token_kind != HLL_LTOK_DOT) {
-        hll_lisp_obj_head *car = NULL;
-        result = hll_parse(parser, &car);
-
-        if (result == HLL_PARSE_OK) {
-            assert(car != NULL);
-            expr = hll_make_cons(ctx, car, expr);
-            lex_result = hll_lexer_peek(lexer);
-        }
-    }
-
-    // Finalize
-    if (result != HLL_PARSE_OK) {
-    } else if (lex_result != HLL_LEX_OK) {
-        result = HLL_PARSE_LEX_FAILED;
+    if (lex_result != HLL_LEX_OK) {
+        return HLL_PARSE_LEX_FAILED;
+    } else if (lexer->token_kind == HLL_LTOK_DOT) {
+        return HLL_PARSE_STRAY_DOT;
     } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
+        *head = hll_nil;
         hll_lexer_eat(lexer);
-        *head = hll_reverse_list(expr);
-    } else if (lexer->token_kind == HLL_LTOK_DOT &&
-               (lex_result = hll_lexer_eat_peek(lexer)) == HLL_LEX_OK) {
-        hll_lisp_obj_head *car = NULL;
-        if ((result = hll_parse(parser, &car)) == HLL_PARSE_OK) {
-            lex_result = hll_lexer_peek(lexer);
-            *head = hll_reverse_list(expr);
-            hll_unwrap_cons(expr)->cdr = car;
-        }
-    } else {
-        result = HLL_PARSE_MISSING_RPAREN;
+        return HLL_PARSE_OK;
     }
 
-    return result;
+    if ((lex_result = hll_lexer_peek(lexer)) != HLL_LEX_OK) {
+        return HLL_PARSE_LEX_FAILED;
+    } else if (lexer->token_kind == HLL_LTOK_EOF) {
+        return HLL_PARSE_MISSING_RPAREN;
+    }
+
+    hll_lisp_obj_head *car = NULL;
+    if ((result = hll_parse(parser, &car)) != HLL_PARSE_OK) {
+        return result;
+    }
+
+    hll_lisp_obj_head *list_head;
+    hll_lisp_obj_head *list_tail;
+    list_head = list_tail = hll_make_cons(ctx, car, hll_nil);
+
+    for (;;) {
+        lex_result = hll_lexer_peek(lexer);
+        if (lex_result != HLL_LEX_OK) {
+            return HLL_PARSE_LEX_FAILED;
+        } else if (lexer->token_kind == HLL_LTOK_RPAREN) {
+            hll_lexer_eat(lexer);
+            *head = list_head;
+            break;
+        } else if (lexer->token_kind == HLL_LTOK_DOT) {
+            hll_lexer_eat(lexer);
+            if ((result =
+                     hll_parse(parser, &hll_unwrap_cons(list_tail)->cdr)) !=
+                HLL_PARSE_OK) {
+                return result;
+            }
+
+            lex_result = hll_lexer_peek(lexer);
+            if (lex_result != HLL_LEX_OK) {
+                return HLL_PARSE_LEX_FAILED;
+            }
+
+            if (lexer->token_kind != HLL_LTOK_RPAREN) {
+                return HLL_PARSE_MISSING_RPAREN;
+            }
+            hll_lexer_eat(lexer);
+            *head = list_head;
+            break;
+        }
+
+        hll_lisp_obj_head *obj = NULL;
+        if ((result = hll_parse(parser, &obj)) != HLL_PARSE_OK) {
+            return result;
+        }
+
+        assert(obj != NULL);
+        hll_unwrap_cons(list_tail)->cdr = hll_make_cons(ctx, obj, hll_nil);
+        list_tail = hll_unwrap_cons(list_tail)->cdr;
+    }
+
+    return HLL_PARSE_OK;
 }
 
 static hll_parse_result
 read_quote(hll_parser *parser, hll_lisp_obj_head **head) {
-    hll_parse_result result = HLL_PARSE_OK;
-
     hll_lisp_obj_head *symb = hll_find_symb(
         parser->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
     hll_lexer_eat(parser->lexer);
 
     hll_lisp_obj_head *car = NULL;
-    result = hll_parse(parser, &car);
+    hll_parse_result result = hll_parse(parser, &car);
     if (result == HLL_PARSE_OK) {
         assert(car != NULL);
         *head = hll_make_cons(parser->ctx, symb,

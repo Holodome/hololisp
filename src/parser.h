@@ -18,6 +18,7 @@ typedef enum {
     HLL_PARSE_LEX_FAILED = 0x2,
     HLL_PARSE_UNEXPECTED_TOKEN = 0x3,
     HLL_PARSE_MISSING_RPAREN = 0x4,
+    HLL_PARSE_STRAY_DOT = 0x5
 } hll_parse_result;
 
 char const *hll_parse_result_str(hll_parse_result res);

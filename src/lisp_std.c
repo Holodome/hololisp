@@ -73,7 +73,7 @@ static HLL_LISP_BIND(builtin_num_ne) {
     for (hll_lisp_obj_head *obj1 = args; obj1 != hll_nil; obj1 = CDR(obj1)) {
         hll_lisp_obj_head *num1 = CAR(obj1);
         if (num1->kind != HLL_LOBJ_INT) {
-            hll_report_error(ctx, "= arguments must be integers");
+            hll_report_error(ctx, "/= arguments must be integers");
             return hll_nil;
         }
 
@@ -85,7 +85,7 @@ static HLL_LISP_BIND(builtin_num_ne) {
 
             hll_lisp_obj_head *num2 = CAR(obj2);
             if (num2->kind != HLL_LOBJ_INT) {
-                hll_report_error(ctx, "= arguments must be integers");
+                hll_report_error(ctx, "/= arguments must be integers");
                 return hll_nil;
             }
 
