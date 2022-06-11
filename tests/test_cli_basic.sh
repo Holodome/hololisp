@@ -79,5 +79,15 @@ run_test "'" "abc" "'abc"
 run_test "'" "(a b c)" "'(a b c)"
 
 run_test "+ '" 10 "(+ 1 2 . (3 4))"
-
 run_test ". '" "(1 . 2)" "'(1 . 2)"
+
+run_test "car" "()" "(car ())"
+run_test "cdr" "2" "(cdr '(1 . 2))"
+run_test "cdr" "(2)" "(cdr '(1 2))" 
+run_test "cadr" "2" "(cadr '(1 2))" 
+run_test "car" "a" "(car '(a b c))" 
+run_test "cdr" "(b c)" "(cdr '(a b c))"
+
+run_test "cadr" "2" "(cadr '(1 2 3 4))"
+run_test "caddr" "3" "(caddr '(1 2 3 4))"
+run_test "cadddr" "4" "(cadddr '(1 2 3 4))"

@@ -260,14 +260,14 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
 static hll_obj *
 uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "c%sr must have exactly 1 argument");
+        hll_report_error(ctx, "c%sr must have exactly 1 argument", ops);
         return hll_nil;
     }
 
-    hll_obj *result = hll_unwrap_car(args);
+    hll_obj *result = hll_eval(ctx, hll_unwrap_car(args));
 
-    char const *op = ops + strlen(ops);
-    while (op >= ops) {
+    char const *op = ops + strlen(ops) - 1;
+    while (op >= ops && result != hll_nil) {
         if (*op == 'a') {
             // TODO: Error checking here
             result = hll_unwrap_car(result);
@@ -277,6 +277,8 @@ uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
         } else {
             assert(0);
         }
+
+        --op;
     }
 
     return result;
@@ -289,31 +291,3 @@ uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
 HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 
-void
-hll_init_std(hll_ctx *ctx) {
-#define STR_LEN(_str) _str, (sizeof(_str) - 1)
-#define BIND(_func, _symb) hll_add_binding(ctx, _func, STR_LEN(_symb))
-    BIND(hll_std_print, "print");
-    BIND(hll_std_add, "+");
-    BIND(hll_std_sub, "-");
-    BIND(hll_std_div, "/");
-    BIND(hll_std_mul, "*");
-    BIND(hll_std_quote, "quote");
-    BIND(hll_std_eval, "eval");
-    BIND(hll_std_int_eq, "=");
-    BIND(hll_std_int_ne, "/=");
-    BIND(hll_std_int_lt, "<");
-    BIND(hll_std_int_le, "<=");
-    BIND(hll_std_int_gt, ">");
-    BIND(hll_std_int_ge, ">=");
-    hll_unwrap_env(ctx->env_stack)->vars =
-        hll_make_acons(ctx, hll_find_symb(ctx, STR_LEN("t")), hll_true,
-                       hll_unwrap_env(ctx->env_stack)->vars);
-
-#define HLL_CAR_CDR(_letters) BIND(hll_std_c##_letters##r, "c" #_letters "r");
-    HLL_ENUMERATE_CAR_CDR
-#undef HLL_CAR_CDR
-
-#undef BIND
-#undef STR_LEN
-}
