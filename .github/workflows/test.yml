@@ -9,7 +9,7 @@ jobs:
         uses: actions/checkout@master
       - name: Test
         run: |
-          make test
+          make test CFLAGS=-g
   coverage:
     runs-on: ubuntu-latest
     steps:
@@ -21,7 +21,7 @@ jobs:
           curl -Os https://uploader.codecov.io/latest/linux/codecov && chmod +x codecov 
       - name: Test
         run: |
-          make test COV=1
+          make test COV=1 CFLAGS=-g
       - name: Generate coverage statistics
         run: |
           gcovr -x cov.xml 
