@@ -1,7 +1,8 @@
+#include "lisp_gc.h"
+
 #include <stdlib.h>
 
 #include "lisp.h"
-#include "lisp_gc.h"
 
 struct hll_obj *
 hll_alloc(size_t body_size, uint32_t kind) {
@@ -16,4 +17,3 @@ void
 hll_free(hll_obj *head) {
     free(head);
 }
-

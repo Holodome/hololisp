@@ -94,7 +94,8 @@ execute_file(char const *filename) {
         if (parse_result == HLL_PARSE_EOF) {
             break;
         } else if (parse_result != HLL_PARSE_OK) {
-            fprintf(stderr, "Invalid syntax: %s\n", hll_parse_result_str(parse_result));
+            fprintf(stderr, "Invalid syntax: %s\n",
+                    hll_parse_result_str(parse_result));
             break;
         } else {
             hll_print(stdout, hll_eval(&ctx, obj));
@@ -137,7 +138,8 @@ execute_repl(void) {
             if (parse_result == HLL_PARSE_EOF) {
                 break;
             } else if (parse_result != HLL_PARSE_OK) {
-                fprintf(stderr, "Invalid syntax: %s\n", hll_parse_result_str(parse_result));
+                fprintf(stderr, "Invalid syntax: %s\n",
+                        hll_parse_result_str(parse_result));
                 break;
             } else {
                 hll_print(stdout, hll_eval(&ctx, obj));

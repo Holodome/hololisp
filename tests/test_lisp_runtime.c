@@ -156,7 +156,9 @@ test_lisp_eval_int(void) {
 }
 
 static int test_builtin_var = 0;
-static HLL_LISP_BIND(test_builtin) {
+
+struct hll_obj *
+test_binding(struct hll_ctx *ctx, struct hll_obj *args) {
     (void)ctx;
     (void)args;
     test_builtin_var = 100;
@@ -170,7 +172,7 @@ test_lisp_eval_builtin_call(void) {
 
     hll_ctx ctx = hll_default_ctx();
 
-    hll_add_binding(&ctx, test_builtin, "test", 4);
+    hll_add_binding(&ctx, test_binding, "test", 4);
 
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
@@ -528,7 +530,7 @@ test_lisp_prints_quote_without_evaling(void) {
     TEST_ASSERT(strcmp(buffer, "(quote (+ 1 (* 2 3)))") == 0);
 }
 
-static void 
+static void
 test_lisp_evals_quote(void) {
     char const *source = "(print (eval '(+ 1 (* 2 3))))";
     char buffer[4096];

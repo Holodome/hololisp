@@ -368,4 +368,3 @@ TEST_LIST = { TCASE(test_reader_reports_eof),
               TCASE(test_reader_parses_dotted_list),
               TCASE(test_reader_parses_quote),
               { NULL, NULL } };
-

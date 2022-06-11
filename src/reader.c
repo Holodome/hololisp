@@ -128,8 +128,8 @@ read_cons(hll_reader *reader, hll_obj **head) {
 
 static hll_parse_result
 read_quote(hll_reader *reader, hll_obj **head) {
-    hll_obj *symb = hll_find_symb(
-        reader->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME, HLL_BUILTIN_QUOTE_SYMB_LEN);
+    hll_obj *symb = hll_find_symb(reader->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME,
+                                  HLL_BUILTIN_QUOTE_SYMB_LEN);
     hll_lexer_eat(reader->lexer);
 
     hll_obj *car = NULL;

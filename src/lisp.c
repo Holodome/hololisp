@@ -44,6 +44,16 @@ hll_unwrap_cons(hll_obj *head) {
     return &obj->body.cons;
 }
 
+hll_obj *
+hll_unwrap_car(hll_obj *obj) {
+    return hll_unwrap_cons(obj)->car;
+}
+
+hll_obj *
+hll_unwrap_cdr(hll_obj *obj) {
+    return hll_unwrap_cons(obj)->cdr;
+}
+
 hll_symb *
 hll_unwrap_symb(hll_obj *head) {
     lisp_obj *obj = (void *)head;
@@ -73,8 +83,7 @@ hll_unwrap_env(hll_obj *head) {
 }
 
 hll_obj *
-hll_make_cons(hll_ctx *ctx, hll_obj *car,
-              hll_obj *cdr) {
+hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr) {
     (void)ctx;
     hll_obj *cons = hll_alloc(sizeof(hll_cons), HLL_OBJ_CONS);
 
@@ -95,19 +104,16 @@ hll_make_env(hll_ctx *ctx, hll_obj *up) {
 }
 
 hll_obj *
-hll_make_acons(hll_ctx *ctx, hll_obj *x, hll_obj *y,
-               hll_obj *a) {
+hll_make_acons(hll_ctx *ctx, hll_obj *x, hll_obj *y, hll_obj *a) {
     return hll_make_cons(ctx, hll_make_cons(ctx, x, y), a);
 }
 
 hll_obj *
 hll_make_symb(hll_ctx *ctx, char const *data, size_t length) {
     (void)ctx;
-    hll_obj *symb =
-        hll_alloc(sizeof(hll_symb) + length + 1, HLL_OBJ_SYMB);
+    hll_obj *symb = hll_alloc(sizeof(hll_symb) + length + 1, HLL_OBJ_SYMB);
 
-    char *string =
-        (char *)symb + sizeof(hll_obj) + sizeof(hll_symb);
+    char *string = (char *)symb + sizeof(hll_obj) + sizeof(hll_symb);
     strncpy(string, data, length);
     hll_unwrap_symb(symb)->symb = string;
     hll_unwrap_symb(symb)->length = length;
@@ -126,8 +132,7 @@ hll_make_int(hll_ctx *ctx, int64_t value) {
 static hll_obj *
 hll_make_binding(hll_ctx *ctx, hll_bind_func *bind) {
     (void)ctx;
-    hll_obj *binding =
-        hll_alloc(sizeof(hll_obj), HLL_OBJ_BIND);
+    hll_obj *binding = hll_alloc(sizeof(hll_obj), HLL_OBJ_BIND);
     hll_unwrap_bind(binding)->bind = bind;
     return binding;
 }
@@ -306,7 +311,6 @@ hll_list_length(hll_obj *obj) {
 
     return result;
 }
-
 
 hll_ctx
 hll_default_ctx(void) {

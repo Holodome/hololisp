@@ -91,12 +91,7 @@ typedef struct {
     hll_obj *vars;
 } hll_env;
 
-/// Signature of C binding function.
-#define HLL_LISP_BIND(_name) hll_obj *_name(struct hll_ctx *ctx, hll_obj *args)
-
-/// Type of c binding function.
-typedef HLL_LISP_BIND(hll_bind_func);
-
+typedef hll_obj *hll_bind_func(struct hll_ctx *ctx, hll_obj *args);
 /// C binding object.
 typedef struct {
     /// Bind function.
@@ -122,6 +117,9 @@ extern hll_obj *hll_nil;
 extern hll_obj *hll_true;
 
 hll_cons *hll_unwrap_cons(hll_obj *obj);
+
+hll_obj *hll_unwrap_car(hll_obj *obj);
+hll_obj *hll_unwrap_cdr(hll_obj *obj);
 
 hll_symb *hll_unwrap_symb(hll_obj *obj);
 
