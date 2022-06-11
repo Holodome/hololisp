@@ -98,3 +98,10 @@ run_test "if" "less" "(if (> 3 4) 'more 'less)"
 run_test "if" "more" "(if (> 4 3) 'more 'less)"
 run_test "if" "123" "(if t 123)"
 run_test "if" "()" "(if () 123)"
+
+run_test "cons" "(a a b)" "(cons 'a '(a b))"
+run_test "cons" "((a b) . a)" "(cons '(a b) 'a)"
+
+run_test "list" "(1)" "(list 1)"
+run_test "list" "()" "(list)"
+run_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"

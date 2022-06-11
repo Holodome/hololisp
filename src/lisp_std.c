@@ -314,3 +314,36 @@ hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
     return result;
 }
 
+struct hll_obj *
+hll_std_cons(struct hll_ctx *ctx, struct hll_obj *args) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "cons expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *car = hll_unwrap_car(args);
+    hll_obj *cdr = hll_unwrap_car(hll_unwrap_cdr(args));
+    return hll_make_cons(ctx, hll_eval(ctx, car), hll_eval(ctx, cdr));
+}
+
+struct hll_obj *
+hll_std_list(struct hll_ctx *ctx, struct hll_obj *args) {
+    hll_obj *head = NULL;
+    hll_obj *tail = NULL;
+
+    for (hll_obj *src = args; src != hll_nil; src = hll_unwrap_cdr(src)) {
+        hll_obj *tmp = hll_eval(ctx, hll_unwrap_car(src));
+
+        if (head == NULL) {
+            head = tail = hll_make_cons(ctx, tmp, hll_nil);
+        } else {
+            hll_unwrap_cons(tail)->cdr = hll_make_cons(ctx, tmp, hll_nil);
+            tail = hll_unwrap_cdr(tail);
+        }
+    }
+
+    if (head == NULL) {
+        head = hll_nil;
+    }
+    return head;
+}
