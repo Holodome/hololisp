@@ -28,6 +28,8 @@ typedef enum {
     HLL_OBJ_ENV = 0x6,
     /// True
     HLL_OBJ_TRUE = 0x7,
+    /// Function
+    HLL_OBJ_FUNC = 0x8,
 } hll_obj_kind;
 
 /// All lisp objects are represented in abstract hierarchy, similar to
@@ -117,17 +119,13 @@ extern hll_obj *hll_nil;
 extern hll_obj *hll_true;
 
 hll_cons *hll_unwrap_cons(hll_obj *obj);
-
 hll_obj *hll_unwrap_car(hll_obj *obj);
 hll_obj *hll_unwrap_cdr(hll_obj *obj);
-
 hll_symb *hll_unwrap_symb(hll_obj *obj);
-
 hll_int *hll_unwrap_int(hll_obj *obj);
-
 hll_bind *hll_unwrap_bind(hll_obj *obj);
-
 hll_env *hll_unwrap_env(hll_obj *obj);
+hll_func *hll_unwrap_func(hll_obj *obj);
 
 hll_ctx hll_create_ctx(void);
 
@@ -139,6 +137,11 @@ hll_obj *hll_make_symb(hll_ctx *ctx, char const *symb, size_t length);
 
 hll_obj *hll_make_int(hll_ctx *ctx, int64_t value);
 
+hll_obj *hll_make_bind(hll_ctx *ctx, hll_bind_func *bind);
+
+hll_obj *hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params,
+                           hll_obj *body);
+
 void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
 
@@ -149,6 +152,8 @@ size_t hll_list_length(hll_obj *obj);
 hll_obj *hll_find_symb(hll_ctx *ctx, char const *symb, size_t length);
 
 hll_obj *hll_find_var(hll_ctx *ctx, hll_obj *car);
+
+void hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value);
 
 hll_obj *hll_eval(hll_ctx *ctx, hll_obj *obj);
 

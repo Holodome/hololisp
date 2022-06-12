@@ -92,4 +92,13 @@ struct hll_obj *hll_std_cons(struct hll_ctx *ctx, struct hll_obj *args);
 // (list <args>*)
 struct hll_obj *hll_std_list(struct hll_ctx *ctx, struct hll_obj *args);
 
+// (defun <name: symb> (<arg: symb>*) <body>*)
+struct hll_obj *hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args);
+
+// (lambda (<arg: symb>*) <body>*)
+struct hll_obj *hll_std_lambda(struct hll_ctx *ctx, struct hll_obj *args);
+
+// (progn <body>*)
+struct hll_obj *hll_std_progn(struct hll_ctx *ctx, struct hll_obj *args);
+
 #endif

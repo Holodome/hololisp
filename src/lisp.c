@@ -83,6 +83,13 @@ hll_unwrap_env(hll_obj *head) {
     return &obj->body.env;
 }
 
+hll_func *
+hll_unwrap_func(hll_obj *head) {
+    lisp_obj *obj = (void *)head;
+    assert(head->kind == HLL_OBJ_FUNC);
+    return &obj->body.func;
+}
+
 hll_obj *
 hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr) {
     (void)ctx;
@@ -131,22 +138,34 @@ hll_make_int(hll_ctx *ctx, int64_t value) {
     return integer;
 }
 
-static hll_obj *
-hll_make_binding(hll_ctx *ctx, hll_bind_func *bind) {
+hll_obj *
+hll_make_bind(hll_ctx *ctx, hll_bind_func *bind) {
     (void)ctx;
-    hll_obj *binding = hll_alloc(sizeof(hll_obj), HLL_OBJ_BIND);
+    hll_obj *binding = hll_alloc(sizeof(hll_bind), HLL_OBJ_BIND);
     hll_unwrap_bind(binding)->bind = bind;
     return binding;
 }
 
+hll_obj *
+hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params, hll_obj *body) {
+    (void)ctx;
+    hll_obj *func = hll_alloc(sizeof(hll_func), HLL_OBJ_FUNC);
+
+    hll_unwrap_func(func)->env = env;
+    hll_unwrap_func(func)->params = params;
+    hll_unwrap_func(func)->body = body;
+
+    return func;
+}
+
 void
-hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
+hll_add_binding(hll_ctx *ctx, hll_bind_func *bind_func, char const *symbol,
                 size_t length) {
-    hll_obj *binding = hll_make_binding(ctx, bind);
+    hll_obj *bind = hll_make_bind(ctx, bind_func);
     hll_obj *symb = hll_find_symb(ctx, symbol, length);
     assert(ctx->env_stack != hll_nil);
-    hll_unwrap_env(ctx->env_stack)->vars = hll_make_acons(
-        ctx, symb, binding, hll_unwrap_env(ctx->env_stack)->vars);
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, symb, bind, hll_unwrap_env(ctx->env_stack)->vars);
 }
 
 hll_obj *
@@ -250,6 +269,9 @@ hll_print(void *file_, hll_obj *obj) {
     case HLL_OBJ_TRUE:
         fprintf(file, "t");
         break;
+    case HLL_OBJ_FUNC:
+        fprintf(file, "<func>");
+        break;
     }
 }
 
@@ -264,6 +286,21 @@ call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
     case HLL_OBJ_BIND:
         result = hll_unwrap_bind(fn)->bind(ctx, args);
         break;
+    case HLL_OBJ_FUNC: {
+        hll_func *func = hll_unwrap_func(fn);
+        hll_obj *cur_env = ctx->env_stack;
+        hll_obj *env = hll_make_env(ctx, func->env);
+        assert(hll_list_length(args) == hll_list_length(func->params));
+        for (hll_obj *arg = args, *name = func->params; arg != hll_nil;
+             arg = hll_unwrap_cdr(arg), name = hll_unwrap_cdr(name)) {
+            hll_unwrap_env(env)->vars = hll_make_acons(
+                ctx, hll_unwrap_car(name), hll_eval(ctx, hll_unwrap_car(arg)),
+                hll_unwrap_env(env)->vars);
+        }
+        ctx->env_stack = env;
+        result = hll_std_progn(ctx, func->body);
+        ctx->env_stack = cur_env;
+    } break;
     }
 
     return result;
@@ -292,7 +329,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
         }
     } break;
     case HLL_OBJ_CONS: {
-        // Car should be function
+        // Car should be executable
         hll_obj *fn = hll_eval(ctx, hll_unwrap_cons(obj)->car);
         hll_obj *args = hll_unwrap_cons(obj)->cdr;
         result = call(ctx, fn, args);
@@ -312,6 +349,12 @@ hll_list_length(hll_obj *obj) {
     }
 
     return result;
+}
+
+void
+hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value) {
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, symb, value, hll_unwrap_env(ctx->env_stack)->vars);
 }
 
 hll_ctx
@@ -348,6 +391,8 @@ hll_create_ctx(void) {
     BIND(hll_std_if, "if");
     BIND(hll_std_cons, "cons");
     BIND(hll_std_list, "list");
+    BIND(hll_std_lambda, "lambda");
+    BIND(hll_std_defun, "defun");
 #undef BIND
 #undef STR_LEN
 
@@ -391,6 +436,9 @@ hll_dump_object_desc(void *file, hll_obj *obj) {
         break;
     case HLL_OBJ_NIL:
         fprintf(file, "lobj<kind=Nil>");
+        break;
+    case HLL_OBJ_FUNC:
+        fprintf(file, "lobj<kind=Func>");
         break;
     }
 }

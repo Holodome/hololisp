@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "lexer.h"
 #include "lisp.h"
 #include "lisp_std.h"
@@ -25,6 +27,11 @@ help(void) {
 static void
 version(void) {
     printf("hololisp version 0.0.1\n");
+}
+
+static int
+is_stdin_interactive(void) {
+    return isatty(STDIN_FILENO);
 }
 
 static bool
@@ -94,12 +101,9 @@ execute_file(char const *filename) {
         if (parse_result == HLL_READ_EOF) {
             break;
         } else if (parse_result != HLL_READ_OK) {
-            fprintf(stderr, "Invalid syntax: %s\n",
-                    hll_read_result_str(parse_result));
             break;
         } else {
-            hll_print(stdout, hll_eval(&ctx, obj));
-            printf("\n");
+            hll_eval(&ctx, obj);
         }
     }
 
@@ -120,8 +124,12 @@ execute_repl(void) {
     char buffer[BUFFER_SIZE];
     char line_buffer[BUFFER_SIZE];
 
+    int is_interactive = is_stdin_interactive();
+
     for (;;) {
-        printf("hololisp> ");
+        if (is_interactive) {
+            printf("hololisp> ");
+        }
         // TODO: Overflow
         if (fgets(line_buffer, BUFFER_SIZE, stdin) == NULL) {
             break;
@@ -137,8 +145,6 @@ execute_repl(void) {
             if (parse_result == HLL_READ_EOF) {
                 break;
             } else if (parse_result != HLL_READ_OK) {
-                fprintf(stderr, "Invalid syntax: %s\n",
-                        hll_read_result_str(parse_result));
                 break;
             } else {
                 hll_print(stdout, hll_eval(&ctx, obj));
