@@ -347,3 +347,73 @@ hll_std_list(struct hll_ctx *ctx, struct hll_obj *args) {
     }
     return head;
 }
+
+struct hll_obj *
+hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
+    if (hll_list_length(args) < 3) {
+        hll_report_error(ctx, "defun expects at least 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *name = hll_unwrap_car(args);
+    if (name->kind != HLL_OBJ_SYMB) {
+        hll_report_error(ctx, "defun name must be a symbol");
+        return hll_nil;
+    }
+
+    hll_obj *param_list = hll_unwrap_car(hll_unwrap_cdr(args));
+    if (param_list->kind != HLL_OBJ_CONS && param_list->kind != HLL_OBJ_NIL) {
+        hll_report_error(ctx, "defun parameter list must be a list");
+        return hll_nil;
+    }
+
+    for (hll_obj *param = param_list; param != hll_nil;
+         param = hll_unwrap_cdr(param)) {
+        if (hll_unwrap_car(param)->kind != HLL_OBJ_SYMB) {
+            hll_report_error(ctx, "defun paramter must be a symbol");
+            return hll_nil;
+        }
+    }
+
+    hll_obj *body = hll_unwrap_cdr(hll_unwrap_cdr(args));
+    hll_obj *func = hll_make_func(ctx, ctx->env_stack, param_list, body);
+
+    hll_add_var(ctx, name, func);
+
+    return func;
+}
+
+struct hll_obj *
+hll_std_lambda(struct hll_ctx *ctx, struct hll_obj *args) {
+    if (hll_list_length(args) < 2) {
+        hll_report_error(ctx, "lambda expects at least 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *param_list = hll_unwrap_car(args);
+    if (param_list->kind != HLL_OBJ_CONS && param_list->kind != HLL_OBJ_NIL) {
+        hll_report_error(ctx, "lambda parameter list must be a list");
+        return hll_nil;
+    }
+
+    for (hll_obj *param = param_list; param != hll_nil;
+         param = hll_unwrap_cdr(param)) {
+        if (hll_unwrap_car(param)->kind != HLL_OBJ_SYMB) {
+            hll_report_error(ctx, "lambda paramter must be a symbol");
+            return hll_nil;
+        }
+    }
+
+    hll_obj *body = hll_unwrap_cdr(args);
+    return hll_make_func(ctx, ctx->env_stack, param_list, body);
+}
+
+struct hll_obj *
+hll_std_progn(struct hll_ctx *ctx, struct hll_obj *args) {
+    hll_obj *result = hll_nil;
+
+    for (hll_obj *expr = args; expr != hll_nil; expr = hll_unwrap_cdr(expr)) {
+        result = hll_eval(ctx, hll_unwrap_car(expr));
+    }
+    return result;
+}
