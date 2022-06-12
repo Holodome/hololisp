@@ -104,7 +104,6 @@ read_cons(hll_reader *reader, hll_obj **head) {
             return result;
         }
 
-        assert(car != NULL);
         list_head = list_tail = hll_make_cons(ctx, car, hll_nil);
     }
 
@@ -156,7 +155,6 @@ read_cons(hll_reader *reader, hll_obj **head) {
             return result;
         }
 
-        assert(obj != NULL);
         hll_unwrap_cons(list_tail)->cdr = hll_make_cons(ctx, obj, hll_nil);
         list_tail = hll_unwrap_cons(list_tail)->cdr;
     }
