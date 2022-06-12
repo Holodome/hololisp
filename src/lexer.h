@@ -55,6 +55,8 @@ typedef enum {
     HLL_LEX_ALL_DOT_SYMB = 0x2,
 } hll_lex_result;
 
+char const *hll_lex_result_str(hll_lex_result result);
+
 /** Call to initialize the lexer. */
 hll_lexer hll_lexer_create(char const *cursor, char *buf, uint32_t buffer_size);
 

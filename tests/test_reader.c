@@ -13,9 +13,9 @@ test_reader_reports_eof(void) {
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
     hll_obj *obj = NULL;
-    hll_parse_result result = hll_parse(&reader, &obj);
+    hll_read_result result = hll_read(&reader, &obj);
 
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    TEST_ASSERT(result == HLL_READ_EOF);
     TEST_ASSERT(obj == NULL);
 }
 
@@ -30,14 +30,14 @@ test_reader_parses_num(void) {
 
     hll_obj *obj = NULL;
 
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(obj)->value == 123);
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -51,14 +51,14 @@ test_reader_parses_symbol(void) {
 
     hll_obj *obj = NULL;
 
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_SYMB);
     TEST_ASSERT(strcmp(hll_unwrap_symb(obj)->symb, source) == 0);
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -72,8 +72,8 @@ test_reader_parses_one_element_list(void) {
 
     hll_obj *obj = NULL;
 
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     hll_cons *cons = hll_unwrap_cons(obj);
@@ -83,8 +83,8 @@ test_reader_parses_one_element_list(void) {
     TEST_ASSERT(car->kind == HLL_OBJ_INT);
     TEST_ASSERT(hll_unwrap_int(car)->value == 100);
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -98,8 +98,8 @@ test_reader_parses_list(void) {
 
     hll_obj *obj = NULL;
 
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
     hll_cons *cons = hll_unwrap_cons(obj);
@@ -128,8 +128,8 @@ test_reader_parses_list(void) {
 
     TEST_ASSERT(cons->cdr == hll_nil);
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -143,8 +143,8 @@ test_reader_parses_nested_lists(void) {
 
     hll_obj *obj = NULL;
 
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     {
         TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
@@ -202,8 +202,8 @@ test_reader_parses_nested_lists(void) {
         TEST_ASSERT(cons->cdr == hll_nil);
     }
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -216,12 +216,12 @@ test_reader_reports_unclosed_list(void) {
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
     hll_obj *obj = NULL;
-    hll_parse_result result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_MISSING_RPAREN);
+    hll_read_result result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_MISSING_RPAREN);
     TEST_ASSERT(obj == NULL);
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -233,15 +233,15 @@ test_reader_returns_eof_arbitrary_amount_of_times(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_EOF);
 }
 
 static void
@@ -253,11 +253,11 @@ test_reader_reports_stary_rparen(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_UNEXPECTED_TOKEN);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_UNEXPECTED_TOKEN);
 }
 
 static void
@@ -269,11 +269,11 @@ test_reader_parses_nil(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_NIL);
 }
@@ -287,11 +287,11 @@ test_reader_parses_simple_dotted_cons(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 
     hll_cons *cons = hll_unwrap_cons(obj);
@@ -308,11 +308,11 @@ test_reader_parses_dotted_list(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 
     hll_cons *cons = hll_unwrap_cons(obj);
@@ -333,11 +333,11 @@ test_reader_parses_quote(void) {
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
-    hll_parse_result result;
+    hll_read_result result;
     hll_obj *obj;
 
-    result = hll_parse(&reader, &obj);
-    TEST_ASSERT(result == HLL_PARSE_OK);
+    result = hll_read(&reader, &obj);
+    TEST_ASSERT(result == HLL_READ_OK);
     TEST_ASSERT(obj != NULL);
     TEST_ASSERT(obj->kind == HLL_OBJ_CONS);
 

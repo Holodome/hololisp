@@ -79,7 +79,7 @@ $(UNIT_TEST_OUT_DIR)/%.o: $(SRC_DIR)/%.c
 $(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) -O0 -g -c -o $@ $<  
 
-test: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
+test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 	for file in $(UNIT_TESTS) ; do echo "Running $$file" && $$file || exit 1 ; done 
 	for file in tests/*.sh ; do echo "Running $$file" && $$file || exit 1 ; done
 

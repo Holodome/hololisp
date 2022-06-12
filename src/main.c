@@ -89,13 +89,13 @@ execute_file(char const *filename) {
 
     for (;;) {
         hll_obj *obj;
-        hll_parse_result parse_result = hll_parse(&reader, &obj);
+        hll_read_result parse_result = hll_read(&reader, &obj);
 
-        if (parse_result == HLL_PARSE_EOF) {
+        if (parse_result == HLL_READ_EOF) {
             break;
-        } else if (parse_result != HLL_PARSE_OK) {
+        } else if (parse_result != HLL_READ_OK) {
             fprintf(stderr, "Invalid syntax: %s\n",
-                    hll_parse_result_str(parse_result));
+                    hll_read_result_str(parse_result));
             break;
         } else {
             hll_print(stdout, hll_eval(&ctx, obj));
@@ -132,13 +132,13 @@ execute_repl(void) {
 
         for (;;) {
             hll_obj *obj;
-            hll_parse_result parse_result = hll_parse(&reader, &obj);
+            hll_read_result parse_result = hll_read(&reader, &obj);
 
-            if (parse_result == HLL_PARSE_EOF) {
+            if (parse_result == HLL_READ_EOF) {
                 break;
-            } else if (parse_result != HLL_PARSE_OK) {
+            } else if (parse_result != HLL_READ_OK) {
                 fprintf(stderr, "Invalid syntax: %s\n",
-                        hll_parse_result_str(parse_result));
+                        hll_read_result_str(parse_result));
                 break;
             } else {
                 hll_print(stdout, hll_eval(&ctx, obj));

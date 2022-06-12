@@ -5,6 +5,25 @@
 #include <stdbool.h>
 #include <string.h>
 
+char const *
+hll_lex_result_str(hll_lex_result result) {
+    char const *str = NULL;
+
+    switch (result) {
+    case HLL_LEX_OK:
+        str = "ok";
+        break;
+    case HLL_LEX_BUF_OVERFLOW:
+        str = "buffer overflow";
+        break;
+    case HLL_LEX_ALL_DOT_SYMB:
+        str = "symbol consists of all dots";
+        break;
+    }
+
+    return str;
+}
+
 hll_lexer
 hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     hll_lexer lex = { 0 };
@@ -111,6 +130,7 @@ hll_lexer_peek(hll_lexer *lexer) {
     } else {
         is_finished = lexer->should_return_old;
     }
+    // TODO: We have to store the error code from last peek
 
     while (!is_finished) {
         uint8_t cp = *lexer->cursor;
