@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define _POSIX_SOURCE
 #include <unistd.h>
 
 #include "lexer.h"
@@ -32,7 +31,7 @@ version(void) {
 
 static int
 is_stdin_interactive(void) {
-    return isatty(fileno(stdin));
+    return isatty(STDIN_FILENO);
 }
 
 static bool
