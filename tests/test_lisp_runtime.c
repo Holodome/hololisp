@@ -417,7 +417,6 @@ test_lisp_eval_nested_function_calls(void) {
 
     hll_ctx ctx = hll_create_ctx();
 
-
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 

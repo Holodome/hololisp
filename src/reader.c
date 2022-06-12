@@ -116,6 +116,9 @@ read_cons(hll_reader *reader, hll_obj **head) {
                 HLL_READ_LEX_FAILED, reader,
                 "Lexing failed when parsing element of list: %s",
                 hll_lex_result_str(lex_result));
+        } else if (lexer->token_kind == HLL_TOK_EOF) {
+            return report_error(HLL_READ_MISSING_RPAREN, reader,
+                                "Missing closing paren (eof ecnountered)");
         } else if (lexer->token_kind == HLL_TOK_RPAREN) {
             // Rparen means that we should exit.
             hll_lexer_eat(lexer);
@@ -185,11 +188,14 @@ hll_read(hll_reader *reader, hll_obj **head) {
     hll_lexer *lexer = reader->lexer;
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     if (lex_result != HLL_LEX_OK) {
-        result = HLL_READ_LEX_FAILED;
+        return report_error(HLL_READ_LEX_FAILED, reader,
+                            "Lexing failed when reading object: %s",
+                            hll_lex_result_str(lex_result));
     } else {
         switch (lexer->token_kind) {
         default:
-            result = HLL_READ_UNEXPECTED_TOKEN;
+            result = report_error(HLL_READ_UNEXPECTED_TOKEN, reader,
+                                  "Unexpected token when reading object");
             break;
         case HLL_TOK_EOF:
             result = HLL_READ_EOF;
