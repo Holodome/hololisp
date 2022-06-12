@@ -21,7 +21,7 @@ run_test () {
         return 
     fi
 
-    result=$("$EXECUTABLE" "$TMPFILE" 2> /dev/null | tail -1)
+    result=$("$EXECUTABLE" < "$TMPFILE" 2> /dev/null | tail -1)
     if [ "$result" != "$2" ]; then
         echo FAILED
         panic "'$2' expected, but got '$result'"
