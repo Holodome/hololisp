@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define _POSIX_SOURCE
 #include <unistd.h>
 
 #include "lexer.h"
