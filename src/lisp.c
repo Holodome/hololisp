@@ -275,8 +275,8 @@ hll_print(void *file_, hll_obj *obj) {
     }
 }
 
-static hll_obj *
-call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
+hll_obj *
+hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
     hll_obj *result = hll_nil;
 
     switch (fn->kind) {
@@ -332,7 +332,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
         // Car should be executable
         hll_obj *fn = hll_eval(ctx, hll_unwrap_cons(obj)->car);
         hll_obj *args = hll_unwrap_cons(obj)->cdr;
-        result = call(ctx, fn, args);
+        result = hll_call(ctx, fn, args);
     } break;
     }
 

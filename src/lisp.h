@@ -159,6 +159,9 @@ hll_obj *hll_eval(hll_ctx *ctx, hll_obj *obj);
 
 void hll_print(void *file, hll_obj *obj);
 
+hll_obj *
+hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);
+
 void hll_dump_object_desc(void *file, hll_obj *object);
 
 void hll_report_error(hll_ctx *ctx, char const *format, ...)

@@ -72,7 +72,6 @@ struct hll_obj;
     _HLL_STD_FUNC(unless, "unless")   \
     _HLL_STD_FUNC(or, "or")           \
     _HLL_STD_FUNC(and, "and")         \
-    _HLL_STD_FUNC(and, "and")         \
     _HLL_STD_FUNC(listp, "listp")     \
     _HLL_STD_FUNC(null, "null")       \
     _HLL_STD_FUNC(minusp, "minusp")   \
@@ -84,9 +83,9 @@ struct hll_obj;
     _HLL_STD_FUNC(min, "min")         \
     _HLL_STD_FUNC(max, "max")         \
     _HLL_STD_FUNC(abs, "abs")         \
-    _HLL_STD_FUNC(sqrt, "sqrt")       \
     _HLL_STD_FUNC(prin1, "prin1")     \
     _HLL_STD_FUNC(read, "read")       \
+    _HLL_STD_FUNC(while, "while")       \
     _HLL_ENUMERATE_CAR_CDR
 
 #define _HLL_STD_FUNC(_name, ...) \

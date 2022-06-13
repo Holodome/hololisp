@@ -6,6 +6,8 @@
 
 #include "lisp.h"
 
+#define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
+
 hll_obj *
 hll_std_print(hll_ctx *ctx, hll_obj *args) {
     FILE *f = ctx->file_out;
@@ -383,8 +385,8 @@ hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
     return func;
 }
 
-struct hll_obj *
-hll_std_lambda(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_lambda(hll_ctx *ctx, hll_obj *args) {
     if (hll_list_length(args) < 2) {
         hll_report_error(ctx, "lambda expects at least 2 arguments");
         return hll_nil;
@@ -408,12 +410,306 @@ hll_std_lambda(struct hll_ctx *ctx, struct hll_obj *args) {
     return hll_make_func(ctx, ctx->env_stack, param_list, body);
 }
 
-struct hll_obj *
-hll_std_progn(struct hll_ctx *ctx, struct hll_obj *args) {
+hll_obj *
+hll_std_progn(hll_ctx *ctx, hll_obj *args) {
     hll_obj *result = hll_nil;
 
     for (hll_obj *expr = args; expr != hll_nil; expr = hll_unwrap_cdr(expr)) {
         result = hll_eval(ctx, hll_unwrap_car(expr));
     }
     return result;
+}
+
+STD_FUNC(nth) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "nth expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
+    if (count < 0) {
+        hll_report_error(ctx, "nth expects nonnegative count");
+        return hll_nil;
+    }
+
+    hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
+
+    hll_obj *result = hll_nil;
+    while (list->kind == HLL_OBJ_CONS && count--) {
+        list = hll_unwrap_cdr(list);
+    }
+
+    if (list->kind != HLL_OBJ_NIL && count == 0) {
+        result = hll_unwrap_car(list);
+    }
+
+    return result;
+}
+
+STD_FUNC(nthcdr) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "nthcdr expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
+    if (count < 0) {
+        hll_report_error(ctx, "nthcdr expects nonnegative count");
+        return hll_nil;
+    }
+
+    hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
+
+    hll_obj *result = hll_nil;
+    while (list->kind == HLL_OBJ_CONS && count--) {
+        list = hll_unwrap_cdr(list);
+    }
+
+    if (list->kind != HLL_OBJ_NIL && count == 0) {
+        result = list;
+    }
+
+    return result;
+}
+
+STD_FUNC(setcar) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "setcar expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *cons = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *expr = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    hll_unwrap_cons(cons)->car = expr;
+
+    return cons;
+}
+
+STD_FUNC(setcdr) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "setcar expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *cons = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *expr = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    hll_unwrap_cons(cons)->cdr = expr;
+
+    return cons;
+}
+
+STD_FUNC(any) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "any expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *predicate = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    while (list->kind == HLL_OBJ_CONS) {
+        if (hll_call(ctx, predicate, hll_unwrap_car(list)) != hll_nil) {
+            return hll_true;
+        }
+
+        list = hll_unwrap_cdr(list);
+    }
+
+    return hll_nil;
+}
+
+STD_FUNC(map) {
+}
+
+STD_FUNC(when) {
+}
+
+STD_FUNC(unless) {
+}
+
+STD_FUNC(or) {
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *result = hll_nil;
+
+    while (list->kind == HLL_OBJ_CONS && result == hll_nil) {
+        if (hll_unwrap_car(list) != hll_nil) {
+            result = hll_true;
+        }
+
+        list = hll_unwrap_cdr(list);
+    }
+
+    return result;
+}
+
+STD_FUNC(and) {
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *result = hll_true;
+
+    while (list->kind == HLL_OBJ_CONS && result == hll_true) {
+        if (hll_unwrap_car(list) == hll_nil) {
+            result = hll_nil;
+        }
+
+        list = hll_unwrap_cdr(list);
+    }
+
+    return result;
+}
+
+STD_FUNC(listp) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "listp expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *result = hll_nil;
+
+    if (obj->kind == HLL_OBJ_CONS || obj->kind == HLL_OBJ_NIL) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(null) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "null expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *result = hll_nil;
+
+    if (obj->kind == HLL_OBJ_NIL) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(minusp) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "minusp expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    if (obj->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "minusp expects integer as argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+
+    if (hll_unwrap_int(obj)->value < 0) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(zerop) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "zerop expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    if (obj->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "zerp expects integer as argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+
+    if (hll_unwrap_int(obj)->value == 0) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(plusp) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "plusp expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    if (obj->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "plusp expects integer as argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+
+    if (hll_unwrap_int(obj)->value > 0) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(numberp) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "null expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *result = hll_nil;
+
+    if (obj->kind == HLL_OBJ_INT) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
+STD_FUNC(append) {
+}
+
+STD_FUNC(reverse) {
+}
+
+STD_FUNC(min) {
+}
+
+STD_FUNC(max) {
+}
+
+STD_FUNC(abs) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "abs expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    if (obj->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "abs expects integer as argument");
+        return hll_nil;
+    }
+
+    int64_t value = hll_unwrap_int(obj)->value;
+    if (value < 0) {
+        value = -value;
+    }
+
+    return hll_make_int(ctx, value);
+}
+
+STD_FUNC(prin1) {
+    FILE *f = ctx->file_out;
+    hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    return hll_nil;
+}
+
+STD_FUNC(read) {
+}
+
+STD_FUNC(while) {
 }
