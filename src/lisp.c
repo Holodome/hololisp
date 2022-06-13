@@ -169,21 +169,6 @@ hll_add_binding(hll_ctx *ctx, hll_bind_func *bind_func, char const *symbol,
 }
 
 hll_obj *
-hll_reverse_list(hll_obj *obj) {
-    hll_obj *result = hll_nil;
-
-    while (obj != hll_nil) {
-        assert(obj->kind == HLL_OBJ_CONS);
-        hll_obj *head = obj;
-        obj = hll_unwrap_cons(obj)->cdr;
-        hll_unwrap_cons(head)->cdr = result;
-        result = head;
-    }
-
-    return result;
-}
-
-hll_obj *
 hll_find_symb(hll_ctx *ctx, char const *data, size_t length) {
     hll_obj *found = NULL;
 

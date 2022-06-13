@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "lexer.h"
 #include "lisp.h"
+#include "reader.h"
 
 #define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
 
@@ -521,12 +523,63 @@ STD_FUNC(any) {
 }
 
 STD_FUNC(map) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "map expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *fn = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    hll_obj *head = NULL;
+    hll_obj *tail = NULL;
+
+    while (list->kind == HLL_OBJ_CONS) {
+        hll_obj *it = hll_call(ctx, fn, hll_unwrap_car(list));
+        if (head == NULL) {
+            head = tail = hll_make_cons(ctx, it, hll_nil);
+        } else {
+            hll_unwrap_cons(tail)->cdr = hll_make_cons(ctx, it, hll_nil);
+            tail = hll_unwrap_cdr(tail);
+        }
+
+        list = hll_unwrap_cdr(list);
+    }
+
+    if (head == NULL) {
+        head = hll_nil;
+    }
+    return head;
 }
 
 STD_FUNC(when) {
+    if (hll_list_length(args) < 1) {
+        hll_report_error(ctx, "when expects at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+    hll_obj *predicate = hll_unwrap_car(args);
+    if (hll_eval(ctx, predicate) != hll_nil) {
+        result = hll_std_progn(ctx, hll_unwrap_cdr(args));
+    }
+
+    return result;
 }
 
 STD_FUNC(unless) {
+    if (hll_list_length(args) < 1) {
+        hll_report_error(ctx, "unless expects at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+    hll_obj *predicate = hll_unwrap_car(args);
+    if (hll_eval(ctx, predicate) != hll_nil) {
+        result = hll_std_progn(ctx, hll_unwrap_cdr(args));
+    }
+
+    return result;
 }
 
 STD_FUNC(or) {
@@ -656,7 +709,7 @@ STD_FUNC(plusp) {
 
 STD_FUNC(numberp) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "null expects exactly 1 argument");
+        hll_report_error(ctx, "numberp expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -671,15 +724,82 @@ STD_FUNC(numberp) {
 }
 
 STD_FUNC(append) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "append expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *list1 = hll_unwrap_car(args);
+    hll_obj *list2 = hll_unwrap_car(hll_unwrap_cdr(args));
+
+    hll_obj *tail = list1;
+    for (; tail != hll_nil; tail = hll_unwrap_cdr(tail))
+        ;
+
+    hll_unwrap_cons(tail)->cdr = list2;
+    return list1;
 }
 
 STD_FUNC(reverse) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "reverse expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *result = hll_nil;
+
+    while (obj != hll_nil) {
+        assert(obj->kind == HLL_OBJ_CONS);
+        hll_obj *head = obj;
+        obj = hll_unwrap_cons(obj)->cdr;
+        hll_unwrap_cons(head)->cdr = result;
+        result = head;
+    }
+
+    return result;
 }
 
 STD_FUNC(min) {
+    hll_obj *result = hll_nil;
+    for (hll_obj *obj = hll_unwrap_car(args); obj != hll_nil;
+         obj = hll_unwrap_cdr(obj)) {
+        hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
+        if (test->kind != HLL_OBJ_INT) {
+            hll_report_error(ctx, "min expects integer arguments");
+            return hll_nil;
+        }
+
+        if (result == hll_nil) {
+            result = test;
+        } else if (hll_unwrap_int(result)->value >
+                   hll_unwrap_int(test)->value) {
+            result = test;
+        }
+    }
+
+    return result;
 }
 
 STD_FUNC(max) {
+    hll_obj *result = hll_nil;
+    for (hll_obj *obj = hll_unwrap_car(args); obj != hll_nil;
+         obj = hll_unwrap_cdr(obj)) {
+        hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
+        if (test->kind != HLL_OBJ_INT) {
+            hll_report_error(ctx, "max expects integer arguments");
+            return hll_nil;
+        }
+
+        if (result == hll_nil) {
+            result = test;
+        } else if (hll_unwrap_int(result)->value <
+                   hll_unwrap_int(test)->value) {
+            result = test;
+        }
+    }
+
+    return result;
 }
 
 STD_FUNC(abs) {
@@ -709,7 +829,41 @@ STD_FUNC(prin1) {
 }
 
 STD_FUNC(read) {
+    (void)args;
+
+    enum { BUFFER_SIZE = 4096 };
+    char buffer[BUFFER_SIZE];
+    char line_buffer[BUFFER_SIZE];
+
+    // TODO: Overflow
+    if (fgets(line_buffer, BUFFER_SIZE, stdin) == NULL) {
+        hll_report_error(ctx, "read failed to read from stdin");
+        return hll_nil;
+    }
+
+    hll_lexer lexer = hll_lexer_create(line_buffer, buffer, BUFFER_SIZE);
+    hll_reader reader = hll_reader_create(&lexer, ctx);
+    hll_obj *obj = NULL;
+    hll_read_result read_result = hll_read(&reader, &obj);
+
+    if (read_result != HLL_READ_OK) {
+        obj = hll_nil;
+    }
+
+    return obj;
 }
 
 STD_FUNC(while) {
+    if (hll_list_length(args) < 2) {
+        hll_report_error(ctx, "while expects at least 2 argument");
+        return hll_nil;
+    }
+
+    hll_obj *condition = hll_unwrap_car(args);
+    hll_obj *body = hll_unwrap_car(hll_unwrap_cdr(args));
+    while (hll_eval(ctx, condition) != hll_nil) {
+        hll_std_list(ctx, body);
+    }
+
+    return hll_nil;
 }
