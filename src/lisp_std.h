@@ -42,26 +42,51 @@ struct hll_obj;
     _HLL_STD_FUNC(c##_letters##r, "c" #_letters "r")
 #define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
 
-#define _HLL_ENUMERATE_STD_FUNCS    \
-    _HLL_STD_FUNC(print, "print")   \
-    _HLL_STD_FUNC(add, "+")         \
-    _HLL_STD_FUNC(sub, "-")         \
-    _HLL_STD_FUNC(div, "/")         \
-    _HLL_STD_FUNC(mul, "*")         \
-    _HLL_STD_FUNC(int_eq, "=")      \
-    _HLL_STD_FUNC(int_ne, "/=")     \
-    _HLL_STD_FUNC(int_le, "<=")     \
-    _HLL_STD_FUNC(int_lt, "<")      \
-    _HLL_STD_FUNC(int_ge, ">=")     \
-    _HLL_STD_FUNC(int_gt, ">")      \
-    _HLL_STD_FUNC(quote, "quote")   \
-    _HLL_STD_FUNC(eval, "eval")     \
-    _HLL_STD_FUNC(if, "if")         \
-    _HLL_STD_FUNC(cons, "cons")     \
-    _HLL_STD_FUNC(list, "list")     \
-    _HLL_STD_FUNC(defun, "defun")   \
-    _HLL_STD_FUNC(lambda, "lambda") \
-    _HLL_STD_FUNC(progn, "progn")   \
+#define _HLL_ENUMERATE_STD_FUNCS      \
+    _HLL_STD_FUNC(print, "print")     \
+    _HLL_STD_FUNC(add, "+")           \
+    _HLL_STD_FUNC(sub, "-")           \
+    _HLL_STD_FUNC(div, "/")           \
+    _HLL_STD_FUNC(mul, "*")           \
+    _HLL_STD_FUNC(int_eq, "=")        \
+    _HLL_STD_FUNC(int_ne, "/=")       \
+    _HLL_STD_FUNC(int_le, "<=")       \
+    _HLL_STD_FUNC(int_lt, "<")        \
+    _HLL_STD_FUNC(int_ge, ">=")       \
+    _HLL_STD_FUNC(int_gt, ">")        \
+    _HLL_STD_FUNC(quote, "quote")     \
+    _HLL_STD_FUNC(eval, "eval")       \
+    _HLL_STD_FUNC(if, "if")           \
+    _HLL_STD_FUNC(cons, "cons")       \
+    _HLL_STD_FUNC(list, "list")       \
+    _HLL_STD_FUNC(defun, "defun")     \
+    _HLL_STD_FUNC(lambda, "lambda")   \
+    _HLL_STD_FUNC(progn, "progn")     \
+    _HLL_STD_FUNC(nth, "nth")         \
+    _HLL_STD_FUNC(nthcdr, "nthcdr")   \
+    _HLL_STD_FUNC(setcar, "setcar")   \
+    _HLL_STD_FUNC(setcdr, "setcdr")   \
+    _HLL_STD_FUNC(any, "any")         \
+    _HLL_STD_FUNC(map, "map")         \
+    _HLL_STD_FUNC(when, "when")       \
+    _HLL_STD_FUNC(unless, "unless")   \
+    _HLL_STD_FUNC(or, "or")           \
+    _HLL_STD_FUNC(and, "and")         \
+    _HLL_STD_FUNC(and, "and")         \
+    _HLL_STD_FUNC(listp, "listp")     \
+    _HLL_STD_FUNC(null, "null")       \
+    _HLL_STD_FUNC(minusp, "minusp")   \
+    _HLL_STD_FUNC(zerop, "zerop")     \
+    _HLL_STD_FUNC(plusp, "plusp")     \
+    _HLL_STD_FUNC(numberp, "numberp") \
+    _HLL_STD_FUNC(append, "append")   \
+    _HLL_STD_FUNC(reverse, "reverse") \
+    _HLL_STD_FUNC(min, "min")         \
+    _HLL_STD_FUNC(max, "max")         \
+    _HLL_STD_FUNC(abs, "abs")         \
+    _HLL_STD_FUNC(sqrt, "sqrt")       \
+    _HLL_STD_FUNC(prin1, "prin1")     \
+    _HLL_STD_FUNC(read, "read")       \
     _HLL_ENUMERATE_CAR_CDR
 
 #define _HLL_STD_FUNC(_name, ...) \
