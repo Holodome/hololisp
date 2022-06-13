@@ -112,6 +112,8 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
@@ -147,6 +149,8 @@ hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "> arguments must be integers");
@@ -178,6 +182,8 @@ hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, ">= arguments must be integers");
@@ -208,6 +214,8 @@ hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "< arguments must be integers");
@@ -237,6 +245,8 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
         hll_report_error(ctx, "<= must have at least 1 argument");
         return hll_nil;
     }
+
+    args = hll_std_list(ctx, args);
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
@@ -858,7 +868,7 @@ STD_FUNC(while) {
     }
 
     hll_obj *condition = hll_unwrap_car(args);
-    hll_obj *body = hll_unwrap_car(hll_unwrap_cdr(args));
+    hll_obj *body = hll_unwrap_cdr(args);
     while (hll_eval(ctx, condition) != hll_nil) {
         hll_std_list(ctx, body);
     }
@@ -866,7 +876,7 @@ STD_FUNC(while) {
     return hll_nil;
 }
 
-STD_FUNC(let_star) {
+STD_FUNC(let) {
     if (hll_list_length(args) < 1) {
         hll_report_error(ctx, "let* expects at least 1 argument");
         return hll_nil;
@@ -883,14 +893,13 @@ STD_FUNC(let_star) {
         vars = hll_make_acons(ctx, name, value, vars);
     }
 
-    hll_obj *body = hll_unwrap_car(hll_unwrap_cdr(args));
+    hll_obj *body = hll_unwrap_cdr(args);
 
-    hll_obj *cur_env = ctx->env_stack;
     hll_obj *env = hll_make_env(ctx, ctx->env_stack);
-    hll_unwrap_env(env)->vars = lets;
     ctx->env_stack = env;
+    hll_unwrap_env(env)->vars = vars;
     hll_obj *result = hll_std_progn(ctx, body);
-    ctx->env_stack = cur_env;
+    ctx->env_stack = hll_unwrap_env(ctx->env_stack)->up;
 
     return result;
 }

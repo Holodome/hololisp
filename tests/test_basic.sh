@@ -7,7 +7,7 @@ TMPFILE=/tmp/hololisp.lisp
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
-    # exit 1
+    exit 1
 }
 
 run_test () {
@@ -99,6 +99,13 @@ run_test "if" "more" "(if (> 4 3) 'more 'less)"
 run_test "if" "123" "(if t 123)"
 run_test "if" "()" "(if () 123)"
 
+run_test "if" "a" "(if 1 'a)"
+run_test "if" "()" "(if () 'a)"
+run_test "if" "a" "(if 1 'a 'b)"
+run_test "if" "a" "(if 0 'a 'b)"
+run_test "if" "a" "(if 'x 'a 'b)"
+run_test "if" "b" "(if () 'a 'b)"
+
 run_test "cons" "(a a b)" "(cons 'a '(a b))"
 run_test "cons" "((a b) . a)" "(cons '(a b) 'a)"
 
@@ -111,3 +118,7 @@ run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
 
 run_test "defun" "12" "(defun double (x) (+ x x)) (double 6)"
 run_test "defun" "15" "(defun f (x y z) (+ x y z)) (f 3 5 7)"
+
+run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
+  ((lambda (var) (call (lambda () var))) 3)"
+

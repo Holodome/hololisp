@@ -100,3 +100,7 @@ run_test "max" "4" "(max 1 2 3 4)"
 
 run_test "abs" "1" "(abs -1)"
 run_test "abs" "1" "(abs 1)"
+
+run_test "progn" "()" "(progn)"
+run_test "progn" "t" "(progn t)"
+run_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
