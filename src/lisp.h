@@ -140,12 +140,10 @@ hll_obj *hll_make_int(hll_ctx *ctx, int64_t value);
 hll_obj *hll_make_bind(hll_ctx *ctx, hll_bind_func *bind);
 
 hll_obj *hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params,
-                           hll_obj *body);
+                       hll_obj *body);
 
 void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
-
-hll_obj *hll_reverse_list(hll_obj *obj);
 
 size_t hll_list_length(hll_obj *obj);
 
@@ -158,6 +156,8 @@ void hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value);
 hll_obj *hll_eval(hll_ctx *ctx, hll_obj *obj);
 
 void hll_print(void *file, hll_obj *obj);
+
+hll_obj *hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);
 
 void hll_dump_object_desc(void *file, hll_obj *object);
 

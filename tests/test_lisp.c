@@ -49,63 +49,6 @@ test_hll_make_cons_works(void) {
 }
 
 static void
-test_hll_reverse_list_works(void) {
-    hll_ctx ctx = hll_create_ctx();
-
-    char const symb_data[] = "hello";
-    size_t length = sizeof(symb_data) - 1;
-    int64_t int_value1 = 100;
-    int64_t int_value2 = -100;
-
-    hll_obj *symb = hll_make_symb(&ctx, symb_data, length);
-    hll_obj *integer1 = hll_make_int(&ctx, int_value1);
-    hll_obj *integer2 = hll_make_int(&ctx, int_value2);
-
-    hll_obj *list = hll_make_cons(
-        &ctx, symb,
-        hll_make_cons(&ctx, integer1, hll_make_cons(&ctx, integer2, hll_nil)));
-
-    size_t idx = 0;
-    for (hll_obj *obj = list; obj != hll_nil;
-         obj = hll_unwrap_cons(obj)->cdr, ++idx) {
-        switch (idx) {
-        default:
-            TEST_ASSERT(0);
-            break;
-        case 0:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == symb);
-            break;
-        case 1:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == integer1);
-            break;
-        case 2:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == integer2);
-            break;
-        }
-    }
-
-    list = hll_reverse_list(list);
-    idx = 0;
-    for (hll_obj *obj = list; obj != hll_nil;
-         obj = hll_unwrap_cons(obj)->cdr, ++idx) {
-        switch (idx) {
-        default:
-            TEST_ASSERT(0);
-            break;
-        case 2:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == symb);
-            break;
-        case 1:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == integer1);
-            break;
-        case 0:
-            TEST_ASSERT(hll_unwrap_cons(obj)->car == integer2);
-            break;
-        }
-    }
-}
-
-static void
 test_hll_find_symb_works_single_item(void) {
     hll_ctx ctx = hll_create_ctx();
 
@@ -148,7 +91,6 @@ test_hll_find_symb_works(void) {
 TEST_LIST = { TCASE(test_hll_make_int_works),
               TCASE(test_hll_make_symb_works),
               TCASE(test_hll_make_cons_works),
-              TCASE(test_hll_reverse_list_works),
               TCASE(test_hll_find_symb_works),
               TCASE(test_hll_find_symb_works_single_item),
               { NULL, NULL } };

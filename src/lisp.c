@@ -169,21 +169,6 @@ hll_add_binding(hll_ctx *ctx, hll_bind_func *bind_func, char const *symbol,
 }
 
 hll_obj *
-hll_reverse_list(hll_obj *obj) {
-    hll_obj *result = hll_nil;
-
-    while (obj != hll_nil) {
-        assert(obj->kind == HLL_OBJ_CONS);
-        hll_obj *head = obj;
-        obj = hll_unwrap_cons(obj)->cdr;
-        hll_unwrap_cons(head)->cdr = result;
-        result = head;
-    }
-
-    return result;
-}
-
-hll_obj *
 hll_find_symb(hll_ctx *ctx, char const *data, size_t length) {
     hll_obj *found = NULL;
 
@@ -275,8 +260,8 @@ hll_print(void *file_, hll_obj *obj) {
     }
 }
 
-static hll_obj *
-call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
+hll_obj *
+hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
     hll_obj *result = hll_nil;
 
     switch (fn->kind) {
@@ -332,7 +317,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
         // Car should be executable
         hll_obj *fn = hll_eval(ctx, hll_unwrap_cons(obj)->car);
         hll_obj *args = hll_unwrap_cons(obj)->cdr;
-        result = call(ctx, fn, args);
+        result = hll_call(ctx, fn, args);
     } break;
     }
 
@@ -368,31 +353,14 @@ hll_create_ctx(void) {
 
 #define STR_LEN(_str) _str, (sizeof(_str) - 1)
 #define BIND(_func, _symb) hll_add_binding(&ctx, _func, STR_LEN(_symb))
-    BIND(hll_std_print, "print");
-    BIND(hll_std_add, "+");
-    BIND(hll_std_sub, "-");
-    BIND(hll_std_div, "/");
-    BIND(hll_std_mul, "*");
-    BIND(hll_std_quote, "quote");
-    BIND(hll_std_eval, "eval");
-    BIND(hll_std_int_eq, "=");
-    BIND(hll_std_int_ne, "/=");
-    BIND(hll_std_int_lt, "<");
-    BIND(hll_std_int_le, "<=");
-    BIND(hll_std_int_gt, ">");
-    BIND(hll_std_int_ge, ">=");
-#define HLL_CAR_CDR(_letters) BIND(hll_std_c##_letters##r, "c" #_letters "r");
-    HLL_ENUMERATE_CAR_CDR
-#undef HLL_CAR_CDR
+#define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
+#define _HLL_STD_FUNC(_name, _str) BIND(hll_std_##_name, _str);
+    _HLL_ENUMERATE_STD_FUNCS
+#undef _HLL_STD_FUNC
     hll_unwrap_env(ctx.env_stack)->vars =
         hll_make_acons(&ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_true,
                        hll_unwrap_env(ctx.env_stack)->vars);
-
-    BIND(hll_std_if, "if");
-    BIND(hll_std_cons, "cons");
-    BIND(hll_std_list, "list");
-    BIND(hll_std_lambda, "lambda");
-    BIND(hll_std_defun, "defun");
+#undef _HLL_CAR_CDR
 #undef BIND
 #undef STR_LEN
 
