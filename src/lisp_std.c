@@ -284,12 +284,12 @@ uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
     return result;
 }
 
-#define HLL_CAR_CDR(_letters)                                      \
+#define _HLL_CAR_CDR(_letters)                                     \
     hll_obj *hll_std_c##_letters##r(hll_ctx *ctx, hll_obj *args) { \
         return uber_car_cdr(ctx, args, #_letters);                 \
     }
-HLL_ENUMERATE_CAR_CDR
-#undef HLL_CAR_CDR
+_HLL_ENUMERATE_CAR_CDR
+#undef _HLL_CAR_CDR
 
 struct hll_obj *
 hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
