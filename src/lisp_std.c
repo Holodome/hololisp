@@ -865,3 +865,79 @@ STD_FUNC(while) {
 
     return hll_nil;
 }
+
+STD_FUNC(let_star) {
+    if (hll_list_length(args) < 1) {
+        hll_report_error(ctx, "let* expects at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *vars = hll_nil;
+    hll_obj *lets = hll_unwrap_car(args);
+    for (hll_obj *let = lets; let != hll_nil; let = hll_unwrap_cdr(let)) {
+        hll_obj *pair = hll_unwrap_car(let);
+        hll_obj *name = hll_unwrap_car(pair);
+        assert(name->kind == HLL_OBJ_SYMB);
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(pair)));
+
+        vars = hll_make_acons(ctx, name, value, vars);
+    }
+
+    hll_obj *body = hll_unwrap_car(hll_unwrap_cdr(args));
+
+    hll_obj *cur_env = ctx->env_stack;
+    hll_obj *env = hll_make_env(ctx, ctx->env_stack);
+    hll_unwrap_env(env)->vars = lets;
+    ctx->env_stack = env;
+    hll_obj *result = hll_std_progn(ctx, body);
+    ctx->env_stack = cur_env;
+
+    return result;
+}
+
+STD_FUNC(defvar) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "defvar expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *name = hll_unwrap_car(args);
+    assert(name->kind == HLL_OBJ_SYMB);
+    hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    for (hll_obj *cons = hll_unwrap_env(ctx->env_stack)->vars; cons != hll_nil;
+         cons = hll_unwrap_cdr(cons)) {
+        hll_obj *test = hll_unwrap_cons(cons)->car;
+        if (hll_unwrap_cons(test)->car == name) {
+            hll_report_error(ctx, "defvar failed (variable is already defined");
+            return hll_nil;
+        }
+    }
+
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, name, value, hll_unwrap_env(ctx->env_stack)->vars);
+
+    return name;
+}
+
+STD_FUNC(setq) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "setq expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *name = hll_unwrap_car(args);
+    assert(name->kind == HLL_OBJ_SYMB);
+    hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    hll_obj *var = hll_find_var(ctx, name);
+    if (var == hll_nil) {
+        hll_report_error(ctx, "setq failed: there is no such variable");
+        return hll_nil;
+    }
+
+    hll_unwrap_cons(var)->cdr = value;
+    return value;
+}
+
+

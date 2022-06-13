@@ -142,6 +142,8 @@ hll_obj *hll_make_bind(hll_ctx *ctx, hll_bind_func *bind);
 hll_obj *hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params,
                        hll_obj *body);
 
+hll_obj *hll_make_env(hll_ctx *ctx, hll_obj *up);
+
 void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
 
