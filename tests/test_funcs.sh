@@ -33,15 +33,15 @@ run_test () {
 
 run_test "nth nil" "()" "(nth 0 ())"
 run_test "nth more than length nil" "()" "(nth 100 ())"
-run_test "nth first" "0" "(nth 0 (0 1 2 3))"
-run_test "nth second" "1" "(nth 1 (0 1 2 3))"
-run_test "nth more than length" "()" "(nth 100 (0 1 2 3))"
+run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
+run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
+run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
 run_test "nthcdr nil" "()" "(nth 0 ())"
 run_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
-run_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 (0 1 2 3))"
-run_test "nthcdr second" "(1 2 3)" "(nthcdr 1 (0 1 2 3))"
-run_test "nthcdr more than length" "()" "(nthcdr 100 (0 1 2 3))"
+run_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
+run_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
+run_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
 
 run_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
 run_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"

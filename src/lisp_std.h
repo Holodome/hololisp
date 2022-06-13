@@ -70,6 +70,7 @@ struct hll_obj;
     _HLL_STD_FUNC(map, "map")         \
     _HLL_STD_FUNC(when, "when")       \
     _HLL_STD_FUNC(unless, "unless")   \
+    _HLL_STD_FUNC(not, "not")         \
     _HLL_STD_FUNC(or, "or")           \
     _HLL_STD_FUNC(and, "and")         \
     _HLL_STD_FUNC(listp, "listp")     \
@@ -86,9 +87,11 @@ struct hll_obj;
     _HLL_STD_FUNC(prin1, "prin1")     \
     _HLL_STD_FUNC(read, "read")       \
     _HLL_STD_FUNC(while, "while")     \
-    _HLL_STD_FUNC(let, "let")   \
+    _HLL_STD_FUNC(let, "let")         \
     _HLL_STD_FUNC(defvar, "defvar")   \
     _HLL_STD_FUNC(setq, "setq")       \
+    _HLL_STD_FUNC(rand, "rand")       \
+    _HLL_STD_FUNC(clrscr, "clrscr")       \
     _HLL_ENUMERATE_CAR_CDR
 
 #define _HLL_STD_FUNC(_name, ...) \

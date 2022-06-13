@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lexer.h"
@@ -77,6 +78,8 @@ hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
@@ -117,7 +120,7 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "= arguments must be integers");
+            hll_report_error(ctx, "= arguments must be integers)");
             return hll_nil;
         }
 
@@ -438,20 +441,25 @@ STD_FUNC(nth) {
         return hll_nil;
     }
 
-    int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
+    hll_obj *count_obj = hll_eval(ctx, hll_unwrap_car(args));
+    if (count_obj->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "nth expects integer count");
+        return hll_nil;
+    }
+
+    int64_t count = hll_unwrap_int(count_obj)->value;
     if (count < 0) {
         hll_report_error(ctx, "nth expects nonnegative count");
         return hll_nil;
     }
 
-    hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
 
-    for (; list->kind == HLL_OBJ_CONS && count;
-         --count, list = hll_unwrap_cdr(list))
+    for (; list != hll_nil && count; --count, list = hll_unwrap_cdr(list))
         ;
 
     hll_obj *result = hll_nil;
-    if (list->kind != HLL_OBJ_NIL && count == 0) {
+    if (list != hll_nil && count == 0) {
         result = hll_unwrap_car(list);
     }
 
@@ -470,9 +478,8 @@ STD_FUNC(nthcdr) {
         return hll_nil;
     }
 
-    hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
-    for (; list->kind == HLL_OBJ_CONS && count;
-         --count, list = hll_unwrap_cdr(list))
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+    for (; list != hll_nil && count; --count, list = hll_unwrap_cdr(list))
         ;
 
     hll_obj *result = hll_nil;
@@ -609,12 +616,26 @@ STD_FUNC(or) {
     return result;
 }
 
+STD_FUNC(not ) {
+    if (hll_list_length(args) != 1) {
+        hll_report_error(ctx, "not expects exactly 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *result = hll_nil;
+    if (hll_eval(ctx, hll_unwrap_car(args)) == hll_nil) {
+        result = hll_true;
+    }
+
+    return result;
+}
+
 STD_FUNC(and) {
-    hll_obj *list = hll_std_list(ctx, args);
     hll_obj *result = hll_true;
 
-    for (; list != hll_nil && result == hll_true; list = hll_unwrap_cdr(list)) {
-        if (hll_unwrap_car(list) == hll_nil) {
+    for (hll_obj *obj = args; obj != hll_nil && result == hll_true;
+         obj = hll_unwrap_cdr(obj)) {
+        if (hll_eval(ctx, hll_unwrap_car(obj)) == hll_nil) {
             result = hll_nil;
         }
     }
@@ -949,4 +970,15 @@ STD_FUNC(setq) {
     return value;
 }
 
+STD_FUNC(rand) {
+    (void)args;
+    int value = rand();
+    return hll_make_int(ctx, value);
+}
 
+STD_FUNC(clrscr) {
+    (void)ctx;
+    (void)args;
+    printf("\033[2J");
+    return hll_nil;
+}
