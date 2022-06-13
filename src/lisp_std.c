@@ -112,6 +112,8 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
@@ -147,6 +149,8 @@ hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "> arguments must be integers");
@@ -178,6 +182,8 @@ hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, ">= arguments must be integers");
@@ -208,6 +214,8 @@ hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
         return hll_nil;
     }
 
+    args = hll_std_list(ctx, args);
+
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "< arguments must be integers");
@@ -237,6 +245,8 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
         hll_report_error(ctx, "<= must have at least 1 argument");
         return hll_nil;
     }
+
+    args = hll_std_list(ctx, args);
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
@@ -858,10 +868,85 @@ STD_FUNC(while) {
     }
 
     hll_obj *condition = hll_unwrap_car(args);
-    hll_obj *body = hll_unwrap_car(hll_unwrap_cdr(args));
+    hll_obj *body = hll_unwrap_cdr(args);
     while (hll_eval(ctx, condition) != hll_nil) {
         hll_std_list(ctx, body);
     }
 
     return hll_nil;
 }
+
+STD_FUNC(let) {
+    if (hll_list_length(args) < 1) {
+        hll_report_error(ctx, "let* expects at least 1 argument");
+        return hll_nil;
+    }
+
+    hll_obj *vars = hll_nil;
+    hll_obj *lets = hll_unwrap_car(args);
+    for (hll_obj *let = lets; let != hll_nil; let = hll_unwrap_cdr(let)) {
+        hll_obj *pair = hll_unwrap_car(let);
+        hll_obj *name = hll_unwrap_car(pair);
+        assert(name->kind == HLL_OBJ_SYMB);
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(pair)));
+
+        vars = hll_make_acons(ctx, name, value, vars);
+    }
+
+    hll_obj *body = hll_unwrap_cdr(args);
+
+    hll_obj *env = hll_make_env(ctx, ctx->env_stack);
+    ctx->env_stack = env;
+    hll_unwrap_env(env)->vars = vars;
+    hll_obj *result = hll_std_progn(ctx, body);
+    ctx->env_stack = hll_unwrap_env(ctx->env_stack)->up;
+
+    return result;
+}
+
+STD_FUNC(defvar) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "defvar expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *name = hll_unwrap_car(args);
+    assert(name->kind == HLL_OBJ_SYMB);
+    hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    for (hll_obj *cons = hll_unwrap_env(ctx->env_stack)->vars; cons != hll_nil;
+         cons = hll_unwrap_cdr(cons)) {
+        hll_obj *test = hll_unwrap_cons(cons)->car;
+        if (hll_unwrap_cons(test)->car == name) {
+            hll_report_error(ctx, "defvar failed (variable is already defined");
+            return hll_nil;
+        }
+    }
+
+    hll_unwrap_env(ctx->env_stack)->vars =
+        hll_make_acons(ctx, name, value, hll_unwrap_env(ctx->env_stack)->vars);
+
+    return name;
+}
+
+STD_FUNC(setq) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "setq expects exactly 2 arguments");
+        return hll_nil;
+    }
+
+    hll_obj *name = hll_unwrap_car(args);
+    assert(name->kind == HLL_OBJ_SYMB);
+    hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+
+    hll_obj *var = hll_find_var(ctx, name);
+    if (var == hll_nil) {
+        hll_report_error(ctx, "setq failed: there is no such variable");
+        return hll_nil;
+    }
+
+    hll_unwrap_cons(var)->cdr = value;
+    return value;
+}
+
+

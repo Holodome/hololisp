@@ -85,7 +85,10 @@ struct hll_obj;
     _HLL_STD_FUNC(abs, "abs")         \
     _HLL_STD_FUNC(prin1, "prin1")     \
     _HLL_STD_FUNC(read, "read")       \
-    _HLL_STD_FUNC(while, "while")       \
+    _HLL_STD_FUNC(while, "while")     \
+    _HLL_STD_FUNC(let, "let")   \
+    _HLL_STD_FUNC(defvar, "defvar")   \
+    _HLL_STD_FUNC(setq, "setq")       \
     _HLL_ENUMERATE_CAR_CDR
 
 #define _HLL_STD_FUNC(_name, ...) \
