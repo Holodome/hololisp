@@ -436,11 +436,11 @@ STD_FUNC(nth) {
 
     hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
 
-    hll_obj *result = hll_nil;
-    while (list->kind == HLL_OBJ_CONS && count--) {
-        list = hll_unwrap_cdr(list);
-    }
+    for (; list->kind == HLL_OBJ_CONS && count;
+         --count, list = hll_unwrap_cdr(list))
+        ;
 
+    hll_obj *result = hll_nil;
     if (list->kind != HLL_OBJ_NIL && count == 0) {
         result = hll_unwrap_car(list);
     }
@@ -461,13 +461,12 @@ STD_FUNC(nthcdr) {
     }
 
     hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
+    for (; list->kind == HLL_OBJ_CONS && count;
+         --count, list = hll_unwrap_cdr(list))
+        ;
 
     hll_obj *result = hll_nil;
-    while (list->kind == HLL_OBJ_CONS && count--) {
-        list = hll_unwrap_cdr(list);
-    }
-
-    if (list->kind != HLL_OBJ_NIL && count == 0) {
+    if (count == 0) {
         result = list;
     }
 
@@ -508,15 +507,17 @@ STD_FUNC(any) {
         return hll_nil;
     }
 
-    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
-    hll_obj *predicate = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+    hll_obj *predicate = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
 
-    while (list->kind == HLL_OBJ_CONS) {
-        if (hll_call(ctx, predicate, hll_unwrap_car(list)) != hll_nil) {
+    for (; list != hll_nil; list = hll_unwrap_cdr(list)) {
+        hll_obj *cdr = hll_unwrap_cdr(list);
+        hll_unwrap_cons(list)->cdr = hll_nil;
+        hll_obj *test = hll_call(ctx, predicate, list);
+        hll_unwrap_cons(list)->cdr = cdr;
+        if (test != hll_nil) {
             return hll_true;
         }
-
-        list = hll_unwrap_cdr(list);
     }
 
     return hll_nil;
@@ -528,14 +529,17 @@ STD_FUNC(map) {
         return hll_nil;
     }
 
-    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
-    hll_obj *fn = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+    hll_obj *fn = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *list = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
 
     hll_obj *head = NULL;
     hll_obj *tail = NULL;
 
     while (list->kind == HLL_OBJ_CONS) {
-        hll_obj *it = hll_call(ctx, fn, hll_unwrap_car(list));
+        hll_obj *cdr = hll_unwrap_cdr(list);
+        hll_unwrap_cons(list)->cdr = hll_nil;
+        hll_obj *it = hll_call(ctx, fn, list);
+        hll_unwrap_cons(list)->cdr = cdr;
         if (head == NULL) {
             head = tail = hll_make_cons(ctx, it, hll_nil);
         } else {
@@ -575,7 +579,7 @@ STD_FUNC(unless) {
 
     hll_obj *result = hll_nil;
     hll_obj *predicate = hll_unwrap_car(args);
-    if (hll_eval(ctx, predicate) != hll_nil) {
+    if (hll_eval(ctx, predicate) == hll_nil) {
         result = hll_std_progn(ctx, hll_unwrap_cdr(args));
     }
 
@@ -583,30 +587,26 @@ STD_FUNC(unless) {
 }
 
 STD_FUNC(or) {
-    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *list = hll_std_list(ctx, args);
     hll_obj *result = hll_nil;
 
-    while (list->kind == HLL_OBJ_CONS && result == hll_nil) {
+    for (; list != hll_nil && result == hll_nil; list = hll_unwrap_cdr(list)) {
         if (hll_unwrap_car(list) != hll_nil) {
             result = hll_true;
         }
-
-        list = hll_unwrap_cdr(list);
     }
 
     return result;
 }
 
 STD_FUNC(and) {
-    hll_obj *list = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *list = hll_std_list(ctx, args);
     hll_obj *result = hll_true;
 
-    while (list->kind == HLL_OBJ_CONS && result == hll_true) {
+    for (; list != hll_nil && result == hll_true; list = hll_unwrap_cdr(list)) {
         if (hll_unwrap_car(list) == hll_nil) {
             result = hll_nil;
         }
-
-        list = hll_unwrap_cdr(list);
     }
 
     return result;
@@ -618,7 +618,7 @@ STD_FUNC(listp) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     hll_obj *result = hll_nil;
 
     if (obj->kind == HLL_OBJ_CONS || obj->kind == HLL_OBJ_NIL) {
@@ -650,7 +650,7 @@ STD_FUNC(minusp) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "minusp expects integer as argument");
         return hll_nil;
@@ -671,7 +671,7 @@ STD_FUNC(zerop) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "zerp expects integer as argument");
         return hll_nil;
@@ -692,7 +692,7 @@ STD_FUNC(plusp) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
         hll_report_error(ctx, "plusp expects integer as argument");
         return hll_nil;
@@ -713,7 +713,7 @@ STD_FUNC(numberp) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     hll_obj *result = hll_nil;
 
     if (obj->kind == HLL_OBJ_INT) {
@@ -729,11 +729,11 @@ STD_FUNC(append) {
         return hll_nil;
     }
 
-    hll_obj *list1 = hll_unwrap_car(args);
-    hll_obj *list2 = hll_unwrap_car(hll_unwrap_cdr(args));
+    hll_obj *list1 = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *list2 = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
 
     hll_obj *tail = list1;
-    for (; tail != hll_nil; tail = hll_unwrap_cdr(tail))
+    for (; hll_unwrap_cdr(tail) != hll_nil; tail = hll_unwrap_cdr(tail))
         ;
 
     hll_unwrap_cons(tail)->cdr = list2;
@@ -746,7 +746,7 @@ STD_FUNC(reverse) {
         return hll_nil;
     }
 
-    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     hll_obj *result = hll_nil;
 
     while (obj != hll_nil) {
@@ -762,8 +762,7 @@ STD_FUNC(reverse) {
 
 STD_FUNC(min) {
     hll_obj *result = hll_nil;
-    for (hll_obj *obj = hll_unwrap_car(args); obj != hll_nil;
-         obj = hll_unwrap_cdr(obj)) {
+    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
         if (test->kind != HLL_OBJ_INT) {
             hll_report_error(ctx, "min expects integer arguments");
@@ -783,8 +782,7 @@ STD_FUNC(min) {
 
 STD_FUNC(max) {
     hll_obj *result = hll_nil;
-    for (hll_obj *obj = hll_unwrap_car(args); obj != hll_nil;
-         obj = hll_unwrap_cdr(obj)) {
+    for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
         if (test->kind != HLL_OBJ_INT) {
             hll_report_error(ctx, "max expects integer arguments");
