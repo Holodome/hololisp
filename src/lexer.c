@@ -211,8 +211,8 @@ hll_lexer_peek(hll_lexer *lexer) {
             } else {
                 lexer->token_kind = HLL_TOK_SYMB;
                 // TODO: don't like that we have to parse multpile times
-                parse_number_result parse_number_result =
-                    try_to_parse_number(lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
+                parse_number_result parse_number_result = try_to_parse_number(
+                    lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
                 if (parse_number_result.is_valid) {
                     lexer->token_kind = HLL_TOK_NUMI;
                     if (parse_number_result.overflow) {
