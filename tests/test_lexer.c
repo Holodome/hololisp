@@ -46,7 +46,7 @@ test_lexer_eats_number(void) {
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
-    TEST_ASSERT(lexer.token_kind == HLL_TOK_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
     TEST_ASSERT(lexer.token_length == 3);
 
     result = hll_lexer_eat_peek(&lexer);

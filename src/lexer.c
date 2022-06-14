@@ -52,11 +52,11 @@ typedef struct {
 } parse_number_result;
 
 static parse_number_result
-try_to_parse_number(char const *buffer, int64_t *number) {
+try_to_parse_number(char const *start, char const *end, int64_t *number) {
     parse_number_result result = { 0 };
     int is_number = 0;
 
-    char const *cursor = buffer;
+    char const *cursor = start;
     if (cursor) {
         int64_t multiplier = 1;
         if (*cursor == '+') {
@@ -76,7 +76,7 @@ try_to_parse_number(char const *buffer, int64_t *number) {
             is_number = 1;
         }
 
-        if (is_number && (is_number = (*cursor == 0))) {
+        if (is_number && (is_number = (cursor == end))) {
             *number = value * multiplier;
             result.is_valid = 1;
         }
@@ -86,7 +86,7 @@ try_to_parse_number(char const *buffer, int64_t *number) {
 }
 
 typedef struct {
-    hll_lex_result result;
+    int overflow;
     size_t written;
     size_t length;
     char const *cursor;
@@ -100,7 +100,7 @@ typedef struct {
  */
 static eat_symbol_result
 eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
-    eat_symbol_result result = { .result = HLL_LEX_OK, .cursor = cursor_ };
+    eat_symbol_result result = { .cursor = cursor_ };
 
     char *write = buffer;
     char *buffer_eof = buffer + buffer_size;
@@ -118,7 +118,7 @@ eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
             result.written = result.length = write - buffer;
             *write = 0;
         } else {
-            result.result = HLL_LEX_BUF_OVERFLOW;
+            result.overflow = 1;
         }
     } else {
         result.written = 0;
@@ -205,14 +205,14 @@ hll_lexer_peek(hll_lexer *lexer) {
             eat_symbol_result eat_symb_res =
                 eat_symbol(lexer->buffer, lexer->buffer_size, lexer->cursor);
 
-            // TODO: Don't like that error code is taken from eat_symb_res
-            if ((result = eat_symb_res.result) != HLL_LEX_OK) {
-                lexer->token_kind = HLL_TOK_SYMB;
+            lexer->token_kind = HLL_TOK_SYMB;
+            if (eat_symb_res.overflow) {
+                result = HLL_LEX_BUF_OVERFLOW;
             } else {
-                // Now we perform checks
+                lexer->token_kind = HLL_TOK_SYMB;
                 // TODO: don't like that we have to parse multpile times
                 parse_number_result parse_number_result =
-                    try_to_parse_number(lexer->buffer, &lexer->token_int);
+                    try_to_parse_number(lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
                 if (parse_number_result.is_valid) {
                     lexer->token_kind = HLL_TOK_NUMI;
                     if (parse_number_result.overflow) {
