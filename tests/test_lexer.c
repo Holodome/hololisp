@@ -371,7 +371,7 @@ test_lexer_parses_quote(void) {
     TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
-static void 
+static void
 test_lexer_stores_error_code_from_last_peek(void) {
     char buffer[4096];
     hll_lexer lexer = hll_lexer_create("...", buffer, sizeof(buffer));
@@ -421,10 +421,11 @@ test_lexer_reports_correct_column_numbers(void) {
     TEST_ASSERT(lexer.token_column == 8);
 }
 
-static void 
+static void
 test_lexer_reports_correct_line_numbers_at_their_start(void) {
     char buffer[4096];
-    hll_lexer lexer = hll_lexer_create("0\n1\n\n3\n\n\n6\n\n\n\n", buffer, sizeof(buffer));
+    hll_lexer lexer =
+        hll_lexer_create("0\n1\n\n3\n\n\n6\n\n\n\n", buffer, sizeof(buffer));
     hll_lex_result result = hll_lexer_peek(&lexer);
 
     TEST_ASSERT(result == HLL_LEX_OK);
@@ -453,9 +454,9 @@ test_lexer_reports_correct_line_numbers_at_their_start(void) {
     TEST_ASSERT(lexer.token_column == 0);
 }
 
-static void 
+static void
 test_lexer_reports_correct_columns_on_multiline_string(void) {
-    char const *source = 
+    char const *source =
         "hello world\n"
         "1 2 3\n"
         "\n"
@@ -511,6 +512,22 @@ test_lexer_reports_correct_columns_on_multiline_string(void) {
     TEST_ASSERT(lexer.token_column == 0);
 }
 
+static void
+test_lexer_reports_too_big_integer(void) {
+    char buffer[4096];
+    hll_lexer lexer =
+        hll_lexer_create("11111111111111111111111111111111111111111111111111",
+                         buffer, sizeof(buffer));
+
+    hll_lex_result result = hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_INT_TOO_BIG);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_NUMI);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
@@ -534,5 +551,6 @@ TEST_LIST = { TCASE(test_lexer_accepts_null_and_returns_eof),
               TCASE(test_lexer_stores_error_code_from_last_peek),
               TCASE(test_lexer_reports_correct_line_numbers_at_their_start),
               TCASE(test_lexer_reports_correct_columns_on_multiline_string),
+              TCASE(test_lexer_reports_too_big_integer),
 
               { NULL, NULL } };

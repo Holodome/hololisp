@@ -12,6 +12,7 @@ typedef enum {
     /// Symbol consisting entirely of dots (more than one). Common lisp
     /// considers such tokens invalid.
     HLL_LEX_ALL_DOT_SYMB = 0x2,
+    HLL_LEX_INT_TOO_BIG = 0x3,
 } hll_lex_result;
 
 /** Lisp lexer token kind. */

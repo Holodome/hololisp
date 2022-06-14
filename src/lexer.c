@@ -2,8 +2,9 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdbool.h>
 #include <string.h>
+
+#define MAX_ALLOWED_INT_VALUE (INT64_MAX / 10LL)
 
 char const *
 hll_lex_result_str(hll_lex_result result) {
@@ -18,6 +19,9 @@ hll_lex_result_str(hll_lex_result result) {
         break;
     case HLL_LEX_ALL_DOT_SYMB:
         str = "symbol consists of all dots";
+        break;
+    case HLL_LEX_INT_TOO_BIG:
+        str = "integer is too big";
         break;
     }
 
@@ -36,15 +40,21 @@ hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     return lex;
 }
 
-static bool
+static int
 is_codepoint_a_symbol(uint32_t codepoint) {
     static char const SYMB_CHARS[] = "+-*/@$%^&_=<>~.?![]{}";
     return isalnum(codepoint) || strchr(SYMB_CHARS, codepoint);
 }
 
-static bool
+typedef struct {
+    int is_valid;
+    int overflow;
+} parse_number_result;
+
+static parse_number_result
 try_to_parse_number(char const *buffer, int64_t *number) {
-    bool is_number = false;
+    parse_number_result result = { 0 };
+    int is_number = 0;
 
     char const *cursor = buffer;
     if (cursor) {
@@ -56,19 +66,23 @@ try_to_parse_number(char const *buffer, int64_t *number) {
             multiplier = -1;
         }
 
-        // TODO: Report overflow
-        int64_t result = 0;
+        int64_t value = 0;
         while (isdigit(*cursor)) {
-            result = result * 10 + (*cursor++ - '0');
-            is_number = true;
+            if (value >= MAX_ALLOWED_INT_VALUE) {
+                result.overflow = 1;
+            }
+
+            value = value * 10 + (*cursor++ - '0');
+            is_number = 1;
         }
 
         if (is_number && (is_number = (*cursor == 0))) {
-            *number = result * multiplier;
+            *number = value * multiplier;
+            result.is_valid = 1;
         }
     }
 
-    return is_number;
+    return result;
 }
 
 typedef struct {
@@ -197,8 +211,13 @@ hll_lexer_peek(hll_lexer *lexer) {
             } else {
                 // Now we perform checks
                 // TODO: don't like that we have to parse multpile times
-                if (try_to_parse_number(lexer->buffer, &lexer->token_int)) {
+                parse_number_result parse_number_result =
+                    try_to_parse_number(lexer->buffer, &lexer->token_int);
+                if (parse_number_result.is_valid) {
                     lexer->token_kind = HLL_TOK_NUMI;
+                    if (parse_number_result.overflow) {
+                        result = HLL_LEX_INT_TOO_BIG;
+                    }
                 } else {
                     int is_all_dots = 1;
                     for (size_t i = 0; i < eat_symb_res.length && is_all_dots;
