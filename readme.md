@@ -49,4 +49,26 @@ Code coverage can be collected if non-empty *COV* flag is passed to make:
 make test COV=1
 ```
 
+## Interface
+
+Program can be run in two modes: Interactive REPL traditional to lisp interprenters and executing scripts.
+To execute script pass its name to the program executable:
+
+```bash
+hololisp examples/game_of_life.lisp
+```
+
+Usual REPL session looks like this:
+
+```shell
+$ hololisp
+hololisp> (defvar x 100)
+x
+hololisp> x
+100
+hololisp> (+ x (* x 100))
+10100
+```
+
+Examples can be found in the *examples* folder.
 
