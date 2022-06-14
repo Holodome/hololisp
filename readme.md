@@ -49,7 +49,7 @@ Code coverage can be collected if non-empty *COV* flag is passed to make:
 make test COV=1
 ```
 
-## Interface
+## Usage
 
 Program can be run in two modes: Interactive REPL traditional to lisp interprenters and executing scripts.
 To execute script pass its name to the program executable:
