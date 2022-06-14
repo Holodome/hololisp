@@ -31,6 +31,7 @@ hll_lexer_create(char const *cursor, char *buffer, uint32_t buffer_size) {
     lex.cursor = cursor;
     lex.buffer = buffer;
     lex.buffer_size = buffer_size;
+    lex.line_start = cursor;
 
     return lex;
 }
@@ -129,12 +130,15 @@ hll_lexer_peek(hll_lexer *lexer) {
         lexer->token_kind = HLL_TOK_EOF;
     } else {
         is_finished = lexer->should_return_old;
+        if (lexer->should_return_old) {
+            result = lexer->old_result;
+        }
     }
-    // TODO: We have to store the error code from last peek
 
     while (!is_finished) {
-        uint8_t cp = *lexer->cursor;
-        lexer->token_start = lexer->cursor;
+        uint8_t cp = *(uint8_t *)lexer->cursor;
+        lexer->token_line = lexer->line;
+        lexer->token_column = lexer->cursor - lexer->line_start;
 
         //
         // EOF
@@ -221,7 +225,10 @@ hll_lexer_peek(hll_lexer *lexer) {
         }
     }
 
-    lexer->should_return_old = 1;
+    if (!lexer->should_return_old) {
+        lexer->should_return_old = 1;
+        lexer->old_result = result;
+    }
 
     return result;
 }

@@ -13,7 +13,7 @@ report_error(hll_read_result result, hll_reader *reader, char const *format,
     va_list args;
     va_start(args, format);
     fprintf(reader->ctx->file_outerr, "Reader error at %u:%u: %s:\n",
-            reader->lexer->line, reader->lexer->column,
+            reader->lexer->token_line, reader->lexer->token_column,
             hll_read_result_str(result));
     vfprintf(reader->ctx->file_outerr, format, args);
     fprintf(reader->ctx->file_outerr, "\n");

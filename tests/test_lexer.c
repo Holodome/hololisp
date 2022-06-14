@@ -371,6 +371,146 @@ test_lexer_parses_quote(void) {
     TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
+static void 
+test_lexer_stores_error_code_from_last_peek(void) {
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("...", buffer, sizeof(buffer));
+
+    hll_lex_result result = hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_ALL_DOT_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_DOT);
+
+    result = hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_ALL_DOT_SYMB);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_DOT);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+}
+
+static void
+test_lexer_reports_correct_column_numbers(void) {
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create(" (1 2 ) ", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 1);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 2);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 4);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 6);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 8);
+}
+
+static void 
+test_lexer_reports_correct_line_numbers_at_their_start(void) {
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create("0\n1\n\n3\n\n\n6\n\n\n\n", buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 1);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 3);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 6);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+    TEST_ASSERT(lexer.token_line == 10);
+    TEST_ASSERT(lexer.token_column == 0);
+}
+
+static void 
+test_lexer_reports_correct_columns_on_multiline_string(void) {
+    char const *source = 
+        "hello world\n"
+        "1 2 3\n"
+        "\n"
+        "\n"
+        " 1 2 3 \n";
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    hll_lex_result result = hll_lexer_peek(&lexer);
+
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 0);
+    TEST_ASSERT(lexer.token_column == 6);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 1);
+    TEST_ASSERT(lexer.token_column == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 1);
+    TEST_ASSERT(lexer.token_column == 2);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 1);
+    TEST_ASSERT(lexer.token_column == 4);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 4);
+    TEST_ASSERT(lexer.token_column == 1);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 4);
+    TEST_ASSERT(lexer.token_column == 3);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_line == 4);
+    TEST_ASSERT(lexer.token_column == 5);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+    TEST_ASSERT(lexer.token_line == 5);
+    TEST_ASSERT(lexer.token_column == 0);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
@@ -390,5 +530,9 @@ TEST_LIST = { TCASE(test_lexer_accepts_null_and_returns_eof),
               TCASE(test_lexer_parses_rparen),
               TCASE(test_lexer_reports_symbol_consisting_of_only_dots),
               TCASE(test_lexer_parses_quote),
+              TCASE(test_lexer_reports_correct_column_numbers),
+              TCASE(test_lexer_stores_error_code_from_last_peek),
+              TCASE(test_lexer_reports_correct_line_numbers_at_their_start),
+              TCASE(test_lexer_reports_correct_columns_on_multiline_string),
 
               { NULL, NULL } };
