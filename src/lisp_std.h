@@ -91,7 +91,8 @@ struct hll_obj;
     _HLL_STD_FUNC(defvar, "defvar")   \
     _HLL_STD_FUNC(setq, "setq")       \
     _HLL_STD_FUNC(rand, "rand")       \
-    _HLL_STD_FUNC(clrscr, "clrscr")       \
+    _HLL_STD_FUNC(clrscr, "clrscr")   \
+    _HLL_STD_FUNC(rem, "rem")   \
     _HLL_ENUMERATE_CAR_CDR
 
 #define _HLL_STD_FUNC(_name, ...) \

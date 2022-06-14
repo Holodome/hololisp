@@ -976,9 +976,24 @@ STD_FUNC(rand) {
     return hll_make_int(ctx, value);
 }
 
+STD_FUNC(rem) {
+    if (hll_list_length(args) != 2) {
+        hll_report_error(ctx, "rem expects exactly 2 arguments");
+        return hll_nil;
+    }
+    hll_obj *x = hll_eval(ctx, hll_unwrap_car(args));
+    hll_obj *y = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
+    if (x->kind != HLL_OBJ_INT || y->kind != HLL_OBJ_INT) {
+        hll_report_error(ctx, "rem expects integer arguments");
+        return hll_nil;
+    }
+    return hll_make_int(ctx, hll_unwrap_int(x)->value % hll_unwrap_int(y)->value);
+}
+
 STD_FUNC(clrscr) {
     (void)ctx;
     (void)args;
     printf("\033[2J");
     return hll_nil;
 }
+
