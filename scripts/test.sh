@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-unit_test_files=$(find build -type f -name "*.test" | xargs)
-test_script_files=$(find tests -type f -name "*.sh" | xargs)
+unit_test_files=$(find build -type f -name "*.test" -exec echo {} \+)
+test_script_files=$(find tests -type f -name "*.sh" -exec echo {} \+)
 
 failed_tests_file=/tmp/hololisp_tests_failed.txt
 true > "$failed_tests_file"
