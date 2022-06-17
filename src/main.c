@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "lexer.h"
 #include "lisp.h"
@@ -20,17 +19,12 @@ help(void) {
     printf(
         "OVERVIEW: toy lisp interprenter\n"
         "\n"
-        "USAGE: hololisp [opts] file...\n");
+        "USAGE: hololisp file\n");
 }
 
 static void
 version(void) {
     printf("hololisp version 0.0.1\n");
-}
-
-static int
-is_stdin_interactive(void) {
-    return isatty(STDIN_FILENO);
 }
 
 static bool

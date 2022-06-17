@@ -164,8 +164,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
 
 static hll_read_result
 read_quote(hll_reader *reader, hll_obj **head) {
-    hll_obj *symb = hll_find_symb(reader->ctx, HLL_BUILTIN_QUOTE_SYMB_NAME,
-                                  HLL_BUILTIN_QUOTE_SYMB_LEN);
+    hll_obj *symb = hll_find_symb(reader->ctx, "quote", sizeof("quote") - 1);
     hll_lexer_eat(reader->lexer);
 
     hll_obj *car = NULL;

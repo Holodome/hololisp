@@ -7,9 +7,6 @@
 struct hll_lexer;
 struct hll_ctx;
 
-#define HLL_BUILTIN_QUOTE_SYMB_NAME "quote"
-#define HLL_BUILTIN_QUOTE_SYMB_LEN (sizeof(HLL_BUILTIN_QUOTE_SYMB_NAME) - 1)
-
 /// Enumeration describing different lisp object kinds.
 typedef enum {
     /// Reserve 0 to make sure we don't forget to initialize kind.
@@ -102,9 +99,11 @@ typedef struct {
 
 /// Lisp context that is used when executing lisp expressions.
 typedef struct hll_ctx {
-    /// Control where stdout goes.
+    /// Controls where stdin comes from.
+    void *file_in;
+    /// Controls where stdout goes.
     void *file_out;
-    /// Control where stderr goes.
+    /// Controls where stderr goes.
     void *file_outerr;
     /// Symbols linked list.
     /// TODO: Make this a hash map?

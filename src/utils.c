@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>  // isatty
 
 hll_fs_io_result
 hll_open_file_(void **file, char const *filename, char const *mode) {
@@ -46,3 +47,9 @@ hll_close_file(void *file) {
 
     return result;
 }
+
+int
+is_stdin_interactive(void) {
+    return isatty(STDIN_FILENO);
+}
+
