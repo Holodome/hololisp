@@ -7,7 +7,10 @@ typedef enum {
     HLL_FS_IO_OK = 0x0,
     HLL_FS_IO_FOPEN_FAILED = 0x1,
     HLL_FS_IO_GET_SIZE_FAILED = 0x2,
-    HLL_FS_IO_CLOSE_FILE_FAILED = 0x3
+    HLL_FS_IO_CLOSE_FILE_FAILED = 0x3,
+    HLL_FS_IO_READ_FAILED = 0x4,
+    HLL_FS_IO_GET_FULL_PATH_FAILED = 0x4,
+    HLL_FS_IO_BUFFER_UNDERFLOW = 0x5,
 } hll_fs_io_result;
 
 /// @brief Wrapper around hll_open_file_. Should be used as public interface
@@ -35,13 +38,14 @@ hll_fs_io_result hll_get_file_size(void *file, size_t *size);
 /// @return Status code.
 hll_fs_io_result hll_close_file(void *file);
 
+hll_fs_io_result hll_get_full_file_path(char const *filename, char *buffer,
+                                        size_t buffer_size, size_t *path_length);
+
+hll_fs_io_result hll_read_entire_file(char const *filename, char **data,
+                                      size_t *data_size);
+
 // @breif Checks if stdin is in intercative mode (like terminal session)
 // @return 1 is interactive 0 otherwise
 int is_stdin_interactive(void);
-
-typedef struct {
-    int overflow;
-    int is_valid;
-} read_lisp_expression_result;
 
 #endif
