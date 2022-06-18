@@ -4,21 +4,20 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "error_reporter.h"
 #include "lexer.h"
 #include "lisp.h"
 
-static hll_read_result
-report_error(hll_read_result result, hll_reader *reader, char const *format,
-             ...) {
+static void
+report_error(hll_reader *reader, char const *format, ...) {
+    source_location loc;
+    loc.filename = reader->filename;
+    loc.line = reader->lexer->token_line;
+    loc.column = reader->lexer->token_column;
+
     va_list args;
     va_start(args, format);
-    fprintf(reader->ctx->file_outerr, "Reader error at %u:%u: %s:\n",
-            reader->lexer->token_line, reader->lexer->token_column,
-            hll_read_result_str(result));
-    vfprintf(reader->ctx->file_outerr, format, args);
-    fprintf(reader->ctx->file_outerr, "\n");
-
-    return result;
+    hll_report_error_verbosev(loc, format, args);
 }
 
 char const *
@@ -77,16 +76,16 @@ read_cons(hll_reader *reader, hll_obj **head) {
     // with right paren or dot, element and right paren Now check if we don't
     // have first element
     if (lex_result != HLL_LEX_OK) {
-        return report_error(
-            HLL_READ_LEX_FAILED, reader,
-            "Lexing failed when parsing first element of list: %s",
-            hll_lex_result_str(lex_result));
+        report_error(reader,
+                     "Lexing failed when parsing first element of list: %s",
+                     hll_lex_result_str(lex_result));
+        return HLL_READ_LEX_FAILED;
     } else if (lexer->token_kind == HLL_TOK_DOT) {
-        return report_error(HLL_READ_STRAY_DOT, reader,
-                            "Stray dot as first element of list");
+        report_error(reader, "Stray dot as first element of list");
+        return HLL_READ_STRAY_DOT;
     } else if (lexer->token_kind == HLL_TOK_EOF) {
-        return report_error(HLL_READ_MISSING_RPAREN, reader,
-                            "Missing closing paren (eof ecnountered)");
+        report_error(reader, "Missing closing paren (eof ecnountered)");
+        return HLL_READ_MISSING_RPAREN;
     } else if (lexer->token_kind == HLL_TOK_RPAREN) {
         // If we encounter right paren right away, do early return and skip
         // unneded stuff.
@@ -111,13 +110,13 @@ read_cons(hll_reader *reader, hll_obj **head) {
     for (;;) {
         lex_result = hll_lexer_peek(lexer);
         if (lex_result != HLL_LEX_OK) {
-            return report_error(
-                HLL_READ_LEX_FAILED, reader,
-                "Lexing failed when parsing element of list: %s",
-                hll_lex_result_str(lex_result));
+            report_error(reader,
+                         "Lexing failed when parsing element of list: %s",
+                         hll_lex_result_str(lex_result));
+            return HLL_READ_LEX_FAILED;
         } else if (lexer->token_kind == HLL_TOK_EOF) {
-            return report_error(HLL_READ_MISSING_RPAREN, reader,
-                                "Missing closing paren (eof ecnountered)");
+            report_error(reader, "Missing closing paren (eof ecnountered)");
+            return HLL_READ_MISSING_RPAREN;
         } else if (lexer->token_kind == HLL_TOK_RPAREN) {
             // Rparen means that we should exit.
             hll_lexer_eat(lexer);
@@ -134,15 +133,16 @@ read_cons(hll_reader *reader, hll_obj **head) {
             // Now peek what we expect to be right paren
             lex_result = hll_lexer_peek(lexer);
             if (lex_result != HLL_LEX_OK) {
-                return report_error(
-                    HLL_READ_LEX_FAILED, reader,
+                report_error(
+                    reader,
                     "Lexing failed when parsing element after dot of list: %s",
                     hll_lex_result_str(lex_result));
+                return HLL_READ_LEX_FAILED;
             }
 
             if (lexer->token_kind != HLL_TOK_RPAREN) {
-                return report_error(HLL_READ_MISSING_RPAREN, reader,
-                                    "Missing closing paren after dot");
+                report_error(reader, "Missing closing paren after dot");
+                return HLL_READ_MISSING_RPAREN;
             }
             hll_lexer_eat(lexer);
             *head = list_head;
@@ -185,14 +185,15 @@ hll_read(hll_reader *reader, hll_obj **head) {
     hll_lexer *lexer = reader->lexer;
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     if (lex_result != HLL_LEX_OK) {
-        return report_error(HLL_READ_LEX_FAILED, reader,
-                            "Lexing failed when reading object: %s",
-                            hll_lex_result_str(lex_result));
+        report_error(reader, "Lexing failed when reading object: %s",
+                     hll_lex_result_str(lex_result));
+        return HLL_READ_LEX_FAILED;
     } else {
         switch (lexer->token_kind) {
         default:
-            result = report_error(HLL_READ_UNEXPECTED_TOKEN, reader,
+            report_error(reader,
                                   "Unexpected token when reading object");
+            result = HLL_READ_UNEXPECTED_TOKEN;
             break;
         case HLL_TOK_EOF:
             result = HLL_READ_EOF;

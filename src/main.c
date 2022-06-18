@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "error_reporter.h"
 #include "lexer.h"
 #include "lisp.h"
 #include "lisp_std.h"
@@ -80,12 +81,14 @@ execute_file(char const *filename) {
         goto error;
     }
 
+    hll_init_error_reporter();
     hll_ctx ctx = hll_create_ctx();
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
     hll_lexer lexer = hll_lexer_create(file_contents, buffer, BUFFER_SIZE);
     hll_reader reader = hll_reader_create(&lexer, &ctx);
+    reader.filename = filename;
 
     for (;;) {
         hll_obj *obj;
@@ -111,6 +114,7 @@ error:
 
 static int
 execute_repl(void) {
+    hll_init_error_reporter();
     hll_ctx ctx = hll_create_ctx();
 
     enum { BUFFER_SIZE = 4096 };

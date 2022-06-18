@@ -30,14 +30,6 @@ hll_obj *hll_nil = &hll_nil_.head;
 static lisp_obj hll_true_ = { .head = { .kind = HLL_OBJ_TRUE, .size = 0 } };
 hll_obj *hll_true = &hll_true_.head;
 
-void
-hll_report_error(hll_ctx *ctx, char const *format, ...) {
-    va_list args;
-    va_start(args, format);
-    vfprintf(ctx->file_outerr, format, args);
-    fprintf(ctx->file_outerr, "\n");
-}
-
 hll_cons *
 hll_unwrap_cons(hll_obj *head) {
     lisp_obj *obj = (void *)head;

@@ -1,10 +1,10 @@
 #include "error_reporter.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #include "utils.h"
 
@@ -80,7 +80,7 @@ get_file_info(char const *filename) {
 
             *info_ptr = info;
         } else {
-            hll_report_error("Failed to read file '%s'", filename);
+            hll_report_error("INTERNAL: Failed to read file '%s'", filename);
         }
     }
 

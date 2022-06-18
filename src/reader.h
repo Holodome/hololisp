@@ -11,6 +11,8 @@ struct hll_obj;
 typedef struct hll_reader {
     struct hll_lexer *lexer;
     struct hll_ctx *ctx;
+
+    char const *filename;
 } hll_reader;
 
 /// Enumeration of result codes of reading.

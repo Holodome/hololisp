@@ -65,7 +65,7 @@ hll_get_full_file_path(char const *filename, char *buffer, size_t buffer_size,
         result = HLL_FS_IO_GET_FULL_PATH_FAILED;
     } else {
         size_t length = strlen(local_buffer);
-        if (length + 1 < buffer_size) {
+        if (length + 1 >= buffer_size) {
             result = HLL_FS_IO_BUFFER_UNDERFLOW;
         } else {
             *path_length = length;

@@ -8,6 +8,7 @@
 #include "lexer.h"
 #include "lisp.h"
 #include "reader.h"
+#include "error_reporter.h"
 
 #define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
 
@@ -74,7 +75,7 @@ hll_std_eval(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, "/= must have at least 1 argument");
+        hll_report_error("/= must have at least 1 argument");
         return hll_nil;
     }
 
@@ -83,7 +84,7 @@ hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "/= arguments must be integers");
+            hll_report_error("/= arguments must be integers");
             return hll_nil;
         }
 
@@ -95,7 +96,7 @@ hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
 
             hll_obj *num2 = hll_unwrap_car(obj2);
             if (num2->kind != HLL_OBJ_INT) {
-                hll_report_error(ctx, "/= arguments must be integers");
+                hll_report_error("/= arguments must be integers");
                 return hll_nil;
             }
 
@@ -111,7 +112,7 @@ hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, "= must have at least 1 argument");
+        hll_report_error("= must have at least 1 argument");
         return hll_nil;
     }
 
@@ -120,7 +121,7 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
     for (hll_obj *obj1 = args; obj1 != hll_nil; obj1 = hll_unwrap_cdr(obj1)) {
         hll_obj *num1 = hll_unwrap_car(obj1);
         if (num1->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "= arguments must be integers)");
+            hll_report_error("= arguments must be integers)");
             return hll_nil;
         }
 
@@ -132,7 +133,7 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
 
             hll_obj *num2 = hll_unwrap_car(obj2);
             if (num2->kind != HLL_OBJ_INT) {
-                hll_report_error(ctx, "= arguments must be integers");
+                hll_report_error("= arguments must be integers");
                 return hll_nil;
             }
 
@@ -148,7 +149,7 @@ hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, "> must have at least 1 argument");
+        hll_report_error("> must have at least 1 argument");
         return hll_nil;
     }
 
@@ -156,7 +157,7 @@ hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "> arguments must be integers");
+        hll_report_error("> arguments must be integers");
         return hll_nil;
     }
 
@@ -164,7 +165,7 @@ hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
          obj = hll_unwrap_cdr(obj)) {
         hll_obj *num = hll_unwrap_car(obj);
         if (num->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "> arguments must be integers");
+            hll_report_error("> arguments must be integers");
             return hll_nil;
         }
 
@@ -181,7 +182,7 @@ hll_std_int_gt(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, ">= must have at least 1 argument");
+        hll_report_error(">= must have at least 1 argument");
         return hll_nil;
     }
 
@@ -189,7 +190,7 @@ hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, ">= arguments must be integers");
+        hll_report_error(">= arguments must be integers");
         return hll_nil;
     }
 
@@ -197,7 +198,7 @@ hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
          obj = hll_unwrap_cdr(obj)) {
         hll_obj *num = hll_unwrap_car(obj);
         if (num->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, ">= arguments must be integers");
+            hll_report_error(">= arguments must be integers");
             return hll_nil;
         }
 
@@ -213,7 +214,7 @@ hll_std_int_ge(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, "< must have at least 1 argument");
+        hll_report_error("< must have at least 1 argument");
         return hll_nil;
     }
 
@@ -221,7 +222,7 @@ hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "< arguments must be integers");
+        hll_report_error("< arguments must be integers");
         return hll_nil;
     }
 
@@ -229,7 +230,7 @@ hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
          obj = hll_unwrap_cdr(obj)) {
         hll_obj *num = hll_unwrap_car(obj);
         if (num->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "< arguments must be integers");
+            hll_report_error("< arguments must be integers");
             return hll_nil;
         }
 
@@ -245,7 +246,7 @@ hll_std_int_lt(hll_ctx *ctx, hll_obj *args) {
 hll_obj *
 hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
     if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error(ctx, "<= must have at least 1 argument");
+        hll_report_error("<= must have at least 1 argument");
         return hll_nil;
     }
 
@@ -253,7 +254,7 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
 
     hll_obj *prev = hll_unwrap_car(args);
     if (prev->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "<= arguments must be integers");
+        hll_report_error("<= arguments must be integers");
         return hll_nil;
     }
 
@@ -261,7 +262,7 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
          obj = hll_unwrap_cdr(obj)) {
         hll_obj *num = hll_unwrap_car(obj);
         if (num->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "<= arguments must be integers");
+            hll_report_error("<= arguments must be integers");
             return hll_nil;
         }
 
@@ -277,7 +278,7 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
 static hll_obj *
 uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "c%sr must have exactly 1 argument", ops);
+        hll_report_error("c%sr must have exactly 1 argument", ops);
         return hll_nil;
     }
 
@@ -311,7 +312,7 @@ _HLL_ENUMERATE_CAR_CDR
 struct hll_obj *
 hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
     if (hll_list_length(args) < 2) {
-        hll_report_error(ctx, "If expects at least 2 arguments");
+        hll_report_error("If expects at least 2 arguments");
         return hll_nil;
     }
 
@@ -334,7 +335,7 @@ hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
 struct hll_obj *
 hll_std_cons(struct hll_ctx *ctx, struct hll_obj *args) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "cons expects exactly 2 arguments");
+        hll_report_error("cons expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -368,26 +369,26 @@ hll_std_list(struct hll_ctx *ctx, struct hll_obj *args) {
 struct hll_obj *
 hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
     if (hll_list_length(args) < 3) {
-        hll_report_error(ctx, "defun expects at least 2 arguments");
+        hll_report_error("defun expects at least 2 arguments");
         return hll_nil;
     }
 
     hll_obj *name = hll_unwrap_car(args);
     if (name->kind != HLL_OBJ_SYMB) {
-        hll_report_error(ctx, "defun name must be a symbol");
+        hll_report_error("defun name must be a symbol");
         return hll_nil;
     }
 
     hll_obj *param_list = hll_unwrap_car(hll_unwrap_cdr(args));
     if (param_list->kind != HLL_OBJ_CONS && param_list->kind != HLL_OBJ_NIL) {
-        hll_report_error(ctx, "defun parameter list must be a list");
+        hll_report_error("defun parameter list must be a list");
         return hll_nil;
     }
 
     for (hll_obj *param = param_list; param != hll_nil;
          param = hll_unwrap_cdr(param)) {
         if (hll_unwrap_car(param)->kind != HLL_OBJ_SYMB) {
-            hll_report_error(ctx, "defun paramter must be a symbol");
+            hll_report_error("defun paramter must be a symbol");
             return hll_nil;
         }
     }
@@ -403,20 +404,20 @@ hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
 hll_obj *
 hll_std_lambda(hll_ctx *ctx, hll_obj *args) {
     if (hll_list_length(args) < 2) {
-        hll_report_error(ctx, "lambda expects at least 2 arguments");
+        hll_report_error("lambda expects at least 2 arguments");
         return hll_nil;
     }
 
     hll_obj *param_list = hll_unwrap_car(args);
     if (param_list->kind != HLL_OBJ_CONS && param_list->kind != HLL_OBJ_NIL) {
-        hll_report_error(ctx, "lambda parameter list must be a list");
+        hll_report_error("lambda parameter list must be a list");
         return hll_nil;
     }
 
     for (hll_obj *param = param_list; param != hll_nil;
          param = hll_unwrap_cdr(param)) {
         if (hll_unwrap_car(param)->kind != HLL_OBJ_SYMB) {
-            hll_report_error(ctx, "lambda paramter must be a symbol");
+            hll_report_error("lambda paramter must be a symbol");
             return hll_nil;
         }
     }
@@ -437,19 +438,19 @@ hll_std_progn(hll_ctx *ctx, hll_obj *args) {
 
 STD_FUNC(nth) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "nth expects exactly 2 arguments");
+        hll_report_error("nth expects exactly 2 arguments");
         return hll_nil;
     }
 
     hll_obj *count_obj = hll_eval(ctx, hll_unwrap_car(args));
     if (count_obj->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "nth expects integer count");
+        hll_report_error("nth expects integer count");
         return hll_nil;
     }
 
     int64_t count = hll_unwrap_int(count_obj)->value;
     if (count < 0) {
-        hll_report_error(ctx, "nth expects nonnegative count");
+        hll_report_error("nth expects nonnegative count");
         return hll_nil;
     }
 
@@ -468,13 +469,13 @@ STD_FUNC(nth) {
 
 STD_FUNC(nthcdr) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "nthcdr expects exactly 2 arguments");
+        hll_report_error("nthcdr expects exactly 2 arguments");
         return hll_nil;
     }
 
     int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
     if (count < 0) {
-        hll_report_error(ctx, "nthcdr expects nonnegative count");
+        hll_report_error("nthcdr expects nonnegative count");
         return hll_nil;
     }
 
@@ -492,7 +493,7 @@ STD_FUNC(nthcdr) {
 
 STD_FUNC(setcar) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "setcar expects exactly 2 arguments");
+        hll_report_error("setcar expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -506,7 +507,7 @@ STD_FUNC(setcar) {
 
 STD_FUNC(setcdr) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "setcar expects exactly 2 arguments");
+        hll_report_error("setcar expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -520,7 +521,7 @@ STD_FUNC(setcdr) {
 
 STD_FUNC(any) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "any expects exactly 2 arguments");
+        hll_report_error("any expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -542,7 +543,7 @@ STD_FUNC(any) {
 
 STD_FUNC(map) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "map expects exactly 2 arguments");
+        hll_report_error("map expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -575,7 +576,7 @@ STD_FUNC(map) {
 
 STD_FUNC(when) {
     if (hll_list_length(args) < 1) {
-        hll_report_error(ctx, "when expects at least 1 argument");
+        hll_report_error("when expects at least 1 argument");
         return hll_nil;
     }
 
@@ -590,7 +591,7 @@ STD_FUNC(when) {
 
 STD_FUNC(unless) {
     if (hll_list_length(args) < 1) {
-        hll_report_error(ctx, "unless expects at least 1 argument");
+        hll_report_error("unless expects at least 1 argument");
         return hll_nil;
     }
 
@@ -618,7 +619,7 @@ STD_FUNC(or) {
 
 STD_FUNC(not ) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "not expects exactly 1 argument");
+        hll_report_error("not expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -645,7 +646,7 @@ STD_FUNC(and) {
 
 STD_FUNC(listp) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "listp expects exactly 1 argument");
+        hll_report_error("listp expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -660,8 +661,9 @@ STD_FUNC(listp) {
 }
 
 STD_FUNC(null) {
+    (void)ctx;
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "null expects exactly 1 argument");
+        hll_report_error("null expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -677,13 +679,13 @@ STD_FUNC(null) {
 
 STD_FUNC(minusp) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "minusp expects exactly 1 argument");
+        hll_report_error("minusp expects exactly 1 argument");
         return hll_nil;
     }
 
     hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "minusp expects integer as argument");
+        hll_report_error("minusp expects integer as argument");
         return hll_nil;
     }
 
@@ -698,13 +700,13 @@ STD_FUNC(minusp) {
 
 STD_FUNC(zerop) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "zerop expects exactly 1 argument");
+        hll_report_error("zerop expects exactly 1 argument");
         return hll_nil;
     }
 
     hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "zerp expects integer as argument");
+        hll_report_error("zerp expects integer as argument");
         return hll_nil;
     }
 
@@ -719,13 +721,13 @@ STD_FUNC(zerop) {
 
 STD_FUNC(plusp) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "plusp expects exactly 1 argument");
+        hll_report_error("plusp expects exactly 1 argument");
         return hll_nil;
     }
 
     hll_obj *obj = hll_eval(ctx, hll_unwrap_car(args));
     if (obj->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "plusp expects integer as argument");
+        hll_report_error("plusp expects integer as argument");
         return hll_nil;
     }
 
@@ -740,7 +742,7 @@ STD_FUNC(plusp) {
 
 STD_FUNC(numberp) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "numberp expects exactly 1 argument");
+        hll_report_error("numberp expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -756,7 +758,7 @@ STD_FUNC(numberp) {
 
 STD_FUNC(append) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "append expects exactly 2 arguments");
+        hll_report_error("append expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -773,7 +775,7 @@ STD_FUNC(append) {
 
 STD_FUNC(reverse) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "reverse expects exactly 1 argument");
+        hll_report_error("reverse expects exactly 1 argument");
         return hll_nil;
     }
 
@@ -796,7 +798,7 @@ STD_FUNC(min) {
     for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
         if (test->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "min expects integer arguments");
+            hll_report_error("min expects integer arguments");
             return hll_nil;
         }
 
@@ -816,7 +818,7 @@ STD_FUNC(max) {
     for (hll_obj *obj = args; obj != hll_nil; obj = hll_unwrap_cdr(obj)) {
         hll_obj *test = hll_eval(ctx, hll_unwrap_car(obj));
         if (test->kind != HLL_OBJ_INT) {
-            hll_report_error(ctx, "max expects integer arguments");
+            hll_report_error("max expects integer arguments");
             return hll_nil;
         }
 
@@ -833,13 +835,13 @@ STD_FUNC(max) {
 
 STD_FUNC(abs) {
     if (hll_list_length(args) != 1) {
-        hll_report_error(ctx, "abs expects exactly 1 argument");
+        hll_report_error("abs expects exactly 1 argument");
         return hll_nil;
     }
 
     hll_obj *obj = hll_unwrap_car(args);
     if (obj->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "abs expects integer as argument");
+        hll_report_error("abs expects integer as argument");
         return hll_nil;
     }
 
@@ -866,7 +868,7 @@ STD_FUNC(read) {
 
     // TODO: Overflow
     if (fgets(line_buffer, BUFFER_SIZE, stdin) == NULL) {
-        hll_report_error(ctx, "read failed to read from stdin");
+        hll_report_error("read failed to read from stdin");
         return hll_nil;
     }
 
@@ -884,7 +886,7 @@ STD_FUNC(read) {
 
 STD_FUNC(while) {
     if (hll_list_length(args) < 2) {
-        hll_report_error(ctx, "while expects at least 2 argument");
+        hll_report_error("while expects at least 2 argument");
         return hll_nil;
     }
 
@@ -899,7 +901,7 @@ STD_FUNC(while) {
 
 STD_FUNC(let) {
     if (hll_list_length(args) < 1) {
-        hll_report_error(ctx, "let* expects at least 1 argument");
+        hll_report_error("let* expects at least 1 argument");
         return hll_nil;
     }
 
@@ -927,7 +929,7 @@ STD_FUNC(let) {
 
 STD_FUNC(defvar) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "defvar expects exactly 2 arguments");
+        hll_report_error("defvar expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -939,7 +941,7 @@ STD_FUNC(defvar) {
          cons = hll_unwrap_cdr(cons)) {
         hll_obj *test = hll_unwrap_cons(cons)->car;
         if (hll_unwrap_cons(test)->car == name) {
-            hll_report_error(ctx, "defvar failed (variable is already defined");
+            hll_report_error("defvar failed (variable is already defined");
             return hll_nil;
         }
     }
@@ -952,7 +954,7 @@ STD_FUNC(defvar) {
 
 STD_FUNC(setq) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "setq expects exactly 2 arguments");
+        hll_report_error("setq expects exactly 2 arguments");
         return hll_nil;
     }
 
@@ -962,7 +964,7 @@ STD_FUNC(setq) {
 
     hll_obj *var = hll_find_var(ctx, name);
     if (var == hll_nil) {
-        hll_report_error(ctx, "setq failed: there is no such variable");
+        hll_report_error("setq failed: there is no such variable");
         return hll_nil;
     }
 
@@ -978,13 +980,13 @@ STD_FUNC(rand) {
 
 STD_FUNC(rem) {
     if (hll_list_length(args) != 2) {
-        hll_report_error(ctx, "rem expects exactly 2 arguments");
+        hll_report_error("rem expects exactly 2 arguments");
         return hll_nil;
     }
     hll_obj *x = hll_eval(ctx, hll_unwrap_car(args));
     hll_obj *y = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
     if (x->kind != HLL_OBJ_INT || y->kind != HLL_OBJ_INT) {
-        hll_report_error(ctx, "rem expects integer arguments");
+        hll_report_error("rem expects integer arguments");
         return hll_nil;
     }
     return hll_make_int(ctx, hll_unwrap_int(x)->value % hll_unwrap_int(y)->value);
