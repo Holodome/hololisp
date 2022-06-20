@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_ALLOWED_INT_VALUE (INT64_MAX / 10LL)
 

@@ -90,6 +90,18 @@ execute_file(char const *filename) {
     hll_reader reader = hll_reader_create(&lexer, &ctx);
     reader.filename = filename;
 
+#if 0
+    for (;;) {
+        hll_lex_result res = hll_lexer_peek(&lexer);
+        if (res || lexer.token_kind == HLL_TOK_EOF) {
+            break;
+        }
+
+        printf("%u: %u %u\n", lexer.token_kind, lexer.token_line,
+               lexer.token_column);
+        hll_lexer_eat(&lexer);
+    }
+#else
     for (;;) {
         hll_obj *obj;
         hll_read_result parse_result = hll_read(&reader, &obj);
@@ -102,6 +114,7 @@ execute_file(char const *filename) {
             hll_eval(&ctx, obj);
         }
     }
+#endif
 
     return EXIT_SUCCESS;
 close_file_error:

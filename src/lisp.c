@@ -271,7 +271,7 @@ hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
 
     switch (fn->kind) {
     default:
-        fprintf(stderr, "Unsupported callable type\n");
+        hll_report_error("Unsupported callable type\n");
         break;
     case HLL_OBJ_BIND:
         result = hll_unwrap_bind(fn)->bind(ctx, args);

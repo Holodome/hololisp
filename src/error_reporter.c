@@ -90,7 +90,7 @@ get_file_info(char const *filename) {
 static void
 report_message(FILE *out, char const *message_kind, char const *msg,
                va_list args) {
-    fprintf(out, "\033[1m%s: \033[1m", message_kind);
+    fprintf(out, "\033[1meval: %s: \033[1m", message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n");
 }
@@ -99,7 +99,7 @@ static void
 report_message_for_stdin(FILE *out, source_location loc,
                          char const *message_kind, char const *msg,
                          va_list args) {
-    fprintf(out, "\033[1mstdin:%u:%s: \033[1m", loc.column, message_kind);
+    fprintf(out, "\033[1mstdin:%u: %s: \033[1m", loc.column, message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n");
 }
@@ -110,7 +110,7 @@ report_message_with_source(FILE *out, char const *file_contents,
                            char const *message_kind, char const *msg,
                            va_list args) {
     char const *line_start = file_contents;
-    uint32_t line_counter = 1;
+    uint32_t line_counter = 0;
     while (line_counter < loc.line && line_start < file_eof) {
         if (*line_start == '\n') {
             ++line_counter;
@@ -132,12 +132,12 @@ report_message_with_source(FILE *out, char const *file_contents,
         ++col_counter;
     }
 
-    fprintf(out, "\033[1m%s:%u:%u: %s: \033[1m", loc.filename, loc.line,
-            col_counter, message_kind);
+    fprintf(out, "\033[1m%s:%u:%u: %s: \033[1m", loc.filename, loc.line + 1,
+            col_counter + 1, message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n%.*s\n", (int)(line_end - line_start), line_start);
-    if (col_counter != 1) {
-        fprintf(out, "%*c", col_counter - 1, ' ');
+    if (col_counter != 0) {
+        fprintf(out, "%*c", col_counter, ' ');
     }
     fprintf(out, "\033[32;1m^\033[0m\n");
 }

@@ -10,7 +10,7 @@
 
 static void
 report_error(hll_reader *reader, char const *format, ...) {
-    source_location loc;
+    source_location loc = { 0 };
     loc.filename = reader->filename;
     loc.line = reader->lexer->token_line;
     loc.column = reader->lexer->token_column;
