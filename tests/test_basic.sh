@@ -4,10 +4,12 @@ EXECUTABLE=./build/hololisp
 
 TMPFILE=/tmp/hololisp.lisp
 
+failed=0
+
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
-    exit 1
+    failed=1
 }
 
 run_test () {
@@ -122,3 +124,4 @@ run_test "defun" "15" "(defun f (x y z) (+ x y z)) (f 3 5 7)"
 run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
 
+exit $failed

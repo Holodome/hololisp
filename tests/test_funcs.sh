@@ -4,10 +4,12 @@ EXECUTABLE=./build/hololisp
 
 TMPFILE=/tmp/hololisp.lisp
 
+failed=0
+
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
-    # exit 1
+    failed=1
 }
 
 run_test () {
@@ -104,3 +106,5 @@ run_test "abs" "1" "(abs 1)"
 run_test "progn" "()" "(progn)"
 run_test "progn" "t" "(progn t)"
 run_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
+
+exit $failed

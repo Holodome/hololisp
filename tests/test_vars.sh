@@ -4,10 +4,12 @@ EXECUTABLE=./build/hololisp
 
 TMPFILE=/tmp/hololisp.lisp
 
+failed=0
+
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
-    # exit 1
+    failed=1
 }
 
 run_test () {
@@ -41,3 +43,5 @@ run_test "while with defvar and defq" "45" "(defvar i 0) \
     (setq sum (+ sum i)) \
     (setq i (+ i 1))) \
   sum"
+
+exit $failed

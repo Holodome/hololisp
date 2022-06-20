@@ -4,10 +4,12 @@ EXECUTABLE=./build/hololisp
 
 TMPFILE=/tmp/hololisp.lisp
 
+failed=0
+
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
-    exit 1
+    failed=1
 }
 
 run_test () {
@@ -55,3 +57,4 @@ run_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
 run_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
 run_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
 
+exit $failed
