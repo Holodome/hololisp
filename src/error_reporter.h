@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-typedef struct {
+typedef struct source_location {
     char const *filename;
     uint32_t line;
     uint32_t column;

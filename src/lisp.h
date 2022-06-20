@@ -7,25 +7,17 @@
 struct hll_lexer;
 struct hll_ctx;
 
-/// Enumeration describing different lisp object kinds.
+struct source_location;
+
 typedef enum {
-    /// Reserve 0 to make sure we don't forget to initialize kind.
     HLL_OBJ_NONE = 0x0,
-    /// Cons
     HLL_OBJ_CONS = 0x1,
-    /// Symbol
     HLL_OBJ_SYMB = 0x2,
-    /// NIL
     HLL_OBJ_NIL = 0x3,
-    /// Integer
     HLL_OBJ_INT = 0x4,
-    /// C binding function
     HLL_OBJ_BIND = 0x5,
-    /// Env frame
     HLL_OBJ_ENV = 0x6,
-    /// True
     HLL_OBJ_TRUE = 0x7,
-    /// Function
     HLL_OBJ_FUNC = 0x8,
 } hll_obj_kind;
 
@@ -42,68 +34,47 @@ typedef enum {
 /// internally via pointer arithmetic. If we want to lisp object according to
 /// its kind we can use hll_unwrap_... functions.
 typedef struct hll_obj {
-    /// Kind of object for identifying it.
     hll_obj_kind kind;
-    /// Size of body.
-    /// TODO: Do we need it here?
     size_t size;
 } hll_obj;
 
-/// Cons object.
 typedef struct {
-    /// A car.
     hll_obj *car;
-    /// A cdr.
     hll_obj *cdr;
 } hll_cons;
 
-/// Symbol object.
 typedef struct {
-    /// Symbol pointer.
     char const *symb;
-    /// Length of symbol.
     size_t length;
 } hll_symb;
 
-/// Function object.
 typedef struct {
-    /// Parameter list (their names).
     hll_obj *params;
-    /// Body statement list.
     hll_obj *body;
     /// Environment in which function is defined and which is used when
     /// executing it.
     hll_obj *env;
 } hll_func;
 
-/// Integer object.
 typedef struct {
-    /// Value.
     int64_t value;
 } hll_int;
 
-/// Environment frame contains information about current lexical scope.
 typedef struct {
     /// Pointer to parent scope frame.
     hll_obj *up;
-    /// Variable linked list.
     hll_obj *vars;
 } hll_env;
 
 typedef hll_obj *hll_bind_func(struct hll_ctx *ctx, hll_obj *args);
-/// C binding object.
+
 typedef struct {
-    /// Bind function.
     hll_bind_func *bind;
 } hll_bind;
 
-/// Lisp context that is used when executing lisp expressions.
 typedef struct hll_ctx {
-    /// Controls where stdin comes from.
     void *file_in;
-    /// Controls where stdout goes.
     void *file_out;
-    /// Controls where stderr goes.
     void *file_outerr;
     /// Symbols linked list.
     /// TODO: Make this a hash map?
@@ -112,10 +83,7 @@ typedef struct hll_ctx {
     hll_obj *env_stack;
 } hll_ctx;
 
-/// Global nil object.
-extern hll_obj *hll_nil;
-// Global true object.
-extern hll_obj *hll_true;
+/* struct source_location *hll_get_source_loc(hll_obj *obj); */
 
 hll_cons *hll_unwrap_cons(hll_obj *obj);
 hll_obj *hll_unwrap_car(hll_obj *obj);
@@ -127,6 +95,9 @@ hll_env *hll_unwrap_env(hll_obj *obj);
 hll_func *hll_unwrap_func(hll_obj *obj);
 
 hll_ctx hll_create_ctx(void);
+
+hll_obj *hll_make_nil(hll_ctx *ctx);
+hll_obj *hll_make_true(hll_ctx *ctx);
 
 hll_obj *hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr);
 

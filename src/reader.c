@@ -20,6 +20,26 @@ report_error(hll_reader *reader, char const *format, ...) {
     hll_report_error_verbosev(loc, format, args);
 }
 
+#if 0
+static source_location
+get_source_loc(hll_reader *reader) {
+    return (source_location){ .filename = reader->filename,
+                              .line = reader->lexer->token_line,
+                              .column = reader->lexer->token_column };
+}
+
+static void
+set_source_loc_(hll_obj *obj, source_location loc) {
+    *hll_get_source_loc(obj) = loc;
+}
+
+static void
+set_source_loc(hll_reader *reader, hll_obj *obj) {
+    source_location loc = get_source_loc(reader);
+    set_source_loc_(obj, loc);
+}
+#endif
+
 char const *
 hll_read_result_str(hll_read_result res) {
     char const *str = NULL;
@@ -71,6 +91,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     assert(lex_result == HLL_LEX_OK);
     assert(lexer->token_kind == HLL_TOK_LPAREN);
+    /* source_location list_start_loc = get_source_loc(reader); */
     lex_result = hll_lexer_eat_peek(lexer);
     // Now we epxect at least one list element followed by others ending either
     // with right paren or dot, element and right paren Now check if we don't
@@ -89,7 +110,8 @@ read_cons(hll_reader *reader, hll_obj **head) {
     } else if (lexer->token_kind == HLL_TOK_RPAREN) {
         // If we encounter right paren right away, do early return and skip
         // unneded stuff.
-        *head = hll_nil;
+        *head = hll_make_nil(ctx);
+        /* set_source_loc_(*head, list_start_loc); */
         hll_lexer_eat(lexer);
         return HLL_READ_OK;
     }
@@ -103,7 +125,8 @@ read_cons(hll_reader *reader, hll_obj **head) {
             return result;
         }
 
-        list_head = list_tail = hll_make_cons(ctx, car, hll_nil);
+        list_head = list_tail = hll_make_cons(ctx, car, hll_make_nil(ctx));
+        /* set_source_loc_(list_head, list_start_loc); */
     }
 
     // Now enter the loop of parsing other list elements.
@@ -155,8 +178,11 @@ read_cons(hll_reader *reader, hll_obj **head) {
             return result;
         }
 
-        hll_unwrap_cons(list_tail)->cdr = hll_make_cons(ctx, obj, hll_nil);
+        hll_unwrap_cons(list_tail)->cdr =
+            hll_make_cons(ctx, obj, hll_make_nil(ctx));
         list_tail = hll_unwrap_cons(list_tail)->cdr;
+        /* set_source_loc_(list_tail, */
+                        /* *hll_get_source_loc(hll_unwrap_car(list_tail))); */
     }
 
     assert(!"Unreachable");
@@ -171,8 +197,9 @@ read_quote(hll_reader *reader, hll_obj **head) {
     hll_read_result result = hll_read(reader, &car);
     if (result == HLL_READ_OK) {
         assert(car != NULL);
-        *head = hll_make_cons(reader->ctx, symb,
-                              hll_make_cons(reader->ctx, car, hll_nil));
+        *head = hll_make_cons(
+            reader->ctx, symb,
+            hll_make_cons(reader->ctx, car, hll_make_nil(reader->ctx)));
     }
 
     return result;
@@ -191,8 +218,7 @@ hll_read(hll_reader *reader, hll_obj **head) {
     } else {
         switch (lexer->token_kind) {
         default:
-            report_error(reader,
-                                  "Unexpected token when reading object");
+            report_error(reader, "Unexpected token when reading object");
             result = HLL_READ_UNEXPECTED_TOKEN;
             break;
         case HLL_TOK_EOF:

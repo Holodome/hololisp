@@ -163,7 +163,7 @@ test_binding(struct hll_ctx *ctx, struct hll_obj *args) {
     (void)ctx;
     (void)args;
     test_builtin_var = 100;
-    return hll_nil;
+    return hll_make_nil(ctx);
 }
 
 static void
@@ -188,7 +188,7 @@ test_lisp_eval_builtin_call(void) {
     test_builtin_var = 0;
     hll_obj *eval_result = hll_eval(&ctx, obj);
     TEST_ASSERT(test_builtin_var == 100);
-    TEST_ASSERT(eval_result == hll_nil);
+    TEST_ASSERT(eval_result->kind == HLL_OBJ_NIL);
 }
 
 static void

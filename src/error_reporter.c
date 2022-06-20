@@ -88,18 +88,27 @@ get_file_info(char const *filename) {
 }
 
 static void
-report_message_internal(FILE *out, char const *message_kind, char const *msg,
-                        va_list args) {
+report_message(FILE *out, char const *message_kind, char const *msg,
+               va_list args) {
     fprintf(out, "\033[1m%s: \033[1m", message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n");
 }
 
 static void
-report_message_internal_with_source(FILE *out, char const *file_contents,
-                                    char const *file_eof, source_location loc,
-                                    char const *message_kind, char const *msg,
-                                    va_list args) {
+report_message_for_stdin(FILE *out, source_location loc,
+                         char const *message_kind, char const *msg,
+                         va_list args) {
+    fprintf(out, "\033[1mstdin:%u:%s: \033[1m", loc.column, message_kind);
+    vfprintf(out, msg, args);
+    fprintf(out, "\033[0m\n");
+}
+
+static void
+report_message_with_source(FILE *out, char const *file_contents,
+                           char const *file_eof, source_location loc,
+                           char const *message_kind, char const *msg,
+                           va_list args) {
     char const *line_start = file_contents;
     uint32_t line_counter = 1;
     while (line_counter < loc.line && line_start < file_eof) {
@@ -136,7 +145,7 @@ report_message_internal_with_source(FILE *out, char const *file_contents,
 void
 hll_report_errorv(char const *format, va_list args) {
     CHECK_INITIALIZED;
-    report_message_internal(rep->out, ERROR_STRING, format, args);
+    report_message(rep->out, ERROR_STRING, format, args);
 }
 
 void
@@ -150,11 +159,16 @@ void
 hll_report_error_verbosev(source_location loc, char const *format,
                           va_list args) {
     CHECK_INITIALIZED;
-    file_info *file = get_file_info(loc.filename);
-    if (file != NULL) {
-        report_message_internal_with_source(rep->out, file->data,
-                                            file->data + file->data_size, loc,
-                                            ERROR_STRING, format, args);
+    if (!loc.filename) {
+        report_message_for_stdin(rep->out, loc, ERROR_STRING, format, args);
+    } else {
+        file_info *file = get_file_info(loc.filename);
+        if (file != NULL) {
+            loc.filename = file->full_name;
+            report_message_with_source(rep->out, file->data,
+                                      file->data + file->data_size, loc,
+                                      ERROR_STRING, format, args);
+        }
     }
 }
 

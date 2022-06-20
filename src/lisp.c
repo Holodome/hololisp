@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "error_reporter.h"
 #include "lisp_gc.h"
 #include "lisp_std.h"
 
@@ -29,6 +30,18 @@ hll_obj *hll_nil = &hll_nil_.head;
 
 static lisp_obj hll_true_ = { .head = { .kind = HLL_OBJ_TRUE, .size = 0 } };
 hll_obj *hll_true = &hll_true_.head;
+
+hll_obj *
+hll_make_nil(hll_ctx *ctx) {
+    (void)ctx;
+    return hll_nil;
+}
+
+hll_obj *
+hll_make_true(hll_ctx *ctx) {
+    (void)ctx;
+    return hll_true;
+}
 
 hll_cons *
 hll_unwrap_cons(hll_obj *head) {
