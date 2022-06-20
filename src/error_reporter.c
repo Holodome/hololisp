@@ -166,8 +166,8 @@ hll_report_error_verbosev(source_location loc, char const *format,
         if (file != NULL) {
             loc.filename = file->full_name;
             report_message_with_source(rep->out, file->data,
-                                      file->data + file->data_size, loc,
-                                      ERROR_STRING, format, args);
+                                       file->data + file->data_size, loc,
+                                       ERROR_STRING, format, args);
         }
     }
 }
@@ -177,4 +177,41 @@ hll_report_error_verbose(source_location loc, char const *format, ...) {
     va_list args;
     va_start(args, format);
     hll_report_error_verbosev(loc, format, args);
+}
+
+void
+hll_report_notev(char const *format, va_list args) {
+    CHECK_INITIALIZED;
+    report_message(rep->out, NOTE_STRING, format, args);
+}
+
+void
+hll_report_note(char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    hll_report_notev(format, args);
+}
+
+void
+hll_report_note_verbosev(source_location loc, char const *format,
+                         va_list args) {
+    CHECK_INITIALIZED;
+    if (!loc.filename) {
+        report_message_for_stdin(rep->out, loc, NOTE_STRING, format, args);
+    } else {
+        file_info *file = get_file_info(loc.filename);
+        if (file != NULL) {
+            loc.filename = file->full_name;
+            report_message_with_source(rep->out, file->data,
+                                       file->data + file->data_size, loc,
+                                       NOTE_STRING, format, args);
+        }
+    }
+}
+
+void
+hll_report_note_verbose(source_location loc, char const *format, ...) {
+    va_list args;
+    va_start(args, format);
+    hll_report_note_verbosev(loc, format, args);
 }

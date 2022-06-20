@@ -30,4 +30,21 @@ void hll_report_error_verbose(source_location loc, char const *format, ...)
 #endif
     ;
 
+void hll_report_notev(char const *format, va_list args);
+
+void hll_report_note(char const *format, ...)
+#if defined(__GNUC__) || defined(__clang__)
+    __attribute__((format(printf, 1, 2)))
+#endif
+    ;
+
+void hll_report_note_verbosev(source_location loc, char const *format,
+                              va_list args);
+
+void hll_report_note_verbose(source_location loc, char const *format, ...)
+#if defined(__GNUC__) || defined(__clang__)
+    __attribute__((format(printf, 2, 3)))
+#endif
+    ;
+
 #endif
