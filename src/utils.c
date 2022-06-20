@@ -1,12 +1,17 @@
 #include "utils.h"
 
+#define _POSIX_C_SOURCE 1
+#define _POSIX_SOURCE 1
+#define _GNU_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  // isatty
-#define _POSIX_C_SOURCE 1
-#define _POSIX_SOURCE 1
+#include <unistd.h>  
 #include <limits.h>
+#ifdef __linux__
+#include <linux/limits.h>
+#endif 
 
 hll_fs_io_result
 hll_open_file_(void **file, char const *filename, char const *mode) {
