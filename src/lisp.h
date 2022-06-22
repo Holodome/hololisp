@@ -77,13 +77,10 @@ typedef struct hll_ctx {
     void *file_out;
     void *file_outerr;
     /// Symbols linked list.
-    /// TODO: Make this a hash map?
     hll_obj *symbols;
     /// Current executing frame stack.
     hll_obj *env_stack;
 } hll_ctx;
-
-/* struct source_location *hll_get_source_loc(hll_obj *obj); */
 
 hll_cons *hll_unwrap_cons(hll_obj *obj);
 hll_obj *hll_unwrap_car(hll_obj *obj);
@@ -98,40 +95,28 @@ hll_ctx hll_create_ctx(void);
 
 hll_obj *hll_make_nil(hll_ctx *ctx);
 hll_obj *hll_make_true(hll_ctx *ctx);
-
 hll_obj *hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr);
-
 hll_obj *hll_make_acons(hll_ctx *ctx, hll_obj *x, hll_obj *y, hll_obj *a);
-
 hll_obj *hll_make_symb(hll_ctx *ctx, char const *symb, size_t length);
-
 hll_obj *hll_make_int(hll_ctx *ctx, int64_t value);
-
 hll_obj *hll_make_bind(hll_ctx *ctx, hll_bind_func *bind);
-
 hll_obj *hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params,
                        hll_obj *body);
-
 hll_obj *hll_make_env(hll_ctx *ctx, hll_obj *up);
+
+hll_obj *hll_find_symb(hll_ctx *ctx, char const *symb, size_t length);
+hll_obj *hll_find_var(hll_ctx *ctx, hll_obj *car);
 
 void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
-
-size_t hll_list_length(hll_obj *obj);
-
-hll_obj *hll_find_symb(hll_ctx *ctx, char const *symb, size_t length);
-
-hll_obj *hll_find_var(hll_ctx *ctx, hll_obj *car);
-
 void hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value);
 
+hll_obj *hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);
 hll_obj *hll_eval(hll_ctx *ctx, hll_obj *obj);
-
 void hll_print(void *file, hll_obj *obj);
 
-hll_obj *hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);
-
 void hll_dump_object_desc(void *file, hll_obj *object);
+size_t hll_list_length(hll_obj *obj);
 
 #endif
 
