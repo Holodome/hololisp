@@ -6,7 +6,7 @@
 
 struct hll_obj *
 hll_alloc(size_t body_size, uint32_t kind) {
-    hll_obj *head = malloc(sizeof(hll_obj) + body_size);
+    hll_obj *head = calloc(1, sizeof(hll_obj) + body_size);
     head->kind = kind;
     head->size = body_size;
 

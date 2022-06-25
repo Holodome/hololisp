@@ -119,7 +119,7 @@ report_message_with_source(FILE *out, char const *file_contents,
     }
 
     char const *line_end = line_start + 1;
-    while (*line_end != '\n' && line_end != file_eof) {
+    while (*line_end != '\n' && line_end < file_eof) {
         ++line_end;
     }
 

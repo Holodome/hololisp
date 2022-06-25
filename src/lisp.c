@@ -312,8 +312,11 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
     case HLL_OBJ_SYMB: {
         hll_obj *var = hll_find_var(ctx, obj);
         if (var == NULL) {
+            hll_dump_object_desc(stderr, obj);
+            hll_dump_object_desc(stderr, ctx->env_stack);
             fprintf(stderr, "Undefined variable '%s'\n",
                     hll_unwrap_symb(obj)->symb);
+            assert(0);
         } else {
             result = hll_unwrap_cons(var)->cdr;
         }
@@ -362,9 +365,9 @@ hll_create_ctx(void) {
 #define _HLL_STD_FUNC(_name, _str) BIND(hll_std_##_name, _str);
     _HLL_ENUMERATE_STD_FUNCS
 #undef _HLL_STD_FUNC
-    hll_unwrap_env(ctx.env_stack)->vars =
-        hll_make_acons(&ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_true,
-                       hll_unwrap_env(ctx.env_stack)->vars);
+    hll_unwrap_env(ctx.env_stack)->vars = hll_make_acons(
+        &ctx, hll_find_symb(&ctx, STR_LEN("t")), hll_make_true(&ctx),
+        hll_unwrap_env(ctx.env_stack)->vars);
 #undef _HLL_CAR_CDR
 #undef BIND
 #undef STR_LEN
