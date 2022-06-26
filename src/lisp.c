@@ -31,6 +31,41 @@ hll_obj *hll_nil = &hll_nil_.head;
 static lisp_obj hll_true_ = { .head = { .kind = HLL_OBJ_TRUE, .size = 0 } };
 hll_obj *hll_true = &hll_true_.head;
 
+char const *
+hll_get_obj_kind_str(hll_obj_kind kind) {
+    char const *result = NULL;
+    switch (kind) {
+    default:
+        break;
+    case HLL_OBJ_CONS:
+        result = "cons";
+        break;
+    case HLL_OBJ_SYMB:
+        result = "symb";
+        break;
+    case HLL_OBJ_NIL:
+        result = "nil";
+        break;
+    case HLL_OBJ_INT:
+        result = "int";
+        break;
+    case HLL_OBJ_BIND:
+        result = "c binding";
+        break;
+    case HLL_OBJ_ENV:
+        result = "env";
+        break;
+    case HLL_OBJ_TRUE:
+        result = "true";
+        break;
+    case HLL_OBJ_FUNC:
+        result = "func";
+        break;
+    }
+
+    return result;
+}
+
 hll_obj *
 hll_make_nil(hll_ctx *ctx) {
     (void)ctx;

@@ -12,96 +12,123 @@
 
 #define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
 
-hll_obj *
-hll_std_print(hll_ctx *ctx, hll_obj *args) {
+#define ITER(_obj, _head)                                  \
+    for (hll_obj *_obj = _head; _obj->kind != HLL_OBJ_NIL; \
+         _obj = hll_unwrap_cdr(_obj))
+
+#define CHECK_TYPE(_obj, _kind)                                             \
+    do {                                                                    \
+        if (!hll_is_error_reported() && (_obj)->kind != (_kind)) {          \
+            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_"))); \
+            hll_report_error("%s arguments must be of type %s (got %s)",    \
+                             __func__ + strlen("hll_std_"),                 \
+                             hll_get_obj_kind_str(_kind),                   \
+                             hll_get_obj_kind_str((_obj)->kind));           \
+            return hll_make_nil(ctx);                                       \
+        }                                                                   \
+    } while (0)
+
+#define CHECK_HAS_ATLEAST_1_ARG                                             \
+    do {                                                                    \
+        if (!hll_is_error_reported() && args->kind != HLL_OBJ_CONS) {       \
+            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_"))); \
+            hll_report_error("%s must have at least 1 argument",            \
+                             __func__ + strlen("hll_std_"));                \
+            return hll_make_nil(ctx);                                       \
+        }                                                                   \
+    } while (0)
+
+#define CHECK_HAS_1_ARG                                                      \
+    do {                                                                     \
+        if (!hll_is_error_reported() &&                                      \
+            (args->kind != HLL_OBJ_CONS ||                                   \
+             hll_unwrap_cdr(args)->kind != HLL_OBJ_NIL)) {                   \
+            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_")));  \
+            hll_report_error("%s must have at exactly 1 argument (got %zu)", \
+                             __func__ + strlen("hll_std_"),                  \
+                             hll_list_length(args));                         \
+            return hll_make_nil(ctx);                                        \
+        }                                                                    \
+    } while (0)
+
+STD_FUNC(print) {
     FILE *f = ctx->file_out;
     hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
     fprintf(f, "\n");
     return hll_make_nil(ctx);
 }
 
-hll_obj *
-hll_std_add(hll_ctx *ctx, hll_obj *args) {
+STD_FUNC(add) {
     int64_t result = 0;
-    for (hll_obj *obj = args; obj->kind != HLL_OBJ_NIL;
-         obj = hll_unwrap_cdr(obj)) {
-        result += hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
+    ITER(obj, args) {
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(obj));
+        CHECK_TYPE(value, HLL_OBJ_INT);
+        result += hll_unwrap_int(value)->value;
     }
     return hll_make_int(ctx, result);
 }
 
-hll_obj *
-hll_std_sub(hll_ctx *ctx, hll_obj *args) {
-    int64_t result =
-        hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
-    for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj->kind != HLL_OBJ_NIL;
-         obj = hll_unwrap_cdr(obj)) {
-        result -= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
+STD_FUNC(sub) {
+    CHECK_HAS_ATLEAST_1_ARG;
+    hll_obj *first = hll_eval(ctx, hll_unwrap_car(args));
+    CHECK_TYPE(first, HLL_OBJ_INT);
+    int64_t result = hll_unwrap_int(first)->value;
+    ITER(obj, hll_unwrap_cdr(args)) {
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(obj));
+        CHECK_TYPE(value, HLL_OBJ_INT);
+        result -= hll_unwrap_int(value)->value;
     }
     return hll_make_int(ctx, result);
 }
 
-hll_obj *
-hll_std_div(hll_ctx *ctx, hll_obj *args) {
-    int64_t result =
-        hll_unwrap_int(hll_eval(ctx, hll_unwrap_cons(args)->car))->value;
-
-    for (hll_obj *obj = hll_unwrap_cons(args)->cdr; obj->kind != HLL_OBJ_NIL;
-         obj = hll_unwrap_cdr(obj)) {
-        result /= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
+STD_FUNC(div) {
+    CHECK_HAS_ATLEAST_1_ARG;
+    hll_obj *first = hll_eval(ctx, hll_unwrap_car(args));
+    CHECK_TYPE(first, HLL_OBJ_INT);
+    int64_t result = hll_unwrap_int(first)->value;
+    ITER(obj, hll_unwrap_cdr(args)) {
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(obj));
+        CHECK_TYPE(value, HLL_OBJ_INT);
+        result /= hll_unwrap_int(value)->value;
     }
     return hll_make_int(ctx, result);
 }
 
-hll_obj *
-hll_std_mul(hll_ctx *ctx, hll_obj *args) {
+STD_FUNC(mul) {
     int64_t result = 1;
-    for (hll_obj *obj = args; obj->kind != HLL_OBJ_NIL;
-         obj = hll_unwrap_cdr(obj)) {
-        result *= hll_unwrap_int(hll_eval(ctx, hll_unwrap_car(obj)))->value;
+    ITER(obj, args) {
+        hll_obj *value = hll_eval(ctx, hll_unwrap_car(obj));
+        CHECK_TYPE(value, HLL_OBJ_INT);
+        result *= hll_unwrap_int(value)->value;
     }
     return hll_make_int(ctx, result);
 }
 
-hll_obj *
-hll_std_quote(hll_ctx *ctx, hll_obj *args) {
-    (void)ctx;
+STD_FUNC(quote) {
+    CHECK_HAS_1_ARG;
     return hll_unwrap_cons(args)->car;
 }
 
-hll_obj *
-hll_std_eval(hll_ctx *ctx, hll_obj *args) {
-    return hll_eval(ctx, hll_eval(ctx, hll_unwrap_cons(args)->car));
+STD_FUNC(eval) {
+    CHECK_HAS_1_ARG;
+    return hll_eval(ctx, hll_eval(ctx, hll_unwrap_car(args)));
 }
 
-hll_obj *
-hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
-    if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error("/= must have at least 1 argument");
-        return hll_make_nil(ctx);
-    }
+STD_FUNC(int_ne) {
+    CHECK_HAS_ATLEAST_1_ARG;
 
     args = hll_std_list(ctx, args);
-
-    for (hll_obj *obj1 = args; obj1->kind != HLL_OBJ_NIL;
-         obj1 = hll_unwrap_cdr(obj1)) {
+    ITER(obj1, args) {
         hll_obj *num1 = hll_unwrap_car(obj1);
-        if (num1->kind != HLL_OBJ_INT) {
-            hll_report_error("/= arguments must be integers");
-            return hll_make_nil(ctx);
-        }
+        CHECK_TYPE(num1, HLL_OBJ_INT);
 
-        for (hll_obj *obj2 = hll_unwrap_cdr(obj1); obj2->kind != HLL_OBJ_NIL;
-             obj2 = hll_unwrap_cdr(obj2)) {
+        ITER(obj2, hll_unwrap_cdr(obj1)) {
             if (obj1 == obj2) {
                 continue;
             }
 
             hll_obj *num2 = hll_unwrap_car(obj2);
-            if (num2->kind != HLL_OBJ_INT) {
-                hll_report_error("/= arguments must be integers");
-                return hll_make_nil(ctx);
-            }
+            CHECK_TYPE(num2, HLL_OBJ_INT);
 
             if (hll_unwrap_int(num1)->value == hll_unwrap_int(num2)->value) {
                 return hll_make_nil(ctx);
@@ -114,32 +141,20 @@ hll_std_int_ne(hll_ctx *ctx, hll_obj *args) {
 
 hll_obj *
 hll_std_int_eq(hll_ctx *ctx, hll_obj *args) {
-    if (args->kind != HLL_OBJ_CONS) {
-        hll_report_error("= must have at least 1 argument");
-        return hll_make_nil(ctx);
-    }
+    CHECK_HAS_ATLEAST_1_ARG;
 
     args = hll_std_list(ctx, args);
-
-    for (hll_obj *obj1 = args; obj1->kind != HLL_OBJ_NIL;
-         obj1 = hll_unwrap_cdr(obj1)) {
+    ITER(obj1, args) {
         hll_obj *num1 = hll_unwrap_car(obj1);
-        if (num1->kind != HLL_OBJ_INT) {
-            hll_report_error("= arguments must be integers)");
-            return hll_make_nil(ctx);
-        }
+        CHECK_TYPE(num1, HLL_OBJ_INT);
 
-        for (hll_obj *obj2 = hll_unwrap_cdr(obj1); obj2->kind != HLL_OBJ_NIL;
-             obj2 = hll_unwrap_cdr(obj2)) {
+        ITER(obj2, hll_unwrap_cdr(obj1)) {
             if (obj1 == obj2) {
                 continue;
             }
 
             hll_obj *num2 = hll_unwrap_car(obj2);
-            if (num2->kind != HLL_OBJ_INT) {
-                hll_report_error("= arguments must be integers");
-                return hll_make_nil(ctx);
-            }
+            CHECK_TYPE(num2, HLL_OBJ_INT);
 
             if (hll_unwrap_int(num1)->value != hll_unwrap_int(num2)->value) {
                 return hll_make_nil(ctx);

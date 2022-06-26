@@ -21,6 +21,8 @@ typedef enum {
     HLL_OBJ_FUNC = 0x8,
 } hll_obj_kind;
 
+char const *hll_get_obj_kind_str(hll_obj_kind kind);
+
 /// All lisp objects are represented in abstract hierarchy, similar to
 /// inheritance. Internally lisp object are located in memory as
 /// *hll_obj* and body right after that, whilst total size of object
