@@ -490,3 +490,4 @@ build/
 *.gcno
 codecov
 cov.json
+.ccls-cache
