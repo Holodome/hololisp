@@ -306,7 +306,7 @@ hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
 
     switch (fn->kind) {
     default:
-        hll_report_error("Unsupported callable type\n");
+        hll_report_error(ctx->reporter, "Unsupported callable type\n");
         break;
     case HLL_OBJ_BIND:
         result = hll_unwrap_bind(fn)->bind(ctx, args);
@@ -347,11 +347,8 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
     case HLL_OBJ_SYMB: {
         hll_obj *var = hll_find_var(ctx, obj);
         if (var == NULL) {
-            hll_dump_object_desc(stderr, obj);
-            hll_dump_object_desc(stderr, ctx->env_stack);
-            fprintf(stderr, "Undefined variable '%s'\n",
-                    hll_unwrap_symb(obj)->symb);
-            assert(0);
+            hll_report_error(ctx->reporter, "Undefined variable '%s'\n",
+                             hll_unwrap_symb(obj)->symb);
         } else {
             result = hll_unwrap_cons(var)->cdr;
         }
@@ -410,6 +407,7 @@ hll_create_ctx(void) {
     return ctx;
 }
 
+#ifdef HLL_DELC
 void
 hll_dump_object_desc(void *file, hll_obj *obj) {
     switch (obj->kind) {
@@ -453,3 +451,4 @@ hll_dump_object_desc(void *file, hll_obj *obj) {
         break;
     }
 }
+#endif

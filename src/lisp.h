@@ -4,10 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ext.h"
+
 struct hll_lexer;
 struct hll_ctx;
-
-struct source_location;
+struct hll_error_reporter;
 
 typedef enum {
     HLL_OBJ_NONE = 0x0,
@@ -82,43 +83,94 @@ typedef struct hll_ctx {
     hll_obj *symbols;
     /// Current executing frame stack.
     hll_obj *env_stack;
+
+    struct hll_error_reporter *reporter;
 } hll_ctx;
 
+HLL_DECL
 hll_cons *hll_unwrap_cons(hll_obj *obj);
+
+HLL_DECL
 hll_obj *hll_unwrap_car(hll_obj *obj);
+
+HLL_DECL
 hll_obj *hll_unwrap_cdr(hll_obj *obj);
+
+HLL_DECL
 hll_symb *hll_unwrap_symb(hll_obj *obj);
+
+HLL_DECL
 hll_int *hll_unwrap_int(hll_obj *obj);
+
+HLL_DECL
 hll_bind *hll_unwrap_bind(hll_obj *obj);
+
+HLL_DECL
 hll_env *hll_unwrap_env(hll_obj *obj);
+
+HLL_DECL
 hll_func *hll_unwrap_func(hll_obj *obj);
 
+HLL_DECL
 hll_ctx hll_create_ctx(void);
 
+HLL_DECL
 hll_obj *hll_make_nil(hll_ctx *ctx);
+
+HLL_DECL
 hll_obj *hll_make_true(hll_ctx *ctx);
+
+HLL_DECL
 hll_obj *hll_make_cons(hll_ctx *ctx, hll_obj *car, hll_obj *cdr);
+
+HLL_DECL
 hll_obj *hll_make_acons(hll_ctx *ctx, hll_obj *x, hll_obj *y, hll_obj *a);
+
+HLL_DECL
 hll_obj *hll_make_symb(hll_ctx *ctx, char const *symb, size_t length);
+
+HLL_DECL
 hll_obj *hll_make_int(hll_ctx *ctx, int64_t value);
+
+HLL_DECL
 hll_obj *hll_make_bind(hll_ctx *ctx, hll_bind_func *bind);
+
+HLL_DECL
 hll_obj *hll_make_func(hll_ctx *ctx, hll_obj *env, hll_obj *params,
                        hll_obj *body);
+
+HLL_DECL
 hll_obj *hll_make_env(hll_ctx *ctx, hll_obj *up);
 
+HLL_DECL
 hll_obj *hll_find_symb(hll_ctx *ctx, char const *symb, size_t length);
+
+HLL_DECL
 hll_obj *hll_find_var(hll_ctx *ctx, hll_obj *car);
 
+HLL_DECL
 void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
+
+HLL_DECL
 void hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value);
 
+HLL_DECL
 hll_obj *hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);
+
+HLL_DECL
 hll_obj *hll_eval(hll_ctx *ctx, hll_obj *obj);
+
+HLL_DECL
 void hll_print(void *file, hll_obj *obj);
 
-void hll_dump_object_desc(void *file, hll_obj *object);
+HLL_DECL
 size_t hll_list_length(hll_obj *obj);
+
+#ifdef HLL_DEBUG
+HLL_DECL
+void hll_dump_object_desc(void *file, hll_obj *object); 
+#endif 
 
 #endif
 
