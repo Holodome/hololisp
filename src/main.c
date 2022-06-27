@@ -81,8 +81,9 @@ execute_file(char const *filename) {
         goto error;
     }
 
-    hll_init_error_reporter();
-    hll_ctx ctx = hll_create_ctx();
+    hll_error_reporter reporter = { 0 };
+    hll_init_error_reporter(&reporter);
+    hll_ctx ctx = hll_create_ctx(&reporter);
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
@@ -127,8 +128,9 @@ error:
 
 static int
 execute_repl(void) {
-    hll_init_error_reporter();
-    hll_ctx ctx = hll_create_ctx();
+    hll_error_reporter reporter = { 0 };
+    hll_init_error_reporter(&reporter);
+    hll_ctx ctx = hll_create_ctx(&reporter);
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];

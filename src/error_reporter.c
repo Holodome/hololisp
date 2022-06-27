@@ -10,6 +10,7 @@
 
 #define ERROR_STRING "\033[31;1merror\033[0m"
 #define NOTE_STRING "\033[90;1mnote\033[1m"
+
 #define CHECK_INITIALIZED assert(reporter->is_initialized)
 
 typedef struct file_info {
@@ -21,6 +22,16 @@ typedef struct file_info {
     char const *data;
     size_t data_size;
 } file_info;
+
+hll_error_reporter *
+hll_get_empty_reporter(void) {
+    static hll_error_reporter rep = { 0 };
+    if (!rep.is_initialized) {
+        rep.out = tmpfile();
+        rep.is_initialized = 1;
+    }
+    return &rep;
+}
 
 void
 hll_init_error_reporter(hll_error_reporter *reporter) {

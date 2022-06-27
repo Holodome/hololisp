@@ -8,20 +8,20 @@
 #include "lexer.h"
 #include "lisp.h"
 
-static source_location
+static hll_source_location
 get_source_loc(hll_reader *reader) {
-    return (source_location){ .filename = reader->filename,
-                              .line = reader->lexer->token_line,
-                              .column = reader->lexer->token_column };
+    return (hll_source_location){ .filename = reader->filename,
+                                  .line = reader->lexer->token_line,
+                                  .column = reader->lexer->token_column };
 }
 
 static void
 report_error(hll_reader *reader, char const *format, ...) {
-    source_location loc = get_source_loc(reader);
+    hll_source_location loc = get_source_loc(reader);
 
     va_list args;
     va_start(args, format);
-    hll_report_error_verbosev(loc, format, args);
+    hll_report_error_verbosev(reader->ctx->reporter, &loc, format, args);
 }
 
 #if 0
@@ -89,7 +89,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
     hll_lex_result lex_result = hll_lexer_peek(lexer);
     assert(lex_result == HLL_LEX_OK);
     assert(lexer->token_kind == HLL_TOK_LPAREN);
-    source_location list_start_loc = get_source_loc(reader);
+    hll_source_location list_start_loc = get_source_loc(reader);
     lex_result = hll_lexer_eat_peek(lexer);
     // Now we epxect at least one list element followed by others ending either
     // with right paren or dot, element and right paren Now check if we don't
@@ -190,7 +190,8 @@ read_cons(hll_reader *reader, hll_obj **head) {
 
     assert(!"Unreachable");
 error:
-    hll_report_note_verbose(list_start_loc, "When reading list");
+    hll_report_note_verbose(ctx->reporter, &list_start_loc,
+                            "When reading list");
     return result;
 }
 

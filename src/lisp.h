@@ -112,7 +112,7 @@ HLL_DECL
 hll_func *hll_unwrap_func(hll_obj *obj);
 
 HLL_DECL
-hll_ctx hll_create_ctx(void);
+hll_ctx hll_create_ctx(struct hll_error_reporter *reporter);
 
 HLL_DECL
 hll_obj *hll_make_nil(hll_ctx *ctx);

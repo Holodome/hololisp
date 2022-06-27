@@ -6,6 +6,7 @@
 struct hll_lexer;
 struct hll_ctx;
 struct hll_obj;
+struct hll_error_reporter;
 
 /// Reader can be used to produce lisp objects using lexer results.
 typedef struct hll_reader {

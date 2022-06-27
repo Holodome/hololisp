@@ -383,9 +383,10 @@ hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value) {
 }
 
 hll_ctx
-hll_create_ctx(void) {
+hll_create_ctx(hll_error_reporter *reporter) {
     hll_ctx ctx = { 0 };
 
+    ctx.reporter = reporter;
     ctx.symbols = hll_nil;
     ctx.file_out = stdout;
     ctx.file_outerr = stderr;

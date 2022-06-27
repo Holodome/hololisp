@@ -1,3 +1,4 @@
+#include "../src/error_reporter.h"
 #include "../src/lexer.h"
 #include "../src/lisp.h"
 #include "../src/reader.h"
@@ -8,7 +9,7 @@ test_reader_reports_eof(void) {
     char const *source = "";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -24,7 +25,7 @@ test_reader_parses_num(void) {
     char const *source = "123";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -45,7 +46,7 @@ test_reader_parses_symbol(void) {
     char const *source = "hello-world";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -66,7 +67,7 @@ test_reader_parses_one_element_list(void) {
     char const *source = "(100)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -92,7 +93,7 @@ test_reader_parses_list(void) {
     char const *source = "(-100 100 abc)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -137,7 +138,7 @@ test_reader_parses_nested_lists(void) {
     char const *source = "(+ (* 3 2) hello)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -212,7 +213,7 @@ test_reader_reports_unclosed_list(void) {
     char const *source = "(";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -230,7 +231,7 @@ test_reader_returns_eof_arbitrary_amount_of_times(void) {
     char const *source = "";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -250,7 +251,7 @@ test_reader_reports_stary_rparen(void) {
     char const *source = ")";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -266,7 +267,7 @@ test_reader_parses_nil(void) {
     char const *source = "()";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -284,7 +285,7 @@ test_reader_parses_simple_dotted_cons(void) {
     char const *source = "(abc . 123)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -305,7 +306,7 @@ test_reader_parses_dotted_list(void) {
     char const *source = "(a b c . 123)";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 
@@ -330,7 +331,7 @@ test_reader_parses_quote(void) {
     char const *source = "'1";
     char buffer[4096];
 
-    hll_ctx ctx = hll_create_ctx();
+    hll_ctx ctx = hll_create_ctx(hll_get_empty_reporter());
     hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
     hll_reader reader = hll_reader_create(&lexer, &ctx);
 

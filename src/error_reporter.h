@@ -8,7 +8,7 @@
 #include "ext.h"
 
 typedef struct hll_source_location {
-    /// If 0, considef this be from stdin
+    /// If 0, consider this be from stdin
     char const *filename;
     /// Starts from 0
     uint32_t line;
@@ -21,6 +21,8 @@ typedef struct hll_error_reporter {
     int has_error;
     void *out;
 } hll_error_reporter;
+
+hll_error_reporter *hll_get_empty_reporter(void);
 
 HLL_DECL
 void hll_init_error_reporter(hll_error_reporter *reporter);
