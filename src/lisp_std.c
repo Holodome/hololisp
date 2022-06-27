@@ -10,45 +10,69 @@
 #include "lisp.h"
 #include "reader.h"
 
+static char const *
+get_lisp_function_name(char const *name) {
+    char const *result = NULL;
+    static struct {
+        char const *c_name;
+        char const *lisp_name;
+    } const functions[] = {
+#define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
+#define _HLL_STD_FUNC_(_c, _lisp) { #_c, #_lisp },
+#define _HLL_STD_FUNC(_letters, _lisp) _HLL_STD_FUNC_(hll_std_##_name, _lisp)
+        _HLL_ENUMERATE_STD_FUNCS
+#undef _HLL_STD_FUNC_
+#undef _HLL_STD_FUNC
+#undef _HLL_CAR_CDR
+    };
+
+    size_t count = sizeof(functions) / sizeof(functions[0]);
+    for (size_t i = 0; i < count && result == NULL; ++i) {
+        if (0 == strcmp(functions[i].c_name, name)) {
+            result = functions[i].lisp_name;
+        }
+    }
+
+    assert(result != NULL);
+    return result;
+}
+
 #define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
 
 #define ITER(_obj, _head)                                  \
     for (hll_obj *_obj = _head; _obj->kind != HLL_OBJ_NIL; \
          _obj = hll_unwrap_cdr(_obj))
 
-#define CHECK_TYPE(_obj, _kind)                                             \
-    do {                                                                    \
-        if (!hll_is_error_reported() && (_obj)->kind != (_kind)) {          \
-            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_"))); \
-            hll_report_error("%s arguments must be of type %s (got %s)",    \
-                             __func__ + strlen("hll_std_"),                 \
-                             hll_get_obj_kind_str(_kind),                   \
-                             hll_get_obj_kind_str((_obj)->kind));           \
-            return hll_make_nil(ctx);                                       \
-        }                                                                   \
+#define CHECK_TYPE(_obj, _kind)                                          \
+    do {                                                                 \
+        if ((_obj)->kind != (_kind)) {                                   \
+            hll_report_error(ctx->reporter,                              \
+                             "%s arguments must be of type %s (got %s)", \
+                             get_lisp_function_name(__func__),           \
+                             hll_get_obj_kind_str((_obj)->kind));        \
+            return hll_make_nil(ctx);                                    \
+        }                                                                \
     } while (0)
 
-#define CHECK_HAS_ATLEAST_1_ARG                                             \
-    do {                                                                    \
-        if (!hll_is_error_reported() && args->kind != HLL_OBJ_CONS) {       \
-            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_"))); \
-            hll_report_error("%s must have at least 1 argument",            \
-                             __func__ + strlen("hll_std_"));                \
-            return hll_make_nil(ctx);                                       \
-        }                                                                   \
+#define CHECK_HAS_ATLEAST_1_ARG                                   \
+    do {                                                          \
+        if (args->kind != HLL_OBJ_CONS) {                         \
+            hll_report_error(ctx->reporter,                       \
+                             "%s must have at least 1 argument",  \
+                             get_lisp_function_name(__func__), ); \
+            return hll_make_nil(ctx);                             \
+        }                                                         \
     } while (0)
 
-#define CHECK_HAS_1_ARG                                                      \
-    do {                                                                     \
-        if (!hll_is_error_reported() &&                                      \
-            (args->kind != HLL_OBJ_CONS ||                                   \
-             hll_unwrap_cdr(args)->kind != HLL_OBJ_NIL)) {                   \
-            assert(0 == strncmp(__func__, "hll_std_", strlen("hll_std_")));  \
-            hll_report_error("%s must have at exactly 1 argument (got %zu)", \
-                             __func__ + strlen("hll_std_"),                  \
-                             hll_list_length(args));                         \
-            return hll_make_nil(ctx);                                        \
-        }                                                                    \
+#define CHECK_HAS_1_ARG                                                        \
+    do {                                                                       \
+        if ((args->kind != HLL_OBJ_CONS ||                                     \
+             hll_unwrap_cdr(args)->kind != HLL_OBJ_NIL)) {                     \
+            hll_report_error(                                                  \
+                ctx->reporter, "%s must have at exactly 1 argument (got %zu)", \
+                get_lisp_function_name(__func__), hll_list_length(args));      \
+            return hll_make_nil(ctx);                                          \
+        }                                                                      \
     } while (0)
 
 STD_FUNC(print) {
