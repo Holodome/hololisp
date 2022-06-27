@@ -18,8 +18,8 @@ get_lisp_function_name(char const *name) {
         char const *lisp_name;
     } const functions[] = {
 #define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
-#define _HLL_STD_FUNC_(_c, _lisp) { #_c, #_lisp },
-#define _HLL_STD_FUNC(_letters, _lisp) _HLL_STD_FUNC_(hll_std_##_name, _lisp)
+#define _HLL_STD_FUNC_(_c, _lisp) { #_c, _lisp },
+#define _HLL_STD_FUNC(_name, _lisp) _HLL_STD_FUNC_(hll_std_##_name, _lisp)
         _HLL_ENUMERATE_STD_FUNCS
 #undef _HLL_STD_FUNC_
 #undef _HLL_STD_FUNC
@@ -33,8 +33,13 @@ get_lisp_function_name(char const *name) {
         }
     }
 
-    assert(result != NULL &&
-           "Internal error: failed to get builtin function name");
+    if (result == NULL) {
+        fprintf(stderr,
+                "Internal error: failed to get builtin function name: %s\n",
+                name);
+    }
+
+    assert(result != NULL);
     return result;
 }
 
