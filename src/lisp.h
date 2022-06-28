@@ -111,7 +111,7 @@ void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
                      size_t length);
 
 HLL_DECL
-void hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value);
+void hll_add_var(hll_ctx *ctx, hll_obj *env, hll_obj *symb, hll_obj *value);
 
 HLL_DECL
 hll_obj *hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args);

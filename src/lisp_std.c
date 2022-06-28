@@ -410,9 +410,13 @@ hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
         CHECK_TYPE(hll_unwrap_car(param), HLL_OBJ_SYMB, "parameters");
     }
 
+    // This has to be done because we enclose each builtin function in its own
+    // scope.
+    hll_obj *env = hll_unwrap_env(ctx->env)->up;
+
     hll_obj *body = hll_unwrap_cdr(hll_unwrap_cdr(args));
-    hll_obj *func = hll_make_func(ctx, ctx->env, param_list, body);
-    hll_add_var(ctx, name, func);
+    hll_obj *func = hll_make_func(ctx, env, param_list, body);
+    hll_add_var(ctx, env, name, func);
 
     return func;
 }
@@ -428,8 +432,12 @@ hll_std_lambda(hll_ctx *ctx, hll_obj *args) {
         CHECK_TYPE(hll_unwrap_car(param), HLL_OBJ_SYMB, "parameters");
     }
 
+    // This has to be done because we enclose each builtin function in its own
+    // scope.
+    hll_obj *env = hll_unwrap_env(ctx->env)->up;
+
     hll_obj *body = hll_unwrap_cdr(args);
-    return hll_make_func(ctx, ctx->env, param_list, body);
+    return hll_make_func(ctx, env, param_list, body);
 }
 
 hll_obj *
@@ -880,8 +888,10 @@ STD_FUNC(defvar) {
         }
     }
 
-    hll_unwrap_env(ctx->env)->vars =
-        hll_make_acons(ctx, name, value, hll_unwrap_env(ctx->env)->vars);
+    // This has to be done because we enclose each builtin function in its own
+    // scope.
+    hll_obj *env = hll_unwrap_env(ctx->env)->up;
+    hll_add_var(ctx, env, name, value);
 
     return name;
 }

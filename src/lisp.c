@@ -152,7 +152,8 @@ hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
 
     switch (fn->kind) {
     default:
-        hll_report_error(ctx->reporter, "Unsupported callable type\n");
+        hll_report_error(ctx->reporter, "Unsupported callable type %s",
+                         hll_get_obj_kind_str(fn->kind));
         break;
     case HLL_OBJ_BIND: {
         hll_obj *cur_env = ctx->env;
@@ -205,8 +206,26 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
     case HLL_OBJ_SYMB: {
         hll_obj *var = hll_find_var(ctx, obj);
         if (var == NULL) {
-            hll_report_error(ctx->reporter, "Undefined variable '%s'\n",
+            hll_report_error(ctx->reporter, "Undefined variable '%s'",
                              hll_unwrap_symb(obj)->symb);
+#if HLL_DEBUG
+            char buffer[16384];
+            size_t len = 0;
+            for (hll_obj *env = ctx->env;
+                 env->kind != HLL_OBJ_NIL && result == NULL;
+                 env = hll_unwrap_env(env)->up) {
+                for (hll_obj *cons = hll_unwrap_env(env)->vars;
+                     cons->kind != HLL_OBJ_NIL && result == NULL;
+                     cons = hll_unwrap_cdr(cons)) {
+                    hll_obj *test = hll_unwrap_cons(cons)->car;
+                    size_t written =
+                        snprintf(buffer + len, sizeof(buffer) - len, "%s ",
+                                 hll_unwrap_symb(hll_unwrap_car(test))->symb);
+                    len += written;
+                }
+            }
+            hll_report_note(ctx->reporter, "Possible variants are: %s", buffer);
+#endif
         } else {
             result = hll_unwrap_cons(var)->cdr;
         }
@@ -239,9 +258,9 @@ hll_list_length(hll_obj *obj) {
 }
 
 void
-hll_add_var(hll_ctx *ctx, hll_obj *symb, hll_obj *value) {
-    hll_unwrap_env(ctx->env)->vars =
-        hll_make_acons(ctx, symb, value, hll_unwrap_env(ctx->env)->vars);
+hll_add_var(hll_ctx *ctx ,hll_obj *env, hll_obj *symb, hll_obj *value) {
+    hll_unwrap_env(env)->vars =
+        hll_make_acons(ctx, symb, value, hll_unwrap_env(env)->vars);
 }
 
 hll_ctx
