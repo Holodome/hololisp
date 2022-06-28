@@ -1,6 +1,6 @@
-#include "../src/error_reporter.h"
-#include "../src/lisp.h"
-#include "../src/lisp_gc.h"
+#include "../hololisp/error_reporter.h"
+#include "../hololisp/lisp.h"
+#include "../hololisp/lisp_gc.h"
 #include "acutest.h"
 
 static void

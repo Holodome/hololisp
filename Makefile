@@ -13,7 +13,7 @@
 #
 
 TARGET = hololisp
-SRC_DIR = src
+SRC_DIR = hololisp
 OUT_DIR = build
 # If you want to compile for debugging, run 'make CFLAGS=-g'
 CFLAGS = -O2
