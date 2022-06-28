@@ -18,7 +18,8 @@ get_source_loc(hll_reader *reader) {
 
 void
 hll_reader_get_source_loc(hll_reader *reader, hll_source_location *loc) {
-    (void)hll_lexer_peek(reader->lexer);
+    hll_lex_result res = hll_lexer_peek(reader->lexer);
+    (void)res;
     *loc = get_source_loc(reader);
 }
 
