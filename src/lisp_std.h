@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "ext.h"
+
 struct hll_ctx;
 struct hll_obj;
 
@@ -95,8 +97,9 @@ struct hll_obj;
     _HLL_STD_FUNC(rem, "rem")         \
     _HLL_ENUMERATE_CAR_CDR
 
-#define _HLL_STD_FUNC(_name, ...) \
-    struct hll_obj *hll_std_##_name(struct hll_ctx *ctx, struct hll_obj *args);
+#define _HLL_STD_FUNC(_name, ...)                                 \
+    HLL_DECL struct hll_obj *hll_std_##_name(struct hll_ctx *ctx, \
+                                             struct hll_obj *args);
 _HLL_ENUMERATE_STD_FUNCS
 #undef _HLL_CAR_CDR
 #undef _HLL_STD_FUNC

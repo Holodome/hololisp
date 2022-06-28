@@ -81,8 +81,9 @@ execute_file(char const *filename) {
         goto error;
     }
 
-    hll_init_error_reporter();
-    hll_ctx ctx = hll_create_ctx();
+    hll_error_reporter reporter = { 0 };
+    hll_init_error_reporter(&reporter);
+    hll_ctx ctx = hll_create_ctx(&reporter);
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
@@ -104,6 +105,8 @@ execute_file(char const *filename) {
 #else
     for (;;) {
         hll_obj *obj;
+        hll_source_location current_location = { 0 };
+        hll_reader_get_source_loc(&reader, &current_location);
         hll_read_result parse_result = hll_read(&reader, &obj);
 
         if (parse_result == HLL_READ_EOF) {
@@ -112,6 +115,11 @@ execute_file(char const *filename) {
             break;
         } else {
             hll_eval(&ctx, obj);
+            if (ctx.reporter->has_error) {
+                hll_report_error_verbose(ctx.reporter, &current_location,
+                                         "Eval failed");
+                break;
+            }
         }
     }
 #endif
@@ -127,8 +135,9 @@ error:
 
 static int
 execute_repl(void) {
-    hll_init_error_reporter();
-    hll_ctx ctx = hll_create_ctx();
+    hll_error_reporter reporter = { 0 };
+    hll_init_error_reporter(&reporter);
+    hll_ctx ctx = hll_create_ctx(&reporter);
 
     enum { BUFFER_SIZE = 4096 };
     char buffer[BUFFER_SIZE];
@@ -157,7 +166,7 @@ execute_repl(void) {
             } else if (parse_result != HLL_READ_OK) {
                 break;
             } else {
-                hll_print(stdout, hll_eval(&ctx, obj));
+                hll_print(&ctx, stdout, hll_eval(&ctx, obj));
                 printf("\n");
             }
         }
