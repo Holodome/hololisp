@@ -2,6 +2,7 @@
 #include "../src/lexer.h"
 #include "../src/lisp.h"
 #include "../src/reader.h"
+#include "../src/lisp_gc.h"
 #include "acutest.h"
 
 static void

@@ -8,6 +8,7 @@
 #include "error_reporter.h"
 #include "lexer.h"
 #include "lisp.h"
+#include "lisp_gc.h"
 #include "reader.h"
 
 static char const *
@@ -33,11 +34,13 @@ get_lisp_function_name(char const *name) {
         }
     }
 
+#if HLL_DEBUG
     if (result == NULL) {
         fprintf(stderr,
                 "Internal error: failed to get builtin function name: %s\n",
                 name);
     }
+#endif
 
     assert(result != NULL);
     return result;
@@ -97,7 +100,7 @@ get_lisp_function_name(char const *name) {
 
 STD_FUNC(print) {
     FILE *f = ctx->file_out;
-    hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    hll_print(ctx, f, hll_eval(ctx, hll_unwrap_cons(args)->car));
     fprintf(f, "\n");
     return hll_make_nil(ctx);
 }
@@ -408,7 +411,7 @@ hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
     }
 
     hll_obj *body = hll_unwrap_cdr(hll_unwrap_cdr(args));
-    hll_obj *func = hll_make_func(ctx, ctx->env_stack, param_list, body);
+    hll_obj *func = hll_make_func(ctx, ctx->env, param_list, body);
     hll_add_var(ctx, name, func);
 
     return func;
@@ -426,7 +429,7 @@ hll_std_lambda(hll_ctx *ctx, hll_obj *args) {
     }
 
     hll_obj *body = hll_unwrap_cdr(args);
-    return hll_make_func(ctx, ctx->env_stack, param_list, body);
+    return hll_make_func(ctx, ctx->env, param_list, body);
 }
 
 hll_obj *
@@ -793,7 +796,7 @@ STD_FUNC(prin1) {
     CHECK_HAS_N_ARGS(1);
 
     FILE *f = ctx->file_out;
-    hll_print(f, hll_eval(ctx, hll_unwrap_cons(args)->car));
+    hll_print(ctx, f, hll_eval(ctx, hll_unwrap_cons(args)->car));
     return hll_make_nil(ctx);
 }
 
@@ -851,11 +854,11 @@ STD_FUNC(let) {
 
     hll_obj *body = hll_unwrap_cdr(args);
 
-    hll_obj *env = hll_make_env(ctx, ctx->env_stack);
-    ctx->env_stack = env;
+    hll_obj *env = hll_make_env(ctx, ctx->env);
+    ctx->env = env;
     hll_unwrap_env(env)->vars = vars;
     hll_obj *result = hll_std_progn(ctx, body);
-    ctx->env_stack = hll_unwrap_env(ctx->env_stack)->up;
+    ctx->env = hll_unwrap_env(ctx->env)->up;
 
     return result;
 }
@@ -867,7 +870,7 @@ STD_FUNC(defvar) {
     assert(name->kind == HLL_OBJ_SYMB);
     hll_obj *value = hll_eval(ctx, hll_unwrap_car(hll_unwrap_cdr(args)));
 
-    for (hll_obj *cons = hll_unwrap_env(ctx->env_stack)->vars;
+    for (hll_obj *cons = hll_unwrap_env(ctx->env)->vars;
          cons->kind != HLL_OBJ_NIL; cons = hll_unwrap_cdr(cons)) {
         hll_obj *test = hll_unwrap_cons(cons)->car;
         if (hll_unwrap_cons(test)->car == name) {
@@ -877,8 +880,8 @@ STD_FUNC(defvar) {
         }
     }
 
-    hll_unwrap_env(ctx->env_stack)->vars =
-        hll_make_acons(ctx, name, value, hll_unwrap_env(ctx->env_stack)->vars);
+    hll_unwrap_env(ctx->env)->vars =
+        hll_make_acons(ctx, name, value, hll_unwrap_env(ctx->env)->vars);
 
     return name;
 }

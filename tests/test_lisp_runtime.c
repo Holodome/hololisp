@@ -1,6 +1,7 @@
 #include "../src/error_reporter.h"
 #include "../src/lexer.h"
 #include "../src/lisp.h"
+#include "../src/lisp_gc.h"
 #include "../src/lisp_std.h"
 #include "../src/reader.h"
 #include "acutest.h"
@@ -24,7 +25,7 @@ test_lisp_print_nil(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -50,7 +51,7 @@ test_lisp_print_number(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -76,7 +77,7 @@ test_lisp_print_symbol(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -102,7 +103,7 @@ test_lisp_print_single_element_list(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -128,7 +129,7 @@ test_lisp_print_list(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -458,7 +459,7 @@ test_lisp_prints_dotted_list(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -484,7 +485,7 @@ test_lisp_prints_quote(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);
@@ -510,7 +511,7 @@ test_lisp_prints_quote_without_evaling(void) {
     TEST_ASSERT(result == HLL_READ_EOF);
 
     FILE *out = tmpfile();
-    hll_print(out, obj);
+    hll_print(&ctx, out, obj);
 
     fseek(out, 0, SEEK_SET);
     fgets(buffer, sizeof(buffer), out);

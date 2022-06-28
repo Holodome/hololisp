@@ -159,7 +159,7 @@ execute_repl(void) {
             } else if (parse_result != HLL_READ_OK) {
                 break;
             } else {
-                hll_print(stdout, hll_eval(&ctx, obj));
+                hll_print(&ctx, stdout, hll_eval(&ctx, obj));
                 printf("\n");
             }
         }

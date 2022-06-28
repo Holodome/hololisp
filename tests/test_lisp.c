@@ -1,5 +1,6 @@
 #include "../src/error_reporter.h"
 #include "../src/lisp.h"
+#include "../src/lisp_gc.h"
 #include "acutest.h"
 
 static void
