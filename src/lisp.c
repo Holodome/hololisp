@@ -45,7 +45,7 @@ hll_get_obj_kind_str(hll_obj_kind kind) {
     return result;
 }
 
-void
+hll_obj *
 hll_add_binding(hll_ctx *ctx, hll_bind_func *bind_func, char const *symbol,
                 size_t length) {
     hll_obj *bind = hll_make_bind(ctx, bind_func);
@@ -53,6 +53,7 @@ hll_add_binding(hll_ctx *ctx, hll_bind_func *bind_func, char const *symbol,
     assert(ctx->env->kind != HLL_OBJ_NIL);
     hll_unwrap_env(ctx->env)->vars =
         hll_make_acons(ctx, symb, bind, hll_unwrap_env(ctx->env)->vars);
+    return bind;
 }
 
 hll_obj *
@@ -158,7 +159,7 @@ hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
     case HLL_OBJ_BIND: {
         hll_obj *cur_env = ctx->env;
         hll_obj *env = hll_make_env(ctx, cur_env);
-        hll_unwrap_env(env)->meta.name = hll_unwrap_bind(fn)->meta.c_name;
+        hll_unwrap_env(env)->meta.name = hll_unwrap_bind(fn)->meta.name;
 
         ctx->env = env;
         result = hll_unwrap_bind(fn)->bind(ctx, args);
@@ -176,6 +177,7 @@ hll_call(hll_ctx *ctx, hll_obj *fn, hll_obj *args) {
                 ctx, hll_unwrap_car(name), hll_eval(ctx, hll_unwrap_car(arg)),
                 hll_unwrap_env(env)->vars);
         }
+        hll_unwrap_env(env)->meta.name = func->meta.name;
 
         ctx->env = env;
         result = hll_std_progn(ctx, func->body);
@@ -258,9 +260,21 @@ hll_list_length(hll_obj *obj) {
 }
 
 void
-hll_add_var(hll_ctx *ctx ,hll_obj *env, hll_obj *symb, hll_obj *value) {
+hll_add_var(hll_ctx *ctx, hll_obj *env, hll_obj *symb, hll_obj *value) {
     hll_unwrap_env(env)->vars =
         hll_make_acons(ctx, symb, value, hll_unwrap_env(env)->vars);
+}
+
+void
+hll_print_error_stack_trace(hll_ctx *ctx) {
+    size_t idx = 0;
+    for (hll_obj *env = ctx->env; env->kind != HLL_OBJ_NIL;
+         env = hll_unwrap_env(env)->up) {
+        hll_report_note(ctx->reporter, "%zu: In %s", idx,
+                        hll_unwrap_env(env)->meta.name);
+
+        ++idx;
+    }
 }
 
 hll_ctx
@@ -272,9 +286,14 @@ hll_create_ctx(hll_error_reporter *reporter) {
     ctx.file_out = stdout;
     ctx.file_outerr = stderr;
     ctx.env = hll_make_env(&ctx, hll_make_nil(&ctx));
+    hll_unwrap_env(ctx.env)->meta.name = "global";
 
 #define STR_LEN(_str) _str, (sizeof(_str) - 1)
-#define BIND(_func, _symb) hll_add_binding(&ctx, _func, STR_LEN(_symb))
+#define BIND(_func, _symb)                                              \
+    do {                                                                \
+        hll_obj *__temp = hll_add_binding(&ctx, _func, STR_LEN(_symb)); \
+        hll_unwrap_bind(__temp)->meta.name = _symb;                     \
+    } while (0);
 #define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
 #define _HLL_STD_FUNC(_name, _str) BIND(hll_std_##_name, _str);
     _HLL_ENUMERATE_STD_FUNCS

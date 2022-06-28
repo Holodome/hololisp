@@ -72,7 +72,7 @@ get_file_info(char const *filename) {
 static void
 report_message(FILE *out, char const *message_kind, char const *msg,
                va_list args) {
-    fprintf(out, "\033[1meval: %s: \033[1m", message_kind);
+    fprintf(out, "\033[1m%s: \033[1m", message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n");
 }
@@ -81,7 +81,7 @@ static void
 report_message_for_stdin(FILE *out, hll_source_location *loc,
                          char const *message_kind, char const *msg,
                          va_list args) {
-    fprintf(out, "\033[1mstdin:%u: %s: \033[1m", loc->column, message_kind);
+    fprintf(out, "\033[1m%u: %s: \033[1m", loc->column, message_kind);
     vfprintf(out, msg, args);
     fprintf(out, "\033[0m\n");
 }
@@ -137,6 +137,7 @@ hll_report_errorv(hll_error_reporter *reporter, char const *format,
                   va_list args) {
     CHECK_INITIALIZED;
     report_message(reporter->out, ERROR_STRING, format, args);
+    reporter->has_error = 1;
 }
 
 void
@@ -163,6 +164,7 @@ hll_report_error_verbosev(hll_error_reporter *reporter,
                                        ERROR_STRING, format, args);
         }
     }
+    reporter->has_error = 1;
 }
 
 void

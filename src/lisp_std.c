@@ -46,56 +46,62 @@ get_lisp_function_name(char const *name) {
     return result;
 }
 
+#define REPORT(...)                           \
+    do {                                      \
+        if (!ctx->reporter->has_error) {      \
+            hll_report_error(__VA_ARGS__);    \
+            hll_print_error_stack_trace(ctx); \
+        }                                     \
+    } while (0);
+
 #define STD_FUNC(_name) hll_obj *hll_std_##_name(hll_ctx *ctx, hll_obj *args)
 
 #define ITER(_obj, _head)                                  \
     for (hll_obj *_obj = _head; _obj->kind != HLL_OBJ_NIL; \
          _obj = hll_unwrap_cdr(_obj))
 
-#define CHECK_TYPE(_obj, _kind, _msg)                                          \
-    do {                                                                       \
-        hll_obj *__temp = (_obj);                                              \
-        if (__temp->kind != (_kind)) {                                         \
-            hll_report_error(                                                  \
-                ctx->reporter, "%s " _msg " must be of type %s (got %s)",      \
-                get_lisp_function_name(__func__), hll_get_obj_kind_str(_kind), \
-                hll_get_obj_kind_str(__temp->kind));                           \
-            return hll_make_nil(ctx);                                          \
-        }                                                                      \
+#define CHECK_TYPE(_obj, _kind, _msg)                                        \
+    do {                                                                     \
+        hll_obj *__temp = (_obj);                                            \
+        if (__temp->kind != (_kind)) {                                       \
+            REPORT(ctx->reporter, "%s " _msg " must be of type %s (got %s)", \
+                   get_lisp_function_name(__func__),                         \
+                   hll_get_obj_kind_str(_kind),                              \
+                   hll_get_obj_kind_str(__temp->kind));                      \
+            return hll_make_nil(ctx);                                        \
+        }                                                                    \
     } while (0)
 
-#define CHECK_TYPE_LIST(_obj, _msg)                                        \
-    do {                                                                   \
-        hll_obj *__temp = (_obj);                                          \
-        if (__temp->kind != HLL_OBJ_CONS && __temp->kind != HLL_OBJ_NIL) { \
-            hll_report_error(ctx->reporter,                                \
-                             "%s " _msg " must be of list type (got %s)",  \
-                             get_lisp_function_name(__func__),             \
-                             hll_get_obj_kind_str((_obj)->kind));          \
-            return hll_make_nil(ctx);                                      \
-        }                                                                  \
+#define CHECK_TYPE_LIST(_obj, _msg)                                            \
+    do {                                                                       \
+        hll_obj *__temp = (_obj);                                              \
+        if (__temp->kind != HLL_OBJ_CONS && __temp->kind != HLL_OBJ_NIL) {     \
+            REPORT(ctx->reporter, "%s " _msg " must be of list type (got %s)", \
+                   get_lisp_function_name(__func__),                           \
+                   hll_get_obj_kind_str((_obj)->kind));                        \
+            return hll_make_nil(ctx);                                          \
+        }                                                                      \
     } while (0)
 
 #define CHECK_HAS_N_ARGS(_n)                                                   \
     do {                                                                       \
         if (hll_list_length(args) != (_n)) {                                   \
-            hll_report_error(ctx->reporter,                                    \
-                             "%s must have exactly " #_n                       \
-                             " argument%s (got %zu)",                          \
-                             get_lisp_function_name(__func__),                 \
-                             (((_n) == 1) ? "" : "s"), hll_list_length(args)); \
+            REPORT(ctx->reporter,                                              \
+                   "%s must have exactly " #_n " argument%s (got %zu)",        \
+                   get_lisp_function_name(__func__), (((_n) == 1) ? "" : "s"), \
+                   hll_list_length(args));                                     \
             return hll_make_nil(ctx);                                          \
         }                                                                      \
     } while (0)
 
-#define CHECK_HAS_ATLEAST_N_ARGS(_n)                                         \
-    do {                                                                     \
-        if (hll_list_length(args) < (_n)) {                                  \
-            hll_report_error(                                                \
-                ctx->reporter, "%s must have at least " #_n " argument%s",   \
-                get_lisp_function_name(__func__), (((_n) == 1) ? "" : "s")); \
-            return hll_make_nil(ctx);                                        \
-        }                                                                    \
+#define CHECK_HAS_ATLEAST_N_ARGS(_n)                                          \
+    do {                                                                      \
+        if (hll_list_length(args) < (_n)) {                                   \
+            REPORT(ctx->reporter, "%s must have at least " #_n " argument%s", \
+                   get_lisp_function_name(__func__),                          \
+                   (((_n) == 1) ? "" : "s"));                                 \
+            return hll_make_nil(ctx);                                         \
+        }                                                                     \
     } while (0)
 
 STD_FUNC(print) {
@@ -416,6 +422,7 @@ hll_std_defun(struct hll_ctx *ctx, struct hll_obj *args) {
 
     hll_obj *body = hll_unwrap_cdr(hll_unwrap_cdr(args));
     hll_obj *func = hll_make_func(ctx, env, param_list, body);
+    hll_unwrap_func(func)->meta.name = hll_unwrap_symb(name)->symb;
     hll_add_var(ctx, env, name, func);
 
     return func;
@@ -437,7 +444,9 @@ hll_std_lambda(hll_ctx *ctx, hll_obj *args) {
     hll_obj *env = hll_unwrap_env(ctx->env)->up;
 
     hll_obj *body = hll_unwrap_cdr(args);
-    return hll_make_func(ctx, env, param_list, body);
+    hll_obj *result = hll_make_func(ctx, env, param_list, body);
+    hll_unwrap_func(result)->meta.name = "lambda";
+    return result;
 }
 
 hll_obj *

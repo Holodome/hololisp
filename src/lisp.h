@@ -59,6 +59,10 @@ typedef struct hll_func {
     /// Environment in which function is defined and which is used when
     /// executing it.
     hll_obj *env;
+
+    struct {
+        char const *name;
+    } meta;
 } hll_func;
 
 typedef struct hll_int {
@@ -81,7 +85,7 @@ typedef struct hll_bind {
     hll_bind_func *bind;
 
     struct {
-        char const *c_name;
+        char const *name;
     } meta;
 } hll_bind;
 
@@ -107,8 +111,8 @@ HLL_DECL
 hll_obj *hll_find_var(hll_ctx *ctx, hll_obj *car);
 
 HLL_DECL
-void hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
-                     size_t length);
+hll_obj *hll_add_binding(hll_ctx *ctx, hll_bind_func *bind, char const *symbol,
+                         size_t length);
 
 HLL_DECL
 void hll_add_var(hll_ctx *ctx, hll_obj *env, hll_obj *symb, hll_obj *value);
@@ -126,7 +130,7 @@ HLL_DECL
 size_t hll_list_length(hll_obj *obj);
 
 HLL_DECL
-void hll_print_error_stack_trace(hll_obj *env);
+void hll_print_error_stack_trace(hll_ctx *ctx);
 
 #ifdef HLL_DEBUG
 HLL_DECL
