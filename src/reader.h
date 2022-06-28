@@ -7,6 +7,7 @@ struct hll_lexer;
 struct hll_ctx;
 struct hll_obj;
 struct hll_error_reporter;
+struct hll_source_location;
 
 /// Reader can be used to produce lisp objects using lexer results.
 typedef struct hll_reader {
@@ -38,6 +39,9 @@ typedef enum {
     /// Stray dot in list definition
     HLL_READ_STRAY_DOT = 0x5
 } hll_read_result;
+
+void hll_reader_get_source_loc(hll_reader *reader,
+                               struct hll_source_location *loc);
 
 /// @brief Produces string of given read result
 /// @param res Result to give description for

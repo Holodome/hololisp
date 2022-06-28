@@ -16,6 +16,12 @@ get_source_loc(hll_reader *reader) {
                                   .column = reader->lexer->token_column };
 }
 
+void
+hll_reader_get_source_loc(hll_reader *reader, hll_source_location *loc) {
+    (void)hll_lexer_peek(reader->lexer);
+    *loc = get_source_loc(reader);
+}
+
 static void
 report_error(hll_reader *reader, char const *format, ...) {
     hll_source_location loc = get_source_loc(reader);

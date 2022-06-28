@@ -105,6 +105,8 @@ execute_file(char const *filename) {
 #else
     for (;;) {
         hll_obj *obj;
+        hll_source_location current_location = { 0 };
+        hll_reader_get_source_loc(&reader, &current_location);
         hll_read_result parse_result = hll_read(&reader, &obj);
 
         if (parse_result == HLL_READ_EOF) {
@@ -113,6 +115,11 @@ execute_file(char const *filename) {
             break;
         } else {
             hll_eval(&ctx, obj);
+            if (ctx.reporter->has_error) {
+                hll_report_error_verbose(ctx.reporter, &current_location,
+                                         "Eval failed");
+                break;
+            }
         }
     }
 #endif
