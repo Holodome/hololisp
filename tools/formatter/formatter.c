@@ -62,6 +62,7 @@ string_builder_printf(string_builder *b, char const *fmt, ...) {
     }
 
     strcpy(b->buffer + b->written, buffer);
+    b->written += written;
 }
 
 typedef struct {
@@ -126,7 +127,6 @@ read_tokens(char const *source, token_array *array) {
         switch (lexer.token_kind) {
         default:
             HLL_UNREACHABLE;
-            assert(0);
             break;
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
@@ -153,27 +153,104 @@ static token_array
 read_lisp_code_into_tokens(char const *source) {
     token_array array = { 0 };
     size_t token_count = count_tokens(source);
-    printf("Token count: %zu\n", token_count);
     array.tokens = hlma_alloc(&array.arena, sizeof(token) * token_count);
     array.token_count = token_count;
     read_tokens(source, &array);
     return array;
 }
 
+typedef struct formatter_identation_stack {
+    struct formatter_identation_stack *next;
+    size_t ident;
+} formatter_identation_stack;
+
+typedef enum {
+    FMT_START,
+    FMT_FIRST_LIST_ELEMENT,
+    FMT_QUOTED_LIST,
+} formatter_state;
+
+typedef struct {
+    hlma_arena arena;
+    size_t ident;
+    formatter_identation_stack *ident_stack;
+    formatter_identation_stack *ident_freelist;
+} formatter_ctx;
+
+static void
+push_ident(formatter_ctx *ctx, size_t ident) {
+    formatter_identation_stack *it = ctx->ident_freelist;
+    if (!it) {
+        it = hlma_alloc(&ctx->arena, sizeof(formatter_identation_stack));
+    }
+    it->next = ctx->ident_stack;
+    ctx->ident_stack = it;
+    it->ident = ident;
+}
+
+static void
+pop_ident(formatter_ctx *ctx) {
+    assert(ctx->ident_stack);
+    formatter_identation_stack *it = ctx->ident_stack;
+    ctx->ident_stack = it->next;
+    ctx->ident -= it->ident;
+    it->next = ctx->ident_freelist;
+    ctx->ident_freelist = it;
+}
+
 static void
 format_with_tokens(token_array *array, string_builder *sb,
                    hllf_settings *settings) {
-    (void)array;
-    (void)sb;
     (void)settings;
+    formatter_ctx ctx = { 0 };
+
+    token _last_token = { 0 };
+    token *last_token = &_last_token;
+    for (size_t cursor = 0; cursor < array->token_count; ++cursor) {
+        token *tok = array->tokens + cursor;
+        {
+            size_t newline_count = tok->line - last_token->line;
+            while (newline_count--) {
+                string_builder_printf(sb, "\n");
+            }
+        }
+
+        switch (tok->kind) {
+        default:
+            HLL_UNREACHABLE;
+            break;
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
+            string_builder_printf(sb, "%s", tok->data);
+            break;
+        case HLL_TOK_EXT_COMMENT:
+            break;
+        case HLL_TOK_DOT:
+            string_builder_printf(sb, ".");
+            break;
+        case HLL_TOK_LPAREN:
+            push_ident(&ctx, 1);
+            string_builder_printf(sb, "(");
+            break;
+        case HLL_TOK_RPAREN:
+            string_builder_printf(sb, ")");
+            pop_ident(&ctx);
+            break;
+        case HLL_TOK_QUOTE:
+            string_builder_printf(sb, "'");
+            break;
+        }
+
+        last_token = tok;
+    }
+
+    hlma_clear(&ctx.arena);
 }
 
 hllf_format_result
 hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
-    (void)settings;
-
     token_array tokens = read_lisp_code_into_tokens(source);
-#if 1
+#if 0
     for (size_t i = 0; i < tokens.token_count; ++i) {
         printf("Token %zu:%zu:%zu: kind: %u, data; %s\n", i,
                tokens.tokens[i].line, tokens.tokens[i].column,
@@ -271,7 +348,7 @@ write_to_file(char const *filename, char const *data, size_t data_size) {
         goto error;
     }
 
-    if (fwrite(data, data_size, 1, file) != 1) {
+    if (fwrite(data, data_size + 1, 1, file) != 1) {
         fprintf(stderr, "Failed to write data to file '%s'\n", filename);
         goto close_file_error;
     }
@@ -281,6 +358,7 @@ write_to_file(char const *filename, char const *data, size_t data_size) {
         goto error;
     }
 
+    return;
 close_file_error:
     if (hll_close_file(file) != HLL_FS_IO_OK) {
         fprintf(stderr, "Failed to close file '%s'\n", filename);
