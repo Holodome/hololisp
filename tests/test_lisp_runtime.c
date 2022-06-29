@@ -1,9 +1,9 @@
-#include "../src/error_reporter.h"
-#include "../src/lexer.h"
-#include "../src/lisp.h"
-#include "../src/lisp_gc.h"
-#include "../src/lisp_std.h"
-#include "../src/reader.h"
+#include "../hololisp/error_reporter.h"
+#include "../hololisp/lexer.h"
+#include "../hololisp/lisp.h"
+#include "../hololisp/lisp_gc.h"
+#include "../hololisp/lisp_std.h"
+#include "../hololisp/reader.h"
 #include "acutest.h"
 
 static void
