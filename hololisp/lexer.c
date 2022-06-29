@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #define MAX_ALLOWED_INT_VALUE (INT64_MAX / 10LL)
 
@@ -132,6 +132,49 @@ eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
     return result;
 }
 
+typedef struct {
+    int should_generate_token;
+    int is_overflow;
+} handle_comment_result;
+
+static handle_comment_result
+handle_comment(hll_lexer *lexer) {
+    assert(*lexer->cursor == ';');
+    handle_comment_result result = { 0 };
+
+    if (!lexer->is_ext) {
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+        } while (cp != '\n' && cp);
+    } else if (lexer->buffer != NULL) {
+        char *write = lexer->buffer;
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+            if (write < lexer->buffer + lexer->buffer_size) {
+                *write++ = cp;
+            }
+        } while (cp != '\n' && cp);
+
+        if (lexer->buffer + lexer->buffer_size != write) {
+            lexer->token_length = write - lexer->buffer;
+            *write = 0;
+        } else {
+            result.is_overflow = 1;
+        }
+        result.should_generate_token = 1;
+    } else {
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+        } while (cp != '\n' && cp);
+        result.should_generate_token = 1;
+    }
+
+    return result;
+}
+
 hll_lex_result
 hll_lexer_peek(hll_lexer *lexer) {
     hll_lex_result result = HLL_LEX_OK;
@@ -179,9 +222,14 @@ hll_lexer_peek(hll_lexer *lexer) {
         // Comments
         //
         else if (cp == ';') {
-            do {
-                cp = *++lexer->cursor;
-            } while (cp != '\n' && cp);
+            handle_comment_result res = handle_comment(lexer);
+            if (res.should_generate_token) {
+                if (res.is_overflow) {
+                    result = HLL_LEX_BUF_OVERFLOW;
+                }
+                is_finished = 1;
+                lexer->token_kind = HLL_TOK_EXT_COMMENT;
+            }
         }
         //
         // Individual characters

@@ -5,6 +5,8 @@
 
 #include "ext.h"
 
+// TODO: Rewrite this mess
+
 /// Result of lexing. This return code can either be ignored or used to report
 /// error.
 typedef enum {
@@ -40,6 +42,9 @@ typedef enum {
     HLL_TOK_RPAREN = 0x5,
     /// '
     HLL_TOK_QUOTE = 0x6,
+    /// Extended token kinds: only apper when lexer is run in ext mode
+    /// Comment. Buffer is filled with contents
+    HLL_TOK_EXT_COMMENT = 0x10,
 } hll_token_kind;
 
 /// Structure storing data related to performing lexical analysis on lisp code.
@@ -69,6 +74,8 @@ typedef struct hll_lexer {
     /// Flag that we should always return eof after buffer is fully parsed.
     int already_met_eof;
     char const *line_start;
+
+    int is_ext;
 } hll_lexer;
 
 char const *hll_lex_result_str(hll_lex_result result);

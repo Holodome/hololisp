@@ -6,6 +6,8 @@
 #include <string.h>
 
 #include "lexer.h"
+#define HLMA_STATIC
+#include "memory_arena.h"
 
 #ifndef HLL_FORMATTER_CLI
 #define HLL_FORMATTER_CLI 1
@@ -44,8 +46,7 @@ create_string_builder(size_t size) {
     return b;
 }
 
-__attribute__((unused))
-static void
+__attribute__((unused)) static void
 string_builder_printf(string_builder *b, char const *fmt, ...) {
     char buffer[4096];
     va_list args;
@@ -60,15 +61,23 @@ string_builder_printf(string_builder *b, char const *fmt, ...) {
     strcpy(b->buffer + b->written, buffer);
 }
 
-char const *
-hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
-    (void)settings;
+typedef struct {
+    hll_token_kind kind;
+    char const *data;
+    size_t data_length;
+} token;
 
-    size_t sb_size = decide_size_for_string_builder(source_length);
-    string_builder sb = create_string_builder(sb_size);
+typedef struct {
+    token *tokens;
+    size_t token_count;
+    hlma_arena arena;
+} token_array;
 
+static size_t
+count_tokens(char const *source) {
     char string_buf[4096];
     hll_lexer lexer = hll_lexer_create(source, string_buf, sizeof(string_buf));
+    lexer.is_ext = 1;
 
     for (;;) {
         hll_lex_result result = hll_lexer_peek(&lexer);
@@ -80,6 +89,38 @@ hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
 
         hll_lexer_eat(&lexer);
     }
+}
+
+static void
+read_tokens(char const *source, token_array *array) {
+}
+
+static token_array
+read_lisp_code_into_tokens(char const *source) {
+    token_array array = { 0 };
+    size_t token_count = count_tokens(source);
+    array.tokens = hlma_alloc(&array.arena, sizeof(token) * token_count);
+    array.token_count = token_count;
+    read_tokens(source, &array);
+    return array;
+}
+
+static void
+format_with_tokens(token_array *array, string_builder *sb,
+                   hllf_settings *settings) {
+}
+
+char const *
+hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
+    (void)settings;
+
+    token_array tokens = read_lisp_code_into_tokens(source);
+
+    size_t sb_size = decide_size_for_string_builder(source_length);
+    string_builder sb = create_string_builder(sb_size);
+
+    format_with_tokens(&tokens, &sb, settings);
+    hlma_clear(&tokens.arena);
 
     return sb.buffer;
 }
