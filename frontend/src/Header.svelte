@@ -1,15 +1,12 @@
-<main>
-  <nav>
-    <a class="name" href="/"><span>hololisp</span></a>
-    <div >
+<nav>
+  <a class="name" href="/"><span>hololisp</span></a>
+  <div >
 
-    </div>
-  </nav>
-</main>
+  </div>
+</nav>
 
 <style>
   nav {
-      position: fixed;
       top: 0;
       left: 0;
       right: 0;

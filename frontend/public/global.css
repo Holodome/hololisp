@@ -1,7 +1,10 @@
 html, body {
-    font-family: Arial, sans-serif;
+    font-family: "Liberation Mono", sans-serif;
     background-color: #222222;
     color: #EEE;
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 a {

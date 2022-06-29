@@ -2,19 +2,17 @@
   import DiGithubBadge from "svelte-icons/di/DiGithubBadge.svelte";
 </script>
 
-<main>
-  <footer>
-    <div class="github-icon">
-      <span class="github-badge">
-        <DiGithubBadge/>
-      </span>
-      GitHub:
-      <a href="https://github.com/holodome" class="github-link">
-        Holodome
-      </a>
-    </div>
-  </footer>
-</main>
+<footer>
+  <div class="github-icon">
+    <span class="github-badge">
+      <DiGithubBadge/>
+    </span>
+    GitHub:
+    <a href="https://github.com/holodome" class="github-link">
+      Holodome
+    </a>
+  </div>
+</footer>
 
 <style>
   footer {
