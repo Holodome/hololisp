@@ -2,7 +2,6 @@ SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
 LIB = $(OUT_DIR)/hololisp.a
-# If you want to compile for debugging, run 'make CFLAGS=-g'
 CFLAGS = -O2
 
 ifneq (,$(COV))
@@ -13,6 +12,10 @@ LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 LOCAL_LDFLAGS = -pthread -lm
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
+
+ifneq (,$(DEBUG))
+	CFLAGS=-g
+endif 
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
@@ -75,8 +78,6 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 FORMATTER = $(OUT_DIR)/formatter
 FORMATTER_DIR = tools/formatter
 FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
-
--include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
 $(FORMATTER): $(FORMATTER_SRCS) $(LIB)
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ $^
