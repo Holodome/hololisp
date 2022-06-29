@@ -25,7 +25,7 @@
 #endif  // HLMA_DEBUG_INFO
 
 typedef struct hlma_block {
-    struct hl_memory_arena_block *next;
+    struct hlma_block *next;
     size_t used;
     size_t size;
     char *data;
@@ -50,7 +50,7 @@ hlma_alloc(hlma_arena *arena, size_t size);
 HLMA_DEF void hlma_clear(hlma_arena *arena);
 
 #endif  //  __HLMA_H__
-#ifdef __HLMA_IMPL__
+#ifdef HLMA_IMPL
 
 #include <assert.h>
 #include <stdlib.h>
@@ -75,7 +75,7 @@ _alloc_block(size_t size, size_t align) {
     hlma_block *block = memory;
 
     block->data =
-        _align_forward_pow2((uintptr_t)block + sizeof(hlma_block), align);
+        (char *)_align_forward_pow2((uintptr_t)block + sizeof(hlma_block), align);
     block->size = size;
 
     return block;
@@ -136,4 +136,4 @@ hlma_clear(hlma_arena *arena) {
     }
 }
 
-#endif  // __HLMA_IMPL__
+#endif  // HLMA_IMPL

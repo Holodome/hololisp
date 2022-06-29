@@ -152,7 +152,9 @@ handle_comment(hll_lexer *lexer) {
         uint8_t cp;
         do {
             cp = *++lexer->cursor;
-            if (write < lexer->buffer + lexer->buffer_size) {
+            // TODO: This is incorrect in cases of loop end due to post
+            // condition
+            if (write < lexer->buffer + lexer->buffer_size && cp != '\n') {
                 *write++ = cp;
             }
         } while (cp != '\n' && cp);

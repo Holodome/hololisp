@@ -1,8 +1,8 @@
 #ifndef __HLLF_FORMATTER_H__
 #define __HLLF_FORMATTER_H__
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "ext.h"
 
@@ -12,8 +12,14 @@ typedef struct {
 
 hllf_settings hllf_default_settings(void);
 
-HLL_DECL char const *hllf_format(char const *source, size_t source_length,
-                                 hllf_settings *settings);
+typedef struct {
+    char *data;
+    size_t data_size;
+} hllf_format_result;
+
+HLL_DECL hllf_format_result hllf_format(char const *source,
+                                        size_t source_length,
+                                        hllf_settings *settings);
 HLL_DECL void hllf_format_free(char const *text);
 
 #endif
