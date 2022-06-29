@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "ext.h"
+
 /// Result of lexing. This return code can either be ignored or used to report
 /// error.
 typedef enum {
@@ -75,18 +77,12 @@ char const *hll_lex_result_str(hll_lex_result result);
 hll_lexer hll_lexer_create(char const *cursor, char *buf, uint32_t buffer_size);
 
 /** Generate token */
-hll_lex_result hll_lexer_peek(hll_lexer *lexer)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((__warn_unused_result__))
-#endif
-    ;
+HLL_NODISCARD
+hll_lex_result hll_lexer_peek(hll_lexer *lexer);
 
 void hll_lexer_eat(hll_lexer *lexer);
 
-hll_lex_result hll_lexer_eat_peek(hll_lexer *lexer)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((__warn_unused_result__))
-#endif
-    ;
+HLL_NODISCARD
+hll_lex_result hll_lexer_eat_peek(hll_lexer *lexer);
 
 #endif
