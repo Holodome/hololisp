@@ -1,5 +1,6 @@
 #include "formatter.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,10 +76,10 @@ typedef struct {
 
 static size_t
 count_tokens(char const *source) {
-    char string_buf[4096];
-    hll_lexer lexer = hll_lexer_create(source, string_buf, sizeof(string_buf));
+    hll_lexer lexer = hll_lexer_create(source, NULL, 0);
     lexer.is_ext = 1;
 
+    size_t token_count = 0;
     for (;;) {
         hll_lex_result result = hll_lexer_peek(&lexer);
         (void)result;
@@ -87,12 +88,58 @@ count_tokens(char const *source) {
             break;
         }
 
+        ++token_count;
         hll_lexer_eat(&lexer);
     }
+
+    return token_count;
 }
 
 static void
 read_tokens(char const *source, token_array *array) {
+    size_t cursor = 0;
+
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create(source, buffer, sizeof(buffer));
+    lexer.is_ext = 1;
+
+    for (;;) {
+        hll_lex_result result = hll_lexer_peek(&lexer);
+        if (result == HLL_LEX_BUF_OVERFLOW) {
+            fprintf(stderr, "BUFFER OVERFLOW!!!\n");
+            exit(1);
+        }
+
+        assert(cursor < array->token_count);
+        if (lexer.token_kind == HLL_TOK_EOF) {
+            break;
+        }
+
+        token *tok = hlma_alloc(&array->arena, sizeof(token));
+        tok->kind = lexer.token_kind;
+        switch (lexer.token_kind) {
+        default:
+            HLL_UNREACHABLE;
+            break;
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
+        case HLL_TOK_EXT_COMMENT:
+            tok->data = hlma_alloc(&array->arena, lexer.token_length + 1);
+            tok->data_length = lexer.token_length;
+            memcpy((void *)tok->data, lexer.buffer, lexer.token_length);
+            break;
+        case HLL_TOK_DOT:
+        case HLL_TOK_LPAREN:
+        case HLL_TOK_RPAREN:
+        case HLL_TOK_QUOTE:
+            break;
+        }
+
+        ++cursor;
+        hll_lexer_eat(&lexer);
+    }
+
+    assert(cursor < array->token_count);
 }
 
 static token_array
