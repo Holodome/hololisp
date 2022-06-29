@@ -2,8 +2,9 @@
 #define __HLLF_FORMATTER_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
-#include "hololisp/ext.h"
+#include "ext.h"
 
 typedef struct {
     uint32_t tab_size;

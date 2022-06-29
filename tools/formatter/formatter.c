@@ -1,9 +1,11 @@
+#include "formatter.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "hololisp/lexer.h"
+#include "lexer.h"
 
 #ifndef HLL_FORMATTER_CLI
 #define HLL_FORMATTER_CLI 1
@@ -42,6 +44,7 @@ create_string_builder(size_t size) {
     return b;
 }
 
+__attribute__((unused))
 static void
 string_builder_printf(string_builder *b, char const *fmt, ...) {
     char buffer[4096];
@@ -59,6 +62,8 @@ string_builder_printf(string_builder *b, char const *fmt, ...) {
 
 char const *
 hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
+    (void)settings;
+
     size_t sb_size = decide_size_for_string_builder(source_length);
     string_builder sb = create_string_builder(sb_size);
 
