@@ -80,7 +80,7 @@ FORMATTER_DIR = tools/formatter
 FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
 
 $(FORMATTER): $(FORMATTER_SRCS) $(LIB)
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ $^
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -o $@ $^
 
 tools: $(FORMATTER)
 
