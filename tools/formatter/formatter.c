@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@ hllf_settings
 hllf_default_settings(void) {
     hllf_settings settings = { 0 };
 
-    settings.tab_size = 2;
+    settings.tab_size = 1;
 
     return settings;
 }
@@ -49,7 +50,7 @@ create_string_builder(size_t size) {
     return b;
 }
 
-__attribute__((unused)) static void
+static void
 string_builder_printf(string_builder *b, char const *fmt, ...) {
     char buffer[4096];
     va_list args;
@@ -159,43 +160,53 @@ read_lisp_code_into_tokens(char const *source) {
     return array;
 }
 
-typedef struct formatter_identation_stack {
-    struct formatter_identation_stack *next;
-    size_t ident;
-} formatter_identation_stack;
-
-typedef enum {
-    FMT_START,
-    FMT_FIRST_LIST_ELEMENT,
-    FMT_QUOTED_LIST,
-} formatter_state;
+typedef struct fmt_list_stack {
+    struct fmt_list_stack *next;
+    uint32_t element_count;
+    uint32_t ident;
+} fmt_list_stack;
 
 typedef struct {
     hlma_arena arena;
-    size_t ident;
-    formatter_identation_stack *ident_stack;
-    formatter_identation_stack *ident_freelist;
+    uint32_t ident;
+    fmt_list_stack *ident_stack;
+    fmt_list_stack *ident_freelist;
+    uint32_t parens_depth;
 } formatter_ctx;
 
 static void
-push_ident(formatter_ctx *ctx, size_t ident) {
-    formatter_identation_stack *it = ctx->ident_freelist;
+push_ident(formatter_ctx *ctx, uint32_t ident) {
+    fmt_list_stack *it = ctx->ident_freelist;
     if (!it) {
-        it = hlma_alloc(&ctx->arena, sizeof(formatter_identation_stack));
+        it = hlma_alloc(&ctx->arena, sizeof(fmt_list_stack));
+    } else {
+        memset(it, 0, sizeof(fmt_list_stack));
     }
+    it->ident = ident;
+
     it->next = ctx->ident_stack;
     ctx->ident_stack = it;
-    it->ident = ident;
+    ctx->ident += ident;
 }
 
 static void
 pop_ident(formatter_ctx *ctx) {
     assert(ctx->ident_stack);
-    formatter_identation_stack *it = ctx->ident_stack;
+    fmt_list_stack *it = ctx->ident_stack;
     ctx->ident_stack = it->next;
+
+    assert(ctx->ident >= it->ident);
     ctx->ident -= it->ident;
+
     it->next = ctx->ident_freelist;
     ctx->ident_freelist = it;
+}
+
+static void
+ident(formatter_ctx *ctx, string_builder *sb) {
+    if (ctx->ident) {
+        string_builder_printf(sb, "%*s", ctx->ident, "");
+    }
 }
 
 static void
@@ -204,16 +215,16 @@ format_with_tokens(token_array *array, string_builder *sb,
     (void)settings;
     formatter_ctx ctx = { 0 };
 
-    token _last_token = { 0 };
-    token *last_token = &_last_token;
+    /* token _last_token = { 0 }; */
+    /* token *last_token = &_last_token; */
     for (size_t cursor = 0; cursor < array->token_count; ++cursor) {
         token *tok = array->tokens + cursor;
-        {
-            size_t newline_count = tok->line - last_token->line;
-            while (newline_count--) {
-                string_builder_printf(sb, "\n");
-            }
-        }
+        /* { */
+        /*     size_t newline_count = tok->line - last_token->line; */
+        /*     while (newline_count--) { */
+        /*         string_builder_printf(sb, "\n"); */
+        /*     } */
+        /* } */
 
         switch (tok->kind) {
         default:
@@ -221,7 +232,14 @@ format_with_tokens(token_array *array, string_builder *sb,
             break;
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
+            if (ctx.ident_stack && ctx.ident_stack->element_count) {
+                string_builder_printf(sb, "\n");
+                ident(&ctx, sb);
+            }
             string_builder_printf(sb, "%s", tok->data);
+            if (ctx.ident_stack) {
+                ++ctx.ident_stack->element_count;
+            }
             break;
         case HLL_TOK_EXT_COMMENT:
             break;
@@ -229,19 +247,31 @@ format_with_tokens(token_array *array, string_builder *sb,
             string_builder_printf(sb, ".");
             break;
         case HLL_TOK_LPAREN:
-            push_ident(&ctx, 1);
+            ident(&ctx, sb);
+            if (ctx.ident_stack && ctx.ident_stack->element_count) {
+                ++ctx.ident_stack->element_count;
+                string_builder_printf(sb, "\n");
+                ident(&ctx, sb);
+            }
+            if (ctx.ident_stack) {
+                ++ctx.ident_stack->element_count;
+            }
             string_builder_printf(sb, "(");
+            push_ident(&ctx, settings->tab_size);
             break;
         case HLL_TOK_RPAREN:
             string_builder_printf(sb, ")");
             pop_ident(&ctx);
+            if (!ctx.ident_stack) {
+                string_builder_printf(sb, "\n");
+            }
             break;
         case HLL_TOK_QUOTE:
             string_builder_printf(sb, "'");
             break;
         }
 
-        last_token = tok;
+        /* last_token = tok; */
     }
 
     hlma_clear(&ctx.arena);
