@@ -1,31 +1,33 @@
 #!/usr/bin/env bash
 
 EXECUTABLE=./build/hololisp-format
-TMPFILE=/tmp/hololisp.lisp
+TMPFILE1=/tmp/hololisp0.lisp
+TMPFILE2=/tmp/hololisp1.lisp
 
 failed=0
 
 panic () {
     echo -n -e '\e[1;31m[ERROR]\e[0m '
     echo "$1"
+    echo "$2"
     failed=1
 }
 
 run_test () {
     echo -n "Testing $1 ... "
 
-    echo "$3" > "$TMPFILE"
-    error=$("$EXECUTABLE" < "$TMPFILE" 2>&1 > /dev/null)
+    echo "$3" > "$TMPFILE1"
+    error=$("$EXECUTABLE" "$TMPFILE1" "$TMPFILE2" 2>&1 > /dev/null)
     if [ -n "$error" ]; then
         echo FAILED
         panic "$error"
         return 
     fi
 
-    result=$("$EXECUTABLE" < "$TMPFILE" 2> /dev/null1)
-    if [ "$result" != "$2" ]; then
+    echo "$2" > "$TMPFILE1"
+    if ! cmp -s "$TMPFILE1" "$TMPFILE2" ; then 
         echo FAILED
-        panic "'$2' expected, but got '$result'"
+        panic "$1" "'$2' expected, but got '$(cat "$TMPFILE2")'"
         return 
     fi
 
@@ -135,13 +137,13 @@ EOF
 )
 run_test "defun special form" "$test_out" "$test_src"
 
-test_src="(let ((symbols (mapcar #'compute-symbol l))
-         (spaces (mapcar #'compute-space symbols (cdr symbols))))
+test_src="(let ((symbols (mapcar 'compute-symbol l))
+         (spaces (mapcar 'compute-space symbols (cdr symbols))))
     (when (verify-spacing symbols spaces)
       (make-spacing permanent spaces)))"
 test_out=$(cat <<- EOF
-(let ((symbols (mapcar #'compute-symbol l))
-      (spaces (mapcar #'compute-space symbols (cdr symbols))))
+(let ((symbols (mapcar 'compute-symbol l))
+      (spaces (mapcar 'compute-space symbols (cdr symbols))))
   (when (verify-spacing symbols spaces)
     (make-spacing permanent spaces)))
 EOF

@@ -378,7 +378,7 @@ write_to_file(char const *filename, char const *data, size_t data_size) {
         goto error;
     }
 
-    if (fwrite(data, data_size + 1, 1, file) != 1) {
+    if (fwrite(data, data_size, 1, file) != 1) {
         fprintf(stderr, "Failed to write data to file '%s'\n", filename);
         goto close_file_error;
     }

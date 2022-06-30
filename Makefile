@@ -75,7 +75,7 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
 
 
-FORMATTER = $(OUT_DIR)/formatter
+FORMATTER = $(OUT_DIR)/hololisp-format
 FORMATTER_DIR = tools/formatter
 FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
 
