@@ -39,6 +39,8 @@ make
 
 hololisp is currently tested on arm64 MacOS and Linux amd64. The code uses some POSIX functions, so it is not portable to Windows without modification.
 
+By default hololisp is compiled in release mode. If you want to compile in debug mode add `DEBUG=1` flag to make.
+
 ## Testing
 
 ```bash
@@ -50,7 +52,7 @@ done is .sh files found in tests directory.
 
 Code coverage can be collected if non-empty *COV* flag is passed to make:
 ```bash
-make test COV=1
+make test DEBUG=1 COV=1
 ```
 
 ## Usage

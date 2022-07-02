@@ -528,6 +528,37 @@ test_lexer_reports_too_big_integer(void) {
     TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
 }
 
+static void
+test_lexer_ext_eats_comment(void) {
+    hll_lexer lexer = hll_lexer_create("; Hello world\n", NULL, 0);
+    lexer.is_ext = 1;
+
+    hll_lex_result result = hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EXT_COMMENT);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+}
+
+static void
+test_lexer_ext_returns_comment(void) {
+    char buffer[4096];
+    hll_lexer lexer =
+        hll_lexer_create("; Hello world\n", buffer, sizeof(buffer));
+    lexer.is_ext = 1;
+
+    hll_lex_result result = hll_lexer_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EXT_COMMENT);
+    TEST_ASSERT(strcmp(lexer.buffer, " Hello world") == 0);
+
+    result = hll_lexer_eat_peek(&lexer);
+    TEST_ASSERT(result == HLL_LEX_OK);
+    TEST_ASSERT(lexer.token_kind == HLL_TOK_EOF);
+}
+
 #define TCASE(_name) \
     { #_name, _name }
 
@@ -552,5 +583,7 @@ TEST_LIST = { TCASE(test_lexer_accepts_null_and_returns_eof),
               TCASE(test_lexer_reports_correct_line_numbers_at_their_start),
               TCASE(test_lexer_reports_correct_columns_on_multiline_string),
               TCASE(test_lexer_reports_too_big_integer),
+              TCASE(test_lexer_ext_eats_comment),
+              TCASE(test_lexer_ext_returns_comment),
 
               { NULL, NULL } };

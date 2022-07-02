@@ -130,7 +130,7 @@ close_file_error:
         fprintf(stderr, "Failed to close file '%s'\n", filename);
     }
 error:
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }
 
 static int
