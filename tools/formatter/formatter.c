@@ -23,41 +23,6 @@ decide_size_for_string_builder(size_t source_size) {
 }
 
 typedef struct {
-    char *buffer;
-    size_t buffer_size;
-    size_t written;
-
-    size_t grow_inc;
-} string_builder;
-
-static string_builder
-create_string_builder(size_t size) {
-    string_builder b = { 0 };
-
-    b.buffer = calloc(size, 1);
-    b.buffer_size = size;
-    b.grow_inc = 4096;
-
-    return b;
-}
-
-static void
-string_builder_printf(string_builder *b, char const *fmt, ...) {
-    char buffer[4096];
-    va_list args;
-    va_start(args, fmt);
-    size_t written = vsnprintf(buffer, sizeof(buffer), fmt, args);
-
-    if (b->written + written > b->buffer_size) {
-        b->buffer_size += b->grow_inc;
-        b->buffer = realloc(b->buffer, b->buffer_size);
-    }
-
-    strcpy(b->buffer + b->written, buffer);
-    b->written += written;
-}
-
-typedef struct {
     hll_token_kind kind;
     char const *data;
     size_t data_length;
@@ -194,14 +159,14 @@ pop_ident(formatter_ctx *ctx) {
 }
 
 static void
-ident(formatter_ctx *ctx, string_builder *sb) {
+ident(formatter_ctx *ctx, hll_string_builder *sb) {
     if (ctx->ident) {
-        string_builder_printf(sb, "%*s", ctx->ident, "");
+        hll_string_builder_printf(sb, "%*s", ctx->ident, "");
     }
 }
 
 static void
-format_with_tokens(token_array *array, string_builder *sb) {
+format_with_tokens(token_array *array, hll_string_builder *sb) {
     formatter_ctx ctx = { 0 };
 
     /* token _last_token = { 0 }; */
@@ -222,10 +187,10 @@ format_with_tokens(token_array *array, string_builder *sb) {
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
             if (ctx.ident_stack && ctx.ident_stack->element_count) {
-                string_builder_printf(sb, "\n");
+                hll_string_builder_printf(sb, "\n");
                 ident(&ctx, sb);
             }
-            string_builder_printf(sb, "%s", tok->data);
+            hll_string_builder_printf(sb, "%s", tok->data);
             if (ctx.ident_stack) {
                 ++ctx.ident_stack->element_count;
             }
@@ -233,30 +198,30 @@ format_with_tokens(token_array *array, string_builder *sb) {
         case HLL_TOK_EXT_COMMENT:
             break;
         case HLL_TOK_DOT:
-            string_builder_printf(sb, ".");
+            hll_string_builder_printf(sb, ".");
             break;
         case HLL_TOK_LPAREN:
             ident(&ctx, sb);
             if (ctx.ident_stack && ctx.ident_stack->element_count) {
                 ++ctx.ident_stack->element_count;
-                string_builder_printf(sb, "\n");
+                hll_string_builder_printf(sb, "\n");
                 ident(&ctx, sb);
             }
             if (ctx.ident_stack) {
                 ++ctx.ident_stack->element_count;
             }
-            string_builder_printf(sb, "(");
+            hll_string_builder_printf(sb, "(");
             push_ident(&ctx, 2);
             break;
         case HLL_TOK_RPAREN:
-            string_builder_printf(sb, ")");
+            hll_string_builder_printf(sb, ")");
             pop_ident(&ctx);
             if (!ctx.ident_stack) {
-                string_builder_printf(sb, "\n");
+                hll_string_builder_printf(sb, "\n");
             }
             break;
         case HLL_TOK_QUOTE:
-            string_builder_printf(sb, "'");
+            hll_string_builder_printf(sb, "'");
             break;
         }
 
@@ -278,7 +243,7 @@ hllf_format(char const *source, size_t source_length) {
 #endif
 
     size_t sb_size = decide_size_for_string_builder(source_length);
-    string_builder sb = create_string_builder(sb_size);
+    hll_string_builder sb = hll_create_string_builder(sb_size);
 
     format_with_tokens(&tokens, &sb);
     hlma_clear(&tokens.arena);

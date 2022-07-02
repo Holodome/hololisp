@@ -1,10 +1,10 @@
 #include "hll_utils.h"
 
-#define _POSIX_C_SOURCE 1
-#define _POSIX_SOURCE 1
-#define _GNU_SOURCE 1
+// 2008 edition of the POSIX standard (IEEE Standard 1003.1-2008)
+#define _POSIX_C_SOURCE 200809L
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,3 +102,31 @@ hll_read_entire_file(char const *filename, char **data, size_t *data_size) {
 
     return result;
 }
+
+hll_string_builder
+hll_create_string_builder(size_t size) {
+    hll_string_builder b = { 0 };
+
+    b.buffer = calloc(size, 1);
+    b.buffer_size = size;
+    b.grow_inc = 4096;
+
+    return b;
+}
+
+void
+hll_string_builder_printf(hll_string_builder *b, char const *fmt, ...) {
+    char buffer[4096];
+    va_list args;
+    va_start(args, fmt);
+    size_t written = vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+    if (b->written + written > b->buffer_size) {
+        b->buffer_size += b->grow_inc;
+        b->buffer = realloc(b->buffer, b->buffer_size);
+    }
+
+    strcpy(b->buffer + b->written, buffer);
+    b->written += written;
+}
+

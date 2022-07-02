@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "hll_ext.h"
+
 typedef enum {
     HLL_FS_IO_OK = 0x0,
     HLL_FS_IO_FOPEN_FAILED = 0x1,
@@ -48,5 +50,20 @@ hll_fs_io_result hll_read_entire_file(char const *filename, char **data,
 // @brief Checks if stdin is in interactive mode (like terminal session)
 // @return 1 is interactive 0 otherwise
 int is_stdin_interactive(void);
+
+typedef struct {
+    char *buffer;
+    size_t buffer_size;
+    size_t written;
+
+    size_t grow_inc;
+} hll_string_builder;
+
+HLL_DECL
+hll_string_builder hll_create_string_builder(size_t buffer_size);
+
+HLL_DECL
+HLL_ATTR(format(printf, 2, 3))
+void hll_string_builder_printf(hll_string_builder *b, char const *fmt, ...);
 
 #endif
