@@ -181,8 +181,8 @@ hll_lexer_peek(hll_lexer *lexer) {
     hll_lex_result result = HLL_LEX_OK;
 
     /* This is short-circuiting branch for testing null buffer.
-     This shouldn't be ever hit during normal execution, so we don't care if this
-     is ugly */
+     This shouldn't be ever hit during normal execution, so we don't care if
+     this is ugly */
     int is_finished = lexer->cursor == NULL ||
                       (lexer->already_met_eof && !lexer->should_return_old);
     if (is_finished) {
