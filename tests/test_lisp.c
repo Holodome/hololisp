@@ -1,6 +1,6 @@
 #include "../hololisp/hll_error_reporter.h"
 #include "../hololisp/hll_lisp.h"
-#include "../hololisp/lisp_gc.h"
+#include "../hololisp/hll_lisp_gc.h"
 #include "acutest.h"
 
 static void

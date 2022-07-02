@@ -1,10 +1,9 @@
-#include "lisp_gc.h"
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "hll_lisp.h"
+#include "hll_lisp_gc.h"
 
 typedef struct {
     hll_obj head;
