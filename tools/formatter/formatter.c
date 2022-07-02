@@ -346,7 +346,7 @@ read_entire_file(char const *filename) {
         goto close_file_error;
     }
 
-    char *file_contents = calloc(fsize, 1);
+    char *file_contents = calloc(fsize + 1, 1);
     if (fread(file_contents, fsize, 1, file) != 1) {
         fprintf(stderr, "Failed to read file '%s'\n", filename);
         goto close_file_error;
