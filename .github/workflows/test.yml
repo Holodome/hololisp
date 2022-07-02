@@ -9,9 +9,11 @@ jobs:
     steps:
       - name: Fetch
         uses: actions/checkout@master
-      - name: Test format
-        run: |
-          clang-format --dry-run --Werror -style=file:.clang-format $(find $SRCS -type f -name "*.c" -o -name "*.h")
+      - uses: DoozyX/clang-format-lint-action@v0.13
+        with:
+          source: '.'
+          extensions: 'h,c'
+          clangFormatVersion: 12
   test:
     runs-on: ubuntu-latest
     steps:
