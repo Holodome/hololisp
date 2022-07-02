@@ -1,4 +1,4 @@
-#include "../hololisp/lexer.h"
+#include "../hololisp/hll_lexer.h"
 #include "acutest.h"
 
 static void

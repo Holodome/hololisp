@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 // TODO: Rewrite this mess
 

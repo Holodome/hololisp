@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lexer.h"
-#include "utils.h"
+#include "hll_lexer.h"
+#include "hll_utils.h"
 #define HLMA_STATIC
 #define HLMA_IMPL
-#include "memory_arena.h"
+#include "hll_memory_arena.h"
 
 #ifndef HLL_FORMATTER_CLI
 #define HLL_FORMATTER_CLI 1

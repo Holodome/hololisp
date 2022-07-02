@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 struct hll_lexer;
 struct hll_ctx;

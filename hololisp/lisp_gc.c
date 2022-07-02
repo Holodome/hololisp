@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lisp.h"
+#include "hll_lisp.h"
 
 typedef struct {
     hll_obj head;

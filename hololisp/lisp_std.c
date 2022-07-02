@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error_reporter.h"
-#include "lexer.h"
-#include "lisp.h"
+#include "hll_error_reporter.h"
+#include "hll_lexer.h"
+#include "hll_lisp.h"
+#include "hll_reader.h"
 #include "lisp_gc.h"
-#include "reader.h"
 
 static char const *
 get_lisp_function_name(char const *name) {

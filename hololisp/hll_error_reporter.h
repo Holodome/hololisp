@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 typedef struct hll_source_location {
     /// If 0, consider this be from stdin
