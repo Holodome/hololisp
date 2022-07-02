@@ -85,7 +85,8 @@ read_tokens(char const *source, token_array *array) {
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
         case HLL_TOK_EXT_COMMENT:
-            tok->data = hll_memory_arena_alloc(&array->arena, lexer.token_length + 1);
+            tok->data =
+                hll_memory_arena_alloc(&array->arena, lexer.token_length + 1);
             tok->data_length = lexer.token_length;
             memcpy((void *)tok->data, lexer.buffer, lexer.token_length);
             break;
@@ -107,7 +108,8 @@ static token_array
 read_lisp_code_into_tokens(char const *source) {
     token_array array = { 0 };
     size_t token_count = count_tokens(source);
-    array.tokens = hll_memory_arena_alloc(&array.arena, sizeof(token) * token_count);
+    array.tokens =
+        hll_memory_arena_alloc(&array.arena, sizeof(token) * token_count);
     array.token_count = token_count;
     read_tokens(source, &array);
     return array;
@@ -277,77 +279,6 @@ parse_cli_args(int argc, char const **argv) {
     return opts;
 }
 
-typedef struct {
-    char const *data;
-    size_t data_size;
-} read_file_result;
-
-// TODO: This is not correct error handling
-static read_file_result
-read_entire_file(char const *filename) {
-    FILE *file;
-    if (hll_open_file(&file, filename, "r") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto error;
-    }
-
-    size_t fsize;
-    if (hll_get_file_size(file, &fsize) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    char *file_contents = calloc(fsize + 1, 1);
-    if (fread(file_contents, fsize, 1, file) != 1) {
-        fprintf(stderr, "Failed to read file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-        goto error;
-    }
-
-    read_file_result result = { 0 };
-    result.data = file_contents;
-    result.data_size = fsize;
-
-    return result;
-close_file_error:
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-    }
-error:
-    exit(1);
-}
-
-static void
-write_to_file(char const *filename, char const *data, size_t data_size) {
-    FILE *file;
-    if (hll_open_file(&file, filename, "w") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto error;
-    }
-
-    if (fwrite(data, data_size, 1, file) != 1) {
-        fprintf(stderr, "Failed to write data to file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-        goto error;
-    }
-
-    return;
-close_file_error:
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-    }
-error:
-    exit(1);
-}
-
 int
 main(int argc, char const **argv) {
     cli_options opts = parse_cli_args(argc - 1, argv + 1);
@@ -356,12 +287,26 @@ main(int argc, char const **argv) {
         return EXIT_FAILURE;
     }
 
-    read_file_result file_contents = read_entire_file(opts.in_filename);
-    hllf_format_result formatted =
-        hllf_format(file_contents.data, file_contents.data_size);
-    write_to_file(opts.out_filename, formatted.data, formatted.data_size);
+    char *file_contents = NULL;
+    size_t file_size = 0;
+    hll_fs_io_result read_result =
+        hll_read_entire_file(opts.in_filename, &file_contents, &file_size);
+    if (read_result != HLL_FS_IO_OK) {
+        fprintf(stderr, "Failed to code to format from file '%s': %s\n",
+                opts.in_filename, hll_get_fs_io_result_string(read_result));
+        return EXIT_FAILURE;
+    }
 
-    free(formatted.data);
+    hllf_format_result formatted = hllf_format(file_contents, file_size);
+
+    hll_fs_io_result write_result = hll_write_to_file(
+        opts.out_filename, formatted.data, formatted.data_size);
+    if (read_result != HLL_FS_IO_OK) {
+        fprintf(stderr, "Failed to write formatted code to file '%s': %s\n",
+                opts.out_filename, hll_get_fs_io_result_string(write_result));
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
 #endif

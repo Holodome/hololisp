@@ -14,6 +14,39 @@
 #include <linux/limits.h>
 #endif
 
+char const *
+hll_get_fs_io_result_string(hll_fs_io_result result) {
+    char const *str = NULL;
+    switch (result) {
+    case HLL_FS_IO_OK:
+        str = "ok";
+        break;
+    case HLL_FS_IO_FOPEN_FAILED:
+        str = "failed to open file";
+        break;
+    case HLL_FS_IO_GET_SIZE_FAILED:
+        str = "failed to get file size";
+        break;
+    case HLL_FS_IO_CLOSE_FILE_FAILED:
+        str = "failed to close file";
+        break;
+    case HLL_FS_IO_READ_FAILED:
+        str = "failed to read from file";
+        break;
+    case HLL_FS_IO_GET_FULL_PATH_FAILED:
+        str = "failed to get full path";
+        break;
+    case HLL_FS_IO_BUFFER_OVERFLOW:
+        str = "buffer is too small";
+        break;
+    case HLL_FS_IO_WRITE_FAILED:
+        str = "failed to write to file";
+        break;
+    }
+
+    return str;
+}
+
 hll_fs_io_result
 hll_open_file_(void **file, char const *filename, char const *mode) {
     hll_fs_io_result result = HLL_FS_IO_OK;
@@ -73,7 +106,7 @@ hll_get_full_file_path(char const *filename, char *buffer, size_t buffer_size,
     } else {
         size_t length = strlen(local_buffer);
         if (length + 1 >= buffer_size) {
-            result = HLL_FS_IO_BUFFER_UNDERFLOW;
+            result = HLL_FS_IO_BUFFER_OVERFLOW;
         } else {
             *path_length = length;
             strcpy(buffer, local_buffer);
@@ -95,9 +128,27 @@ hll_read_entire_file(char const *filename, char **data, size_t *data_size) {
             if (fread(buffer, size, 1, f) != 1) {
                 result = HLL_FS_IO_READ_FAILED;
             } else {
+                if (data_size != NULL) {
                 *data_size = size;
+                }
                 *data = buffer;
             }
+        }
+    }
+
+    return result;
+}
+
+hll_fs_io_result
+hll_write_to_file(char const *filename, char const *data, size_t data_size) {
+    hll_fs_io_result result;
+
+    FILE *f = NULL;
+    if ((result = hll_open_file(&f, filename, "wb")) == HLL_FS_IO_OK) {
+        if (fwrite(data, data_size, 1, f) != 1) {
+            result = HLL_FS_IO_WRITE_FAILED;
+        } else {
+            result = HLL_FS_IO_OK;
         }
     }
 

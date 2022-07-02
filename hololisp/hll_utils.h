@@ -11,9 +11,12 @@ typedef enum {
     HLL_FS_IO_GET_SIZE_FAILED = 0x2,
     HLL_FS_IO_CLOSE_FILE_FAILED = 0x3,
     HLL_FS_IO_READ_FAILED = 0x4,
-    HLL_FS_IO_GET_FULL_PATH_FAILED = 0x4,
-    HLL_FS_IO_BUFFER_UNDERFLOW = 0x5,
+    HLL_FS_IO_GET_FULL_PATH_FAILED = 0x5,
+    HLL_FS_IO_BUFFER_OVERFLOW = 0x6,
+    HLL_FS_IO_WRITE_FAILED = 0x7
 } hll_fs_io_result;
+
+char const *hll_get_fs_io_result_string(hll_fs_io_result result);
 
 /// @brief Wrapper around hll_open_file_. Should be used as public interface
 /// @breief
@@ -47,6 +50,9 @@ hll_fs_io_result hll_get_full_file_path(char const *filename, char *buffer,
 hll_fs_io_result hll_read_entire_file(char const *filename, char **data,
                                       size_t *data_size);
 
+hll_fs_io_result hll_write_to_file(char const *filename, char const *data,
+                                   size_t data_size);
+
 // @brief Checks if stdin is in interactive mode (like terminal session)
 // @return 1 is interactive 0 otherwise
 int is_stdin_interactive(void);
@@ -59,10 +65,8 @@ typedef struct {
     size_t grow_inc;
 } hll_string_builder;
 
-HLL_DECL
 hll_string_builder hll_create_string_builder(size_t buffer_size);
 
-HLL_DECL
 HLL_ATTR(format(printf, 2, 3))
 void hll_string_builder_printf(hll_string_builder *b, char const *fmt, ...);
 
@@ -81,7 +85,7 @@ typedef struct hll_memory_arena {
     size_t min_block_size;
 } hll_memory_arena;
 
-HLL_DECL void *hll_memory_arena_alloc(hll_memory_arena *arena, size_t size);
-HLL_DECL void hll_memory_arena_clear(hll_memory_arena *);
+void *hll_memory_arena_alloc(hll_memory_arena *arena, size_t size);
+void hll_memory_arena_clear(hll_memory_arena *arena);
 
 #endif
