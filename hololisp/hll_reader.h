@@ -53,7 +53,6 @@ char const *hll_read_result_str(hll_read_result res);
 hll_reader hll_reader_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
 
 HLL_NODISCARD
-hll_read_result
-hll_read(hll_reader *reader, struct hll_obj **head);
+hll_read_result hll_read(hll_reader *reader, struct hll_obj **head);
 
 #endif
