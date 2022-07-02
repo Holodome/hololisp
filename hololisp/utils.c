@@ -4,14 +4,14 @@
 #define _POSIX_SOURCE 1
 #define _GNU_SOURCE 1
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  
-#include <limits.h>
+#include <unistd.h>
 #ifdef __linux__
 #include <linux/limits.h>
-#endif 
+#endif
 
 hll_fs_io_result
 hll_open_file_(void **file, char const *filename, char const *mode) {

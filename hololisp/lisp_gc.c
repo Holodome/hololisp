@@ -1,7 +1,7 @@
 #include "lisp_gc.h"
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lisp.h"
@@ -172,4 +172,3 @@ hll_unwrap_func(hll_obj *head) {
     assert(head->kind == HLL_OBJ_FUNC);
     return &obj->body.func;
 }
-

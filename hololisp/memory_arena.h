@@ -74,8 +74,8 @@ _alloc_block(size_t size, size_t align) {
     void *memory = calloc(size_to_allocate, 1);
     hlma_block *block = memory;
 
-    block->data =
-        (char *)_align_forward_pow2((uintptr_t)block + sizeof(hlma_block), align);
+    block->data = (char *)_align_forward_pow2(
+        (uintptr_t)block + sizeof(hlma_block), align);
     block->size = size;
 
     return block;

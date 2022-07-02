@@ -1,8 +1,8 @@
 #include "../hololisp/error_reporter.h"
 #include "../hololisp/lexer.h"
 #include "../hololisp/lisp.h"
-#include "../hololisp/reader.h"
 #include "../hololisp/lisp_gc.h"
+#include "../hololisp/reader.h"
 #include "acutest.h"
 
 static void

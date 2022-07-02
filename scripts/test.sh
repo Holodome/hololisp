@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# set -x
+set -eou pipefail
+
 unit_test_files=$(find build -type f -name "*.test" -exec echo {} \+)
 test_script_files=$(find tests -type f -name "*.sh" -exec echo {} \+)
 
@@ -15,14 +18,14 @@ process_test () {
     executable=$1 ok_pattern=$2
     fail_pattern=$3
 
-    exec_result=$($executable 2> /dev/null)
+    exec_result=$($executable 2> /dev/null || :)
     exit_code=$?
 
-    ok_count=$(echo "$exec_result" | grep -ocF "$ok_pattern")
-    failed_count=$(echo "$exec_result" | grep -ocF "$fail_pattern")
+    ok_count=$(echo "$exec_result" | grep -ocF "$ok_pattern" || :)
+    failed_count=$(echo "$exec_result" | grep -ocF "$fail_pattern" || :)
 
     if [ "$failed_count" != 0 ]; then
-        failed_lines=$(echo "$exec_result" | grep -F "$fail_pattern")
+        failed_lines=$(echo "$exec_result" | grep -F "$fail_pattern" || :)
         echo -e "\e[1;93m>>>\e[1;0m $executable" >> "$failed_tests_file"
         echo "$failed_lines" >> "$failed_tests_file"
     fi

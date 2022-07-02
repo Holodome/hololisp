@@ -39,7 +39,8 @@ hll_fs_io_result hll_get_file_size(void *file, size_t *size);
 hll_fs_io_result hll_close_file(void *file);
 
 hll_fs_io_result hll_get_full_file_path(char const *filename, char *buffer,
-                                        size_t buffer_size, size_t *path_length);
+                                        size_t buffer_size,
+                                        size_t *path_length);
 
 hll_fs_io_result hll_read_entire_file(char const *filename, char **data,
                                       size_t *data_size);
