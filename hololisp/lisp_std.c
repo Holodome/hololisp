@@ -468,7 +468,7 @@ STD_FUNC(nth) {
 
     int64_t count = hll_unwrap_int(count_obj)->value;
     if (count < 0) {
-        hll_report_error(ctx->reporter, "nth expects nonnegative count");
+        hll_report_error(ctx->reporter, "nth expects non negative count");
         return hll_make_nil(ctx);
     }
 
@@ -491,7 +491,7 @@ STD_FUNC(nthcdr) {
 
     int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
     if (count < 0) {
-        hll_report_error(ctx->reporter, "nthcdr expects nonnegative count");
+        hll_report_error(ctx->reporter, "nthcdr expects non negative count");
         return hll_make_nil(ctx);
     }
 

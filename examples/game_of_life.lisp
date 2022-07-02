@@ -11,7 +11,7 @@
 (defun % (x y)
   (- x (* (/ x y) y)))
 
-; ;; Funtion similar to python range used to create list of numbers from lo to hi
+; ;; Function similar to python range used to create list of numbers from lo to hi
 (defun range-lo (lo hi)
   (unless (<= hi lo)
     (cons lo (range-lo (+ lo 1) hi))))
@@ -20,7 +20,7 @@
 (defun range (hi)
   (range-lo 0 hi))
 
-; ;; Returns new matrix with widht and *height* dimension
+; ;; Returns new matrix with width and *height* dimension
 
 ; ;; Prints board
 (defun print-board (board)

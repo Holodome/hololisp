@@ -2,7 +2,6 @@
 #include "../hololisp/lexer.h"
 #include "../hololisp/lisp.h"
 #include "../hololisp/lisp_gc.h"
-#include "../hololisp/lisp_std.h"
 #include "../hololisp/reader.h"
 #include "acutest.h"
 
@@ -493,7 +492,7 @@ test_lisp_prints_quote(void) {
 }
 
 static void
-test_lisp_prints_quote_without_evaling(void) {
+test_lisp_prints_quote_without_evaluating(void) {
     char const *source = "'(+ 1 (* 2 3))";
     char buffer[4096];
 
@@ -519,7 +518,7 @@ test_lisp_prints_quote_without_evaling(void) {
 }
 
 static void
-test_lisp_evals_quote(void) {
+test_lisp_eval_quote(void) {
     char const *source = "(print (eval '(+ 1 (* 2 3))))";
     char buffer[4096];
 
@@ -546,7 +545,7 @@ test_lisp_evals_quote(void) {
 }
 
 static void
-test_lisp_evals_true(void) {
+test_lisp_eval_true(void) {
     char const *source = "t";
     char buffer[4096];
 
@@ -586,7 +585,7 @@ TEST_LIST = { TCASE(test_lisp_print_nil),
               TCASE(test_lisp_eval_nested_function_calls),
               TCASE(test_lisp_prints_quote),
               TCASE(test_lisp_prints_dotted_list),
-              TCASE(test_lisp_prints_quote_without_evaling),
-              TCASE(test_lisp_evals_quote),
-              TCASE(test_lisp_evals_true),
+              TCASE(test_lisp_prints_quote_without_evaluating),
+              TCASE(test_lisp_eval_quote),
+              TCASE(test_lisp_eval_true),
               { NULL, NULL } };

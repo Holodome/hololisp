@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +6,6 @@
 #include "error_reporter.h"
 #include "lexer.h"
 #include "lisp.h"
-#include "lisp_std.h"
 #include "reader.h"
 #include "utils.h"
 
@@ -18,7 +16,7 @@ typedef struct {
 static void
 help(void) {
     printf(
-        "OVERVIEW: toy lisp interprenter\n"
+        "OVERVIEW: toy lisp interpreter\n"
         "\n"
         "USAGE: hololisp file\n");
 }
@@ -187,6 +185,4 @@ main(int argc, char const **argv) {
     } else {
         return execute_file(opts.filename);
     }
-
-    return EXIT_SUCCESS;
 }
