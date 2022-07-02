@@ -2,6 +2,16 @@ name: Build and Test
 on: [push, pull_request]
 
 jobs:
+  formatting:
+    env:
+      SRCS: hololisp tools
+    runs-on: ubuntu-latest
+    step:
+      - name: Fetch
+        uses: actions/checkout@master
+      - name: Test format
+        run: |
+          clang-format --dry-run --Werror -style=file:.clang-format $(find "$SRCS" -type f -name "*.c" -o -name "*.h")
   test:
     runs-on: ubuntu-latest
     steps:
