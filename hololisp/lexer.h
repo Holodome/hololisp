@@ -20,7 +20,6 @@ typedef enum {
     /// considers such tokens invalid.
     HLL_LEX_ALL_DOT_SYMB = 0x2,
     /// Integer overflow happened.
-    /// TODO: The way we check for this is a bit janky, but it definetely works
     /// for really big numbers, but some close to boundary numbers may not be
     /// handled correctly.
     HLL_LEX_INT_TOO_BIG = 0x3,

@@ -86,7 +86,7 @@ hll_reader_create(hll_lexer *lexer, hll_ctx *ctx) {
 
 static hll_read_result
 read_cons(hll_reader *reader, hll_obj **head) {
-    hll_read_result result = HLL_READ_OK;
+    hll_read_result result;
 
     // Pull the pointers
     hll_lexer *lexer = reader->lexer;
@@ -99,7 +99,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
     assert(lexer->token_kind == HLL_TOK_LPAREN);
     hll_source_location list_start_loc = get_source_loc(reader);
     lex_result = hll_lexer_eat_peek(lexer);
-    // Now we epxect at least one list element followed by others ending either
+    // Now we expect at least one list element followed by others ending either
     // with right paren or dot, element and right paren Now check if we don't
     // have first element
     if (lex_result != HLL_LEX_OK) {
@@ -113,12 +113,12 @@ read_cons(hll_reader *reader, hll_obj **head) {
         result = HLL_READ_STRAY_DOT;
         goto error;
     } else if (lexer->token_kind == HLL_TOK_EOF) {
-        report_error(reader, "Missing closing paren (eof ecnountered)");
+        report_error(reader, "Missing closing paren (eof encountered)");
         result = HLL_READ_MISSING_RPAREN;
         goto error;
     } else if (lexer->token_kind == HLL_TOK_RPAREN) {
         // If we encounter right paren right away, do early return and skip
-        // unneded stuff.
+        // unneeded stuff.
         *head = hll_make_nil(ctx);
         /* set_source_loc_(*head, list_start_loc); */
         hll_lexer_eat(lexer);
@@ -148,7 +148,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
             result = HLL_READ_LEX_FAILED;
             goto error;
         } else if (lexer->token_kind == HLL_TOK_EOF) {
-            report_error(reader, "Missing closing paren (eof ecnountered)");
+            report_error(reader, "Missing closing paren (eof encountered)");
             result = HLL_READ_MISSING_RPAREN;
             goto error;
         } else if (lexer->token_kind == HLL_TOK_RPAREN) {
@@ -185,7 +185,7 @@ read_cons(hll_reader *reader, hll_obj **head) {
             return HLL_READ_OK;
         }
 
-        // If token is non terminating, add one more element to list
+        // If token is non-terminating, add one more element to list
         hll_obj *obj = NULL;
         if ((result = hll_read(reader, &obj)) != HLL_READ_OK) {
             goto error;

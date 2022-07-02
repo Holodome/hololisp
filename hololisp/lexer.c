@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <string.h>
 
 #define MAX_ALLOWED_INT_VALUE (INT64_MAX / 10LL)
@@ -77,7 +76,7 @@ try_to_parse_number(char const *start, char const *end, int64_t *number) {
             is_number = 1;
         }
 
-        if (is_number && (is_number = (cursor == end))) {
+        if (is_number && cursor == end) {
             *number = value * multiplier;
             result.is_valid = 1;
         }
@@ -96,7 +95,7 @@ typedef struct {
 /*
  * Reads lisp symbol from given cursor and writes it to buffer.
  * If buffer size is less that symbol length, skip characters until symbol end.
- * Return number of bytes written, which can be used to detect buffer undeflow.
+ * Return number of bytes written, which can be used to detect buffer overflow.
  * Number of bytes doesn't include terminating symbol.
  */
 static eat_symbol_result
@@ -261,7 +260,7 @@ hll_lexer_peek(hll_lexer *lexer) {
                 result = HLL_LEX_BUF_OVERFLOW;
             } else {
                 lexer->token_kind = HLL_TOK_SYMB;
-                // TODO: don't like that we have to parse multpile times
+                // TODO: don't like that we have to parse multiple times
                 parse_number_result parse_number_res = try_to_parse_number(
                     lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
                 if (parse_number_res.is_valid) {

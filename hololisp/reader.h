@@ -20,7 +20,7 @@ typedef struct hll_reader {
 /// Enumeration of result codes of reading.
 /// This is the way read results should be handled.
 ///
-/// A litle rationale on exit codes: It could be enought to use just three
+/// A little rationale on exit codes: It could be enough to use just three
 /// results: ok, eof, error. Different error codes have little reason to exist
 /// since they all will be handled it same way: Abort the program. But error
 /// codes are quite handy for testing error reporting so are left as is for now

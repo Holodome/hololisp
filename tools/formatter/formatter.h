@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ext.h"
+#include "hololisp/ext.h"
 
 typedef struct {
     uint32_t tab_size;

@@ -84,7 +84,7 @@ hll_get_full_file_path(char const *filename, char *buffer, size_t buffer_size,
 
 hll_fs_io_result
 hll_read_entire_file(char const *filename, char **data, size_t *data_size) {
-    hll_fs_io_result result = HLL_FS_IO_OK;
+    hll_fs_io_result result;
 
     FILE *f = NULL;
     if ((result = hll_open_file(&f, filename, "r")) == HLL_FS_IO_OK) {
