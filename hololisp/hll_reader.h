@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 struct hll_lexer;
 struct hll_ctx;
@@ -54,6 +54,6 @@ hll_reader hll_reader_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
 
 HLL_NODISCARD
 hll_read_result
-hll_read(hll_reader *reader, struct hll_obj **head)
+hll_read(hll_reader *reader, struct hll_obj **head);
 
 #endif

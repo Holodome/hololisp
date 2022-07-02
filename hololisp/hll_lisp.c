@@ -1,11 +1,11 @@
-#include "lisp.h"
+#include "hll_lisp.h"
 
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "error_reporter.h"
+#include "hll_error_reporter.h"
 #include "lisp_gc.h"
 #include "lisp_std.h"
 

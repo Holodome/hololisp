@@ -1,12 +1,12 @@
-#include "reader.h"
+#include "hll_reader.h"
 
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "error_reporter.h"
-#include "lexer.h"
-#include "lisp.h"
+#include "hll_error_reporter.h"
+#include "hll_lexer.h"
+#include "hll_lisp.h"
 #include "lisp_gc.h"
 
 static hll_source_location

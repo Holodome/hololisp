@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 struct hll_obj;
 struct hll_ctx;

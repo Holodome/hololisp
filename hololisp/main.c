@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error_reporter.h"
-#include "lexer.h"
-#include "lisp.h"
-#include "reader.h"
-#include "utils.h"
+#include "hll_error_reporter.h"
+#include "hll_lexer.h"
+#include "hll_lisp.h"
+#include "hll_reader.h"
+#include "hll_utils.h"
 
 typedef struct {
     char const *filename;
