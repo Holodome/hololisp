@@ -45,7 +45,7 @@ hll_fs_io_result hll_get_full_file_path(char const *filename, char *buffer,
 hll_fs_io_result hll_read_entire_file(char const *filename, char **data,
                                       size_t *data_size);
 
-// @breif Checks if stdin is in intercative mode (like terminal session)
+// @brief Checks if stdin is in interactive mode (like terminal session)
 // @return 1 is interactive 0 otherwise
 int is_stdin_interactive(void);
 
