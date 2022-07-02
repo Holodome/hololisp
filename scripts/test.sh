@@ -9,8 +9,7 @@ true > "$failed_tests_file"
 success_count=0
 error_count=0
 
-executables_failed=0
-failed_executables=
+failed_executables=()
 
 process_test () {
     executable=$1 ok_pattern=$2
@@ -29,8 +28,7 @@ process_test () {
     fi
 
     if [ "$exit_code" != 0 ]; then
-        executables_failed=$((executables_failed + 1))
-        failed_executables="$executables_failed $executable"
+        failed_executables+=("$executable")
     fi
 
     success_count=$((success_count + ok_count))
@@ -49,8 +47,8 @@ total_test_count=$((success_count + error_count))
 echo -e "\e[1;32mTESTS PASSED\e[1;0m $success_count/$total_test_count"
 
 exit_code=0
-if [ "$error_count" != 0 ] || [ "$executables_failed" != 0 ] ; then
-    echo -e "\e[1;31m$error_count Failed ($executables_failed execs: $failed_executables)\e[0m"
+if [ "$error_count" != 0 ] || [ "${#failed_executables[@]}" != 0 ] ; then
+    echo -e "\e[1;31m$error_count Failed (${#failed_executables[@]} execs: ${failed_executables[*]})\e[0m"
     cat "$failed_tests_file"
     exit_code=1
 fi
