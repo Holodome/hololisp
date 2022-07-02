@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "ext.h"
+
 struct hll_lexer;
 struct hll_ctx;
 struct hll_obj;
@@ -50,10 +52,8 @@ char const *hll_read_result_str(hll_read_result res);
 
 hll_reader hll_reader_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
 
-hll_read_result hll_read(hll_reader *reader, struct hll_obj **head)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((__warn_unused_result__))
-#endif
-    ;
+HLL_NODISCARD
+hll_read_result
+hll_read(hll_reader *reader, struct hll_obj **head)
 
 #endif
