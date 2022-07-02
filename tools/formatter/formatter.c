@@ -17,15 +17,6 @@
 #define HLL_FORMATTER_CLI 1
 #endif
 
-hllf_settings
-hllf_default_settings(void) {
-    hllf_settings settings = { 0 };
-
-    settings.tab_size = 1;
-
-    return settings;
-}
-
 static size_t
 decide_size_for_string_builder(size_t source_size) {
     return source_size * 3 / 2;
@@ -210,9 +201,7 @@ ident(formatter_ctx *ctx, string_builder *sb) {
 }
 
 static void
-format_with_tokens(token_array *array, string_builder *sb,
-                   hllf_settings *settings) {
-    (void)settings;
+format_with_tokens(token_array *array, string_builder *sb) {
     formatter_ctx ctx = { 0 };
 
     /* token _last_token = { 0 }; */
@@ -257,7 +246,7 @@ format_with_tokens(token_array *array, string_builder *sb,
                 ++ctx.ident_stack->element_count;
             }
             string_builder_printf(sb, "(");
-            push_ident(&ctx, settings->tab_size);
+            push_ident(&ctx, 2);
             break;
         case HLL_TOK_RPAREN:
             string_builder_printf(sb, ")");
@@ -278,7 +267,7 @@ format_with_tokens(token_array *array, string_builder *sb,
 }
 
 hllf_format_result
-hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
+hllf_format(char const *source, size_t source_length) {
     token_array tokens = read_lisp_code_into_tokens(source);
 #if 0
     for (size_t i = 0; i < tokens.token_count; ++i) {
@@ -291,7 +280,7 @@ hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
     size_t sb_size = decide_size_for_string_builder(source_length);
     string_builder sb = create_string_builder(sb_size);
 
-    format_with_tokens(&tokens, &sb, settings);
+    format_with_tokens(&tokens, &sb);
     hlma_clear(&tokens.arena);
 
     hllf_format_result result = { 0 };
@@ -406,9 +395,8 @@ main(int argc, char const **argv) {
     }
 
     read_file_result file_contents = read_entire_file(opts.in_filename);
-    hllf_settings settings = hllf_default_settings();
     hllf_format_result formatted =
-        hllf_format(file_contents.data, file_contents.data_size, &settings);
+        hllf_format(file_contents.data, file_contents.data_size);
     write_to_file(opts.out_filename, formatted.data, formatted.data_size);
 
     free(formatted.data);
