@@ -66,4 +66,22 @@ HLL_DECL
 HLL_ATTR(format(printf, 2, 3))
 void hll_string_builder_printf(hll_string_builder *b, char const *fmt, ...);
 
+#define HLL_MEMORY_ARENA_DEFAULT_BLOCK_SIZE (1 << 20)
+#define HLL_MEMORY_ARENA_ALIGN 16
+
+typedef struct _hll_memory_arena_block {
+    struct _hll_memory_arena_block *next;
+    size_t used;
+    size_t size;
+    char *data;
+} _hll_memory_arena_block;
+
+typedef struct hll_memory_arena {
+    _hll_memory_arena_block *block;
+    size_t min_block_size;
+} hll_memory_arena;
+
+HLL_DECL void *hll_memory_arena_alloc(hll_memory_arena *arena, size_t size);
+HLL_DECL void hll_memory_arena_clear(hll_memory_arena *);
+
 #endif

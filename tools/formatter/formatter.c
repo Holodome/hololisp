@@ -9,9 +9,6 @@
 
 #include "hll_lexer.h"
 #include "hll_utils.h"
-#define HLMA_STATIC
-#define HLMA_IMPL
-#include "hll_memory_arena.h"
 
 #ifndef HLL_FORMATTER_CLI
 #define HLL_FORMATTER_CLI 1
@@ -33,7 +30,7 @@ typedef struct {
 typedef struct {
     token *tokens;
     size_t token_count;
-    hlma_arena arena;
+    hll_memory_arena arena;
 } token_array;
 
 static size_t
@@ -88,7 +85,7 @@ read_tokens(char const *source, token_array *array) {
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
         case HLL_TOK_EXT_COMMENT:
-            tok->data = hlma_alloc(&array->arena, lexer.token_length + 1);
+            tok->data = hll_memory_arena_alloc(&array->arena, lexer.token_length + 1);
             tok->data_length = lexer.token_length;
             memcpy((void *)tok->data, lexer.buffer, lexer.token_length);
             break;
@@ -110,7 +107,7 @@ static token_array
 read_lisp_code_into_tokens(char const *source) {
     token_array array = { 0 };
     size_t token_count = count_tokens(source);
-    array.tokens = hlma_alloc(&array.arena, sizeof(token) * token_count);
+    array.tokens = hll_memory_arena_alloc(&array.arena, sizeof(token) * token_count);
     array.token_count = token_count;
     read_tokens(source, &array);
     return array;
@@ -123,7 +120,7 @@ typedef struct fmt_list_stack {
 } fmt_list_stack;
 
 typedef struct {
-    hlma_arena arena;
+    hll_memory_arena arena;
     uint32_t ident;
     fmt_list_stack *ident_stack;
     fmt_list_stack *ident_freelist;
@@ -134,7 +131,7 @@ static void
 push_ident(formatter_ctx *ctx, uint32_t ident) {
     fmt_list_stack *it = ctx->ident_freelist;
     if (!it) {
-        it = hlma_alloc(&ctx->arena, sizeof(fmt_list_stack));
+        it = hll_memory_arena_alloc(&ctx->arena, sizeof(fmt_list_stack));
     } else {
         memset(it, 0, sizeof(fmt_list_stack));
     }
@@ -228,7 +225,7 @@ format_with_tokens(token_array *array, hll_string_builder *sb) {
         /* last_token = tok; */
     }
 
-    hlma_clear(&ctx.arena);
+    hll_memory_arena_clear(&ctx.arena);
 }
 
 hllf_format_result
@@ -246,7 +243,7 @@ hllf_format(char const *source, size_t source_length) {
     hll_string_builder sb = hll_create_string_builder(sb_size);
 
     format_with_tokens(&tokens, &sb);
-    hlma_clear(&tokens.arena);
+    hll_memory_arena_clear(&tokens.arena);
 
     hllf_format_result result = { 0 };
     result.data = sb.buffer;

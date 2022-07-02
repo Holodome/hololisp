@@ -12,8 +12,7 @@ typedef struct {
 } hllf_format_result;
 
 HLL_DECL hllf_format_result hllf_format(char const *source,
-                                        size_t source_length
-                                        );
+                                        size_t source_length);
 HLL_DECL void hllf_format_free(char const *text);
 
 #endif
