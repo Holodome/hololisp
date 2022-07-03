@@ -14,10 +14,29 @@
 #define HLL_FORMATTER_CLI 1
 #endif
 
-static size_t
-decide_size_for_string_builder(size_t source_size) {
-    return source_size * 3 / 2;
-}
+typedef enum {
+    SPECIAL_FORM_NONE = 0x0,
+    SPECIAL_FORM_IF = 0x1,
+    SPECIAL_FORM_WHEN = 0x2,
+    SPECIAL_FORM_UNLESS = 0x3,
+    SPECIAL_FORM_DEFUN = 0x4,
+    SPECIAL_FORM_LET = 0x5,
+} special_form_kind;
+
+typedef struct fmt_list_stack {
+    struct fmt_list_stack *next;
+    uint32_t element_count;
+    uint32_t ident;
+    special_form_kind special_form;
+} fmt_list_stack;
+
+typedef struct {
+    hll_memory_arena arena;
+    uint32_t ident;
+    fmt_list_stack *ident_stack;
+    fmt_list_stack *ident_freelist;
+    uint32_t parens_depth;
+} formatter_state;
 
 typedef struct {
     hll_token_kind kind;
@@ -25,16 +44,15 @@ typedef struct {
     size_t data_length;
     size_t line;
     size_t column;
-} token;
-
-typedef struct {
-    token *tokens;
-    size_t token_count;
-    hll_memory_arena arena;
-} token_array;
+} lexeme;
 
 static size_t
-count_tokens(char const *source) {
+decide_size_for_string_builder(size_t source_size) {
+    return source_size * 3 / 2;
+}
+
+static size_t
+count_lexemes(char const *source) {
     hll_lexer lexer = hll_lexer_create(source, NULL, 0);
     lexer.is_ext = 1;
 
@@ -55,7 +73,8 @@ count_tokens(char const *source) {
 }
 
 static void
-read_tokens(char const *source, token_array *array) {
+read_lexemes(char const *source, lexeme *lexemes, size_t lexeme_count,
+             hll_memory_arena *arena) {
     size_t cursor = 0;
 
     char buffer[4096];
@@ -73,11 +92,11 @@ read_tokens(char const *source, token_array *array) {
             break;
         }
 
-        assert(cursor < array->token_count);
-        token *tok = array->tokens + cursor;
-        tok->kind = lexer.token_kind;
-        tok->line = lexer.token_line;
-        tok->column = lexer.token_column;
+        assert(cursor < lexeme_count);
+        lexeme *it = lexemes + cursor;
+        it->kind = lexer.token_kind;
+        it->line = lexer.token_line;
+        it->column = lexer.token_column;
         switch (lexer.token_kind) {
         default:
             HLL_UNREACHABLE;
@@ -85,10 +104,9 @@ read_tokens(char const *source, token_array *array) {
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
         case HLL_TOK_EXT_COMMENT:
-            tok->data =
-                hll_memory_arena_alloc(&array->arena, lexer.token_length + 1);
-            tok->data_length = lexer.token_length;
-            memcpy((void *)tok->data, lexer.buffer, lexer.token_length);
+            it->data = hll_memory_arena_alloc(arena, lexer.token_length + 1);
+            it->data_length = lexer.token_length;
+            memcpy((void *)it->data, lexer.buffer, lexer.token_length);
             break;
         case HLL_TOK_DOT:
         case HLL_TOK_LPAREN:
@@ -101,33 +119,19 @@ read_tokens(char const *source, token_array *array) {
         hll_lexer_eat(&lexer);
     }
 
-    assert(cursor == array->token_count);
+    assert(cursor == lexeme_count);
 }
 
-static token_array
-read_lisp_code_into_tokens(char const *source) {
-    token_array array = { 0 };
-    size_t token_count = count_tokens(source);
-    array.tokens =
-        hll_memory_arena_alloc(&array.arena, sizeof(token) * token_count);
-    array.token_count = token_count;
-    read_tokens(source, &array);
-    return array;
+static void
+read_lisp_code_into_tokens(char const *source, lexeme **lexemes,
+                           size_t *lexeme_count, hll_memory_arena *arena) {
+    size_t count = count_lexemes(source);
+    lexeme *its = hll_memory_arena_alloc(arena, sizeof(lexeme) * count);
+    read_lexemes(source, its, count, arena);
+
+    *lexemes = its;
+    *lexeme_count = count;
 }
-
-typedef struct fmt_list_stack {
-    struct fmt_list_stack *next;
-    uint32_t element_count;
-    uint32_t ident;
-} fmt_list_stack;
-
-typedef struct {
-    hll_memory_arena arena;
-    uint32_t ident;
-    fmt_list_stack *ident_stack;
-    fmt_list_stack *ident_freelist;
-    uint32_t parens_depth;
-} formatter_ctx;
 
 static void
 push_ident(formatter_ctx *ctx, uint32_t ident) {
@@ -261,7 +265,7 @@ hllf_format_free(char const *text) {
 
 #if HLL_FORMATTER_CLI
 typedef struct {
-    int is_valid;
+    bool is_valid;
     char const *in_filename;
     char const *out_filename;
 } cli_options;
@@ -273,7 +277,7 @@ parse_cli_args(int argc, char const **argv) {
     if (argc == 2) {
         opts.in_filename = argv[0];
         opts.out_filename = argv[1];
-        opts.is_valid = 1;
+        opts.is_valid = true;
     }
 
     return opts;
@@ -292,7 +296,7 @@ main(int argc, char const **argv) {
     hll_fs_io_result read_result =
         hll_read_entire_file(opts.in_filename, &file_contents, &file_size);
     if (read_result != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to code to format from file '%s': %s\n",
+        fprintf(stderr, "Failed to load code to format from file '%s': %s\n",
                 opts.in_filename, hll_get_fs_io_result_string(read_result));
         return EXIT_FAILURE;
     }

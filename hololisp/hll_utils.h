@@ -19,7 +19,6 @@ typedef enum {
 char const *hll_get_fs_io_result_string(hll_fs_io_result result);
 
 /// @brief Wrapper around hll_open_file_. Should be used as public interface
-/// @breief
 #define hll_open_file(_file, _filename, _mode) \
     hll_open_file_((void **)(_file), _filename, _mode)
 
