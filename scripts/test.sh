@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # set -x
-set -eou pipefail
 
 unit_test_files=$(find build -type f -name "*.test" -exec echo {} \+)
 test_script_files=$(find tests -type f -name "*.sh" -exec echo {} \+)
@@ -18,7 +17,7 @@ process_test () {
     executable=$1 ok_pattern=$2
     fail_pattern=$3
 
-    exec_result=$($executable 2> /dev/null || :)
+    exec_result=$($executable 2> /dev/null)
     exit_code=$?
 
     ok_count=$(echo "$exec_result" | grep -ocF "$ok_pattern" || :)

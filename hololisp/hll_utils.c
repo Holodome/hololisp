@@ -129,7 +129,7 @@ hll_read_entire_file(char const *filename, char **data, size_t *data_size) {
                 result = HLL_FS_IO_READ_FAILED;
             } else {
                 if (data_size != NULL) {
-                *data_size = size;
+                    *data_size = size;
                 }
                 *data = buffer;
             }

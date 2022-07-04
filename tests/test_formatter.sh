@@ -161,9 +161,7 @@ run_test "function arguments" "$test_out" "$test_src"
 
 test_src="((1) (2) (3))"
 test_out=$(cat <<- EOF
-((1)
- (2)
- (3))
+((1) (2) (3))
 EOF
 )
 run_test "list of lists" "$test_out" "$test_src"

@@ -21,7 +21,6 @@ typedef enum {
     SPECIAL_FORM_UNLESS = 0x3,
     SPECIAL_FORM_DEFUN = 0x4,
     SPECIAL_FORM_LET = 0x5,
-    SPECIAL_FORM_DATA = 0x6,  // List of lists
 } special_form_kind;
 
 static special_form_kind
@@ -62,6 +61,48 @@ typedef struct fmt_ast {
     struct fmt_ast *first_child;
     struct fmt_ast *last_child;
 } fmt_ast;
+
+typedef struct fmt_state_ident {
+    struct fmt_state_ident *next;
+    uint32_t ident;
+} fmt_state_ident;
+
+typedef struct {
+    uint32_t ident;
+    fmt_state_ident *stack;
+    fmt_state_ident *freelist;
+    hll_memory_arena *arena;
+    hll_string_builder *sb;
+} fmt_state;
+
+static void
+push_ident(fmt_state *state, uint32_t ident) {
+    fmt_state_ident *it = state->freelist;
+    if (it) {
+        state->freelist = it->next;
+        memset(it, 0, sizeof(fmt_state_ident));
+    } else {
+        it = hll_memory_arena_alloc(state->arena, sizeof(fmt_state_ident));
+    }
+
+    it->ident = ident;
+    state->ident += ident;
+
+    it->next = state->stack;
+    state->stack = it;
+}
+
+static void
+pop_ident(fmt_state *state) {
+    assert(state->stack);
+    fmt_state_ident *it = state->stack;
+    state->stack = it->next;
+
+    assert(state->ident >= it->ident);
+    state->ident -= it->ident;
+    it->next = state->freelist;
+    state->freelist = it;
+}
 
 static size_t
 decide_size_for_string_builder(size_t source_size) {
@@ -152,6 +193,7 @@ read_lisp_code_into_lexemes(char const *source, lexeme **lexemes,
 
 static void
 append_child(fmt_ast *ast, fmt_ast *new) {
+    ++ast->element_count;
     if (!ast->first_child) {
         ast->first_child = ast->last_child = new;
     } else {
@@ -178,10 +220,13 @@ build_ast(lexeme *lexemes, size_t lexeme_count, hll_memory_arena *arena) {
             new->is_list = true;
             new->up = ast;
             append_child(ast, new);
-            ++ast->element_count;
             ast = new;
         } break;
         case HLL_TOK_RPAREN:
+            if (ast->first_child && !ast->first_child->is_list) {
+                ast->special_form =
+                    special_form_from_str(ast->first_child->lex->data);
+            }
             if (ast->up) {
                 ast = ast->up;
             }
@@ -202,7 +247,103 @@ build_ast(lexeme *lexemes, size_t lexeme_count, hll_memory_arena *arena) {
 }
 
 static void
+fmt_newline(fmt_state *state) {
+    hll_string_builder_printf(state->sb, "\n");
+    if (state->ident) {
+        hll_string_builder_printf(state->sb, "%*s", state->ident, "");
+    }
+}
+
+static void
+fmt_ast_recursive(fmt_ast *ast, fmt_state *state) {
+    if (ast->is_list) {
+        hll_string_builder_printf(state->sb, "(");
+        switch (ast->special_form) {
+        case SPECIAL_FORM_NONE:
+            push_ident(state, 1);
+            for (fmt_ast *child = ast->first_child; child;
+                 child = child->next) {
+                fmt_ast_recursive(child, state);
+                if (child->next) {
+                    if (child->next->lex->line == child->lex->line) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else {
+                        fmt_newline(state);
+                    }
+                }
+            }
+            pop_ident(state);
+            break;
+        case SPECIAL_FORM_DEFUN: {
+            push_ident(state, 2);
+            // First 3 elements on same line
+            size_t idx = 0;
+            for (fmt_ast *child = ast->first_child; child;
+                 child = child->next) {
+                fmt_ast_recursive(child, state);
+                if (idx < 2) {
+                    hll_string_builder_printf(state->sb, " ");
+                } else if (idx == 2) {
+                    fmt_newline(state);
+                } else {
+                    if (child->next) {
+                        if (child->next->lex->line == child->lex->line) {
+                            hll_string_builder_printf(state->sb, " ");
+                        } else {
+                            fmt_newline(state);
+                        }
+                    }
+                }
+                ++idx;
+            }
+            pop_ident(state);
+        } break;
+        case SPECIAL_FORM_LET:
+            break;
+        case SPECIAL_FORM_IF:
+        case SPECIAL_FORM_WHEN:
+        case SPECIAL_FORM_UNLESS: {
+            push_ident(state, 2);
+            // First 2 on same line
+            size_t idx = 0;
+            for (fmt_ast *child = ast->first_child; child;
+                 child = child->next) {
+                fmt_ast_recursive(child, state);
+                if (idx < 1) {
+                    hll_string_builder_printf(state->sb, " ");
+                } else if (idx == 1) {
+                    fmt_newline(state);
+                } else {
+                    if (child->next) {
+                        if (child->next->lex->line == child->lex->line) {
+                            hll_string_builder_printf(state->sb, " ");
+                        } else {
+                            fmt_newline(state);
+                        }
+                    }
+                }
+                ++idx;
+            }
+            pop_ident(state);
+        } break;
+        }
+        hll_string_builder_printf(state->sb, ")");
+    } else {
+        if (ast->lex->kind != HLL_TOK_EXT_COMMENT) {
+            hll_string_builder_printf(state->sb, "%s", ast->lex->data);
+        }
+    }
+}
+
+static void
 format_with_ast(fmt_ast *ast, hll_string_builder *sb, hll_memory_arena *arena) {
+    fmt_state state = { 0 };
+    state.arena = arena;
+    state.sb = sb;
+    for (fmt_ast *child = ast->first_child; child; child = child->next) {
+        fmt_ast_recursive(child, &state);
+        hll_string_builder_printf(sb, "\n");
+    }
 }
 
 hllf_format_result
