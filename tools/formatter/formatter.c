@@ -23,20 +23,18 @@ typedef enum {
     SPECIAL_FORM_LET = 0x5,
 } special_form_kind;
 
-typedef struct fmt_list_stack {
-    struct fmt_list_stack *next;
+typedef struct fmt_list {
+    struct fmt_list *next;
     uint32_t element_count;
     uint32_t ident;
     special_form_kind special_form;
-} fmt_list_stack;
+} fmt_list;
 
 typedef struct {
-    hll_memory_arena arena;
-    uint32_t ident;
-    fmt_list_stack *ident_stack;
-    fmt_list_stack *ident_freelist;
-    uint32_t parens_depth;
-} formatter_state;
+    hll_memory_arena *arena;
+    fmt_list *stack;
+    fmt_list *freelist;
+} fmt_state;
 
 typedef struct {
     hll_token_kind kind;
@@ -123,8 +121,8 @@ read_lexemes(char const *source, lexeme *lexemes, size_t lexeme_count,
 }
 
 static void
-read_lisp_code_into_tokens(char const *source, lexeme **lexemes,
-                           size_t *lexeme_count, hll_memory_arena *arena) {
+read_lisp_code_into_lexemes(char const *source, lexeme **lexemes,
+                            size_t *lexeme_count, hll_memory_arena *arena) {
     size_t count = count_lexemes(source);
     lexeme *its = hll_memory_arena_alloc(arena, sizeof(lexeme) * count);
     read_lexemes(source, its, count, arena);
@@ -134,126 +132,124 @@ read_lisp_code_into_tokens(char const *source, lexeme **lexemes,
 }
 
 static void
-push_ident(formatter_ctx *ctx, uint32_t ident) {
-    fmt_list_stack *it = ctx->ident_freelist;
-    if (!it) {
-        it = hll_memory_arena_alloc(&ctx->arena, sizeof(fmt_list_stack));
+push_list(fmt_state *state) {
+    fmt_list *it = state->freelist;
+    if (it) {
+        state->freelist = it->next;
+        memset(it, 0, sizeof(fmt_list));
     } else {
-        memset(it, 0, sizeof(fmt_list_stack));
+        it = hll_memory_arena_alloc(state->arena, sizeof(fmt_list));
     }
-    it->ident = ident;
 
-    it->next = ctx->ident_stack;
-    ctx->ident_stack = it;
-    ctx->ident += ident;
+    it->next = state->stack;
+    state->stack = it;
 }
 
 static void
-pop_ident(formatter_ctx *ctx) {
-    assert(ctx->ident_stack);
-    fmt_list_stack *it = ctx->ident_stack;
-    ctx->ident_stack = it->next;
+pop_list(fmt_state *state) {
+    fmt_list *it = state->stack;
+    assert(it != NULL);
+    state->stack = it->next;
 
-    assert(ctx->ident >= it->ident);
-    ctx->ident -= it->ident;
-
-    it->next = ctx->ident_freelist;
-    ctx->ident_freelist = it;
+    it->next = state->freelist;
+    state->freelist = it;
 }
 
-static void
-ident(formatter_ctx *ctx, hll_string_builder *sb) {
-    if (ctx->ident) {
-        hll_string_builder_printf(sb, "%*s", ctx->ident, "");
+static special_form_kind
+special_form_from_str(char const *str) {
+    special_form_kind kind = SPECIAL_FORM_NONE;
+
+    if (strcmp(str, "if") == 0) {
+        kind = SPECIAL_FORM_IF;
+    } else if (strcmp(str, "when") == 0) {
+        kind = SPECIAL_FORM_WHEN;
+    } else if (strcmp(str, "unless") == 0) {
+        kind = SPECIAL_FORM_UNLESS;
+    } else if (strcmp(str, "defun") == 0) {
+        kind = SPECIAL_FORM_DEFUN;
+    } else if (strcmp(str, "let") == 0) {
+        kind = SPECIAL_FORM_LET;
     }
+
+    return kind;
 }
 
 static void
-format_with_tokens(token_array *array, hll_string_builder *sb) {
-    formatter_ctx ctx = { 0 };
+process_symb(fmt_state *state, lexeme *it, hll_string_builder *sb) {
+    assert(it->kind == HLL_TOK_SYMB);
 
-    /* token _last_token = { 0 }; */
-    /* token *last_token = &_last_token; */
-    for (size_t cursor = 0; cursor < array->token_count; ++cursor) {
-        token *tok = array->tokens + cursor;
-        /* { */
-        /*     size_t newline_count = tok->line - last_token->line; */
-        /*     while (newline_count--) { */
-        /*         string_builder_printf(sb, "\n"); */
-        /*     } */
-        /* } */
-
-        switch (tok->kind) {
-        default:
-            HLL_UNREACHABLE;
-            break;
-        case HLL_TOK_NUMI:
-        case HLL_TOK_SYMB:
-            if (ctx.ident_stack && ctx.ident_stack->element_count) {
-                hll_string_builder_printf(sb, "\n");
-                ident(&ctx, sb);
+    fmt_list *stack = state->stack;
+    if (!stack) {
+        hll_string_builder_printf(sb, "\n%s\n", it->data);
+    } else {
+        if (stack->element_count == 0) {
+            stack->special_form = special_form_from_str(it->data);
+        } else {
+            switch (stack->special_form) {
+            case SPECIAL_FORM_NONE:
+                break;
+            case SPECIAL_FORM_IF:
+                break;
+            case SPECIAL_FORM_WHEN:
+                break;
+            case SPECIAL_FORM_UNLESS:
+                break;
+            case SPECIAL_FORM_DEFUN:
+                break;
+            case SPECIAL_FORM_LET:
+                break;
             }
-            hll_string_builder_printf(sb, "%s", tok->data);
-            if (ctx.ident_stack) {
-                ++ctx.ident_stack->element_count;
-            }
-            break;
-        case HLL_TOK_EXT_COMMENT:
-            break;
-        case HLL_TOK_DOT:
-            hll_string_builder_printf(sb, ".");
-            break;
-        case HLL_TOK_LPAREN:
-            ident(&ctx, sb);
-            if (ctx.ident_stack && ctx.ident_stack->element_count) {
-                ++ctx.ident_stack->element_count;
-                hll_string_builder_printf(sb, "\n");
-                ident(&ctx, sb);
-            }
-            if (ctx.ident_stack) {
-                ++ctx.ident_stack->element_count;
-            }
-            hll_string_builder_printf(sb, "(");
-            push_ident(&ctx, 2);
-            break;
-        case HLL_TOK_RPAREN:
-            hll_string_builder_printf(sb, ")");
-            pop_ident(&ctx);
-            if (!ctx.ident_stack) {
-                hll_string_builder_printf(sb, "\n");
-            }
-            break;
-        case HLL_TOK_QUOTE:
-            hll_string_builder_printf(sb, "'");
-            break;
         }
-
-        /* last_token = tok; */
     }
+}
 
-    hll_memory_arena_clear(&ctx.arena);
+static void
+process_lexeme(fmt_state *state, lexeme *it, hll_string_builder *sb) {
+    switch (it->kind) {
+    default:
+        break;
+    case HLL_TOK_LPAREN:
+        push_list(state);
+        break;
+    case HLL_TOK_RPAREN:
+        pop_list(state);
+        break;
+    case HLL_TOK_SYMB:
+        process_symb(state, it, sb);
+        break;
+    }
+}
+
+static void
+format_with_lexemes(lexeme *lexemes, size_t lexeme_count,
+                    hll_string_builder *sb, hll_memory_arena *arena) {
+    fmt_state state = { 0 };
+    state.arena = arena;
+
+    for (size_t idx = 0; idx < lexeme_count; ++idx) {
+        lexeme *it = lexemes + idx;
+        process_lexeme(&state, it, sb);
+    }
 }
 
 hllf_format_result
 hllf_format(char const *source, size_t source_length) {
-    token_array tokens = read_lisp_code_into_tokens(source);
-#if 0
-    for (size_t i = 0; i < tokens.token_count; ++i) {
-        printf("Token %zu:%zu:%zu: kind: %u, data; %s\n", i,
-               tokens.tokens[i].line, tokens.tokens[i].column,
-               tokens.tokens[i].kind, tokens.tokens[i].data);
-    }
-#endif
+    hll_memory_arena arena = { 0 };
+
+    lexeme *lexemes = NULL;
+    size_t lexeme_count = 0;
+    read_lisp_code_into_lexemes(source, &lexemes, &lexeme_count, &arena);
 
     size_t sb_size = decide_size_for_string_builder(source_length);
     hll_string_builder sb = hll_create_string_builder(sb_size);
 
-    format_with_tokens(&tokens, &sb);
-    hll_memory_arena_clear(&tokens.arena);
+    format_with_lexemes(lexemes, lexeme_count, &sb, &arena);
 
     hllf_format_result result = { 0 };
     result.data = sb.buffer;
     result.data_size = sb.written;
+
+    hll_memory_arena_clear(&arena);
 
     return result;
 }
