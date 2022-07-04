@@ -21,20 +21,27 @@ typedef enum {
     SPECIAL_FORM_UNLESS = 0x3,
     SPECIAL_FORM_DEFUN = 0x4,
     SPECIAL_FORM_LET = 0x5,
+    SPECIAL_FORM_DATA = 0x6,  // List of lists
 } special_form_kind;
 
-typedef struct fmt_list {
-    struct fmt_list *next;
-    uint32_t element_count;
-    uint32_t ident;
-    special_form_kind special_form;
-} fmt_list;
+static special_form_kind
+special_form_from_str(char const *str) {
+    special_form_kind kind = SPECIAL_FORM_NONE;
 
-typedef struct {
-    hll_memory_arena *arena;
-    fmt_list *stack;
-    fmt_list *freelist;
-} fmt_state;
+    if (strcmp(str, "if") == 0) {
+        kind = SPECIAL_FORM_IF;
+    } else if (strcmp(str, "when") == 0) {
+        kind = SPECIAL_FORM_WHEN;
+    } else if (strcmp(str, "unless") == 0) {
+        kind = SPECIAL_FORM_UNLESS;
+    } else if (strcmp(str, "defun") == 0) {
+        kind = SPECIAL_FORM_DEFUN;
+    } else if (strcmp(str, "let") == 0) {
+        kind = SPECIAL_FORM_LET;
+    }
+
+    return kind;
+}
 
 typedef struct {
     hll_token_kind kind;
@@ -43,6 +50,18 @@ typedef struct {
     size_t line;
     size_t column;
 } lexeme;
+
+typedef struct fmt_ast {
+    struct fmt_ast *up;
+    struct fmt_ast *next;
+
+    bool is_list;
+    lexeme *lex;
+    special_form_kind special_form;
+    size_t element_count;
+    struct fmt_ast *first_child;
+    struct fmt_ast *last_child;
+} fmt_ast;
 
 static size_t
 decide_size_for_string_builder(size_t source_size) {
@@ -132,104 +151,58 @@ read_lisp_code_into_lexemes(char const *source, lexeme **lexemes,
 }
 
 static void
-push_list(fmt_state *state) {
-    fmt_list *it = state->freelist;
-    if (it) {
-        state->freelist = it->next;
-        memset(it, 0, sizeof(fmt_list));
+append_child(fmt_ast *ast, fmt_ast *new) {
+    if (!ast->first_child) {
+        ast->first_child = ast->last_child = new;
     } else {
-        it = hll_memory_arena_alloc(state->arena, sizeof(fmt_list));
+        ast->last_child->next = new;
+        ast->last_child = new;
     }
-
-    it->next = state->stack;
-    state->stack = it;
 }
 
-static void
-pop_list(fmt_state *state) {
-    fmt_list *it = state->stack;
-    assert(it != NULL);
-    state->stack = it->next;
+static fmt_ast *
+build_ast(lexeme *lexemes, size_t lexeme_count, hll_memory_arena *arena) {
+    fmt_ast *ast = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+    ast->is_list = true;
 
-    it->next = state->freelist;
-    state->freelist = it;
-}
+    for (size_t i = 0; i < lexeme_count; ++i) {
+        lexeme *it = lexemes + i;
 
-static special_form_kind
-special_form_from_str(char const *str) {
-    special_form_kind kind = SPECIAL_FORM_NONE;
-
-    if (strcmp(str, "if") == 0) {
-        kind = SPECIAL_FORM_IF;
-    } else if (strcmp(str, "when") == 0) {
-        kind = SPECIAL_FORM_WHEN;
-    } else if (strcmp(str, "unless") == 0) {
-        kind = SPECIAL_FORM_UNLESS;
-    } else if (strcmp(str, "defun") == 0) {
-        kind = SPECIAL_FORM_DEFUN;
-    } else if (strcmp(str, "let") == 0) {
-        kind = SPECIAL_FORM_LET;
-    }
-
-    return kind;
-}
-
-static void
-process_symb(fmt_state *state, lexeme *it, hll_string_builder *sb) {
-    assert(it->kind == HLL_TOK_SYMB);
-
-    fmt_list *stack = state->stack;
-    if (!stack) {
-        hll_string_builder_printf(sb, "\n%s\n", it->data);
-    } else {
-        if (stack->element_count == 0) {
-            stack->special_form = special_form_from_str(it->data);
-        } else {
-            switch (stack->special_form) {
-            case SPECIAL_FORM_NONE:
-                break;
-            case SPECIAL_FORM_IF:
-                break;
-            case SPECIAL_FORM_WHEN:
-                break;
-            case SPECIAL_FORM_UNLESS:
-                break;
-            case SPECIAL_FORM_DEFUN:
-                break;
-            case SPECIAL_FORM_LET:
-                break;
+        switch (it->kind) {
+        default:
+            HLL_UNREACHABLE;
+            break;
+        case HLL_TOK_LPAREN: {
+            fmt_ast *new = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+            new->lex = it;
+            new->is_list = true;
+            new->up = ast;
+            append_child(ast, new);
+            ++ast->element_count;
+            ast = new;
+        } break;
+        case HLL_TOK_RPAREN:
+            if (ast->up) {
+                ast = ast->up;
             }
+            break;
+        case HLL_TOK_DOT:
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
+        case HLL_TOK_EXT_COMMENT:
+        case HLL_TOK_QUOTE: {
+            fmt_ast *new = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+            new->lex = it;
+            append_child(ast, new);
+        } break;
         }
     }
+
+    return ast;
 }
 
 static void
-process_lexeme(fmt_state *state, lexeme *it, hll_string_builder *sb) {
-    switch (it->kind) {
-    default:
-        break;
-    case HLL_TOK_LPAREN:
-        push_list(state);
-        break;
-    case HLL_TOK_RPAREN:
-        pop_list(state);
-        break;
-    case HLL_TOK_SYMB:
-        process_symb(state, it, sb);
-        break;
-    }
-}
-
-static void
-format_with_lexemes(lexeme *lexemes, size_t lexeme_count,
-                    hll_string_builder *sb, hll_memory_arena *arena) {
-    fmt_state state = { 0 };
-    state.arena = arena;
-
-    for (size_t idx = 0; idx < lexeme_count; ++idx) {
-        lexeme *it = lexemes + idx;
-        process_lexeme(&state, it, sb);
-    }
+format_with_ast(fmt_ast *ast, hll_string_builder *sb, hll_memory_arena *arena) {
 }
 
 hllf_format_result
@@ -243,7 +216,8 @@ hllf_format(char const *source, size_t source_length) {
     size_t sb_size = decide_size_for_string_builder(source_length);
     hll_string_builder sb = hll_create_string_builder(sb_size);
 
-    format_with_lexemes(lexemes, lexeme_count, &sb, &arena);
+    fmt_ast *ast = build_ast(lexemes, lexeme_count, &arena);
+    format_with_ast(ast, &sb, &arena);
 
     hllf_format_result result = { 0 };
     result.data = sb.buffer;
