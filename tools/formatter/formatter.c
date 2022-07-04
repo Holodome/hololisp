@@ -16,11 +16,12 @@
 
 typedef enum {
     SPECIAL_FORM_NONE = 0x0,
-    SPECIAL_FORM_IF = 0x1,
-    SPECIAL_FORM_WHEN = 0x2,
-    SPECIAL_FORM_UNLESS = 0x3,
-    SPECIAL_FORM_DEFUN = 0x4,
-    SPECIAL_FORM_LET = 0x5,
+    SPECIAL_FORM_FUNC_CALL = 0x1,
+    SPECIAL_FORM_IF = 0x2,
+    SPECIAL_FORM_WHEN = 0x3,
+    SPECIAL_FORM_UNLESS = 0x4,
+    SPECIAL_FORM_DEFUN = 0x5,
+    SPECIAL_FORM_LET = 0x6,
 } special_form_kind;
 
 static special_form_kind
@@ -226,6 +227,9 @@ build_ast(lexeme *lexemes, size_t lexeme_count, hll_memory_arena *arena) {
             if (ast->first_child && !ast->first_child->is_list) {
                 ast->special_form =
                     special_form_from_str(ast->first_child->lex->data);
+                if (!ast->special_form) {
+                    ast->special_form = SPECIAL_FORM_FUNC_CALL;
+                }
             }
             if (ast->up) {
                 ast = ast->up;
@@ -255,82 +259,179 @@ fmt_newline(fmt_state *state) {
 }
 
 static void
+separate_list_its(fmt_ast *ast, fmt_state *state, bool allow_newline) {
+    if (ast->next) {
+        if (ast->next->lex->line == ast->lex->line &&
+            ast->lex->kind != HLL_TOK_QUOTE) {
+            hll_string_builder_printf(state->sb, " ");
+        } else if (ast->next->lex->line != ast->lex->line && allow_newline) {
+            fmt_newline(state);
+        }
+    }
+}
+
+static void
 fmt_ast_recursive(fmt_ast *ast, fmt_state *state) {
     if (ast->is_list) {
-        hll_string_builder_printf(state->sb, "(");
-        switch (ast->special_form) {
-        case SPECIAL_FORM_NONE:
-            push_ident(state, 1);
+        if (ast->first_child->lex->line == ast->last_child->lex->line &&
+            (ast->special_form == SPECIAL_FORM_NONE ||
+             ast->special_form == SPECIAL_FORM_FUNC_CALL)) {
+            hll_string_builder_printf(state->sb, "(");
             for (fmt_ast *child = ast->first_child; child;
                  child = child->next) {
                 fmt_ast_recursive(child, state);
-                if (child->next) {
-                    if (child->next->lex->line == child->lex->line) {
+                separate_list_its(child, state, false);
+            }
+            hll_string_builder_printf(state->sb, ")");
+        } else {
+            hll_string_builder_printf(state->sb, "(");
+            switch (ast->special_form) {
+            case SPECIAL_FORM_NONE:
+                push_ident(state, 1);
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    separate_list_its(ast, state, true);
+                }
+                pop_ident(state);
+                break;
+            case SPECIAL_FORM_DEFUN: {
+                push_ident(state, 2);
+                // First 3 elements on same line
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 2) {
                         hll_string_builder_printf(state->sb, " ");
-                    } else {
+                    } else if (idx == 2) {
                         fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
                     }
+                    ++idx;
                 }
-            }
-            pop_ident(state);
-            break;
-        case SPECIAL_FORM_DEFUN: {
-            push_ident(state, 2);
-            // First 3 elements on same line
-            size_t idx = 0;
-            for (fmt_ast *child = ast->first_child; child;
-                 child = child->next) {
-                fmt_ast_recursive(child, state);
-                if (idx < 2) {
-                    hll_string_builder_printf(state->sb, " ");
-                } else if (idx == 2) {
-                    fmt_newline(state);
-                } else {
-                    if (child->next) {
-                        if (child->next->lex->line == child->lex->line) {
-                            hll_string_builder_printf(state->sb, " ");
-                        } else {
-                            fmt_newline(state);
-                        }
+                pop_ident(state);
+            } break;
+            case SPECIAL_FORM_LET: {
+                // First 2 on same line
+                size_t idx = 0;
+                bool has_ident = false;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    if (idx < 1) {
+                        fmt_ast_recursive(child, state);
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (let (<first>
+                        push_ident(state, strlen("(let "));
+                        fmt_ast_recursive(child, state);
+                        pop_ident(state);
+                        push_ident(state, 2);
+                        fmt_newline(state);
+                        has_ident = true;
+                    } else {
+                        fmt_ast_recursive(child, state);
+                        separate_list_its(child, state, true);
                     }
+                    ++idx;
                 }
-                ++idx;
-            }
-            pop_ident(state);
-        } break;
-        case SPECIAL_FORM_LET:
-            break;
-        case SPECIAL_FORM_IF:
-        case SPECIAL_FORM_WHEN:
-        case SPECIAL_FORM_UNLESS: {
-            push_ident(state, 2);
-            // First 2 on same line
-            size_t idx = 0;
-            for (fmt_ast *child = ast->first_child; child;
-                 child = child->next) {
-                fmt_ast_recursive(child, state);
-                if (idx < 1) {
-                    hll_string_builder_printf(state->sb, " ");
-                } else if (idx == 1) {
-                    fmt_newline(state);
-                } else {
-                    if (child->next) {
-                        if (child->next->lex->line == child->lex->line) {
-                            hll_string_builder_printf(state->sb, " ");
-                        } else {
-                            fmt_newline(state);
-                        }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
+            case SPECIAL_FORM_WHEN:
+            case SPECIAL_FORM_UNLESS: {
+                push_ident(state, 2);
+                // First 2 on same line
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
                     }
+                    ++idx;
                 }
-                ++idx;
+                pop_ident(state);
+            } break;
+            case SPECIAL_FORM_IF: {
+                // First 2 on same line
+                size_t idx = 0;
+                bool has_ident = false;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (if <first>...
+                        push_ident(state, strlen("(if "));
+                        fmt_newline(state);
+                        has_ident = true;
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
+            case SPECIAL_FORM_FUNC_CALL: {
+                // First 2 on same line
+                bool has_ident = false;
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (<name> <first>...
+                        has_ident = true;
+                        push_ident(state,
+                                   1 + ast->first_child->lex->data_length + 1);
+                        fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
             }
-            pop_ident(state);
-        } break;
+            hll_string_builder_printf(state->sb, ")");
         }
-        hll_string_builder_printf(state->sb, ")");
     } else {
-        if (ast->lex->kind != HLL_TOK_EXT_COMMENT) {
+        switch (ast->lex->kind) {
+        default:
+            HLL_UNREACHABLE;
+            break;
+        case HLL_TOK_EXT_COMMENT:
+            break;
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
             hll_string_builder_printf(state->sb, "%s", ast->lex->data);
+            break;
+        case HLL_TOK_DOT:
+            hll_string_builder_printf(state->sb, ".");
+            break;
+        case HLL_TOK_LPAREN:
+            hll_string_builder_printf(state->sb, "(");
+            break;
+        case HLL_TOK_RPAREN:
+            hll_string_builder_printf(state->sb, ")");
+            break;
+        case HLL_TOK_QUOTE:
+            hll_string_builder_printf(state->sb, "'");
+            break;
         }
     }
 }

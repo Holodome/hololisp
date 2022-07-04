@@ -37,8 +37,8 @@ run_test () {
 test_src="(defun f (x) (when (< (g x) 3) (h x 2)))"
 test_out=$(cat <<- EOF 
 (defun f (x)
-    (when (< (g x) 3)
-       (h x 2)))
+  (when (< (g x) 3)
+     (h x 2)))
 EOF
 )
 run_test "closing parens" "$test_out" "$test_src"
@@ -78,10 +78,11 @@ test_src="(abc (< (g x) 2) ;; reinitialize and abandon everything
 
 run_test "double column comment" "$test_out" "$test_src"
 
-test_src="(if (= (f x) 4) (top-level x) (g x))"
+test_src="(if (< (g x) 2) (top-level x) 
+(h y  ))"
 test_out=$(cat <<- EOF
-(if (< (g x) 2) 
-    (top-level x) 
+(if (< (g x) 2)
+    (top-level x)
     (h y))
 EOF
 )
@@ -92,8 +93,8 @@ test_src="(when (= (f x) 4)
     (top-level x))"
 test_out=$(cat <<- EOF
 (when (= (f x) 4)
-    (setf *level-number* 0)
-    (top-level x))
+  (setf *level-number* 0)
+  (top-level x))
 EOF
 )
 
@@ -150,10 +151,12 @@ EOF
 )
 run_test "let special form" "$test_out" "$test_src"
 
-test_src="(my-fun 1 2 3)"
+test_src="(my-fun 1 
+2 
+3)"
 test_out=$(cat <<- EOF
 (my-fun 1
-        2 
+        2
         3)
 EOF
 )
