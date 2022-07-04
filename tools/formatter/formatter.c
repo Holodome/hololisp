@@ -286,15 +286,15 @@ fmt_ast_recursive(fmt_ast *ast, fmt_state *state) {
         } else {
             hll_string_builder_printf(state->sb, "(");
             switch (ast->special_form) {
-            case SPECIAL_FORM_NONE:
+            case SPECIAL_FORM_NONE: {
                 push_ident(state, 1);
                 for (fmt_ast *child = ast->first_child; child;
                      child = child->next) {
                     fmt_ast_recursive(child, state);
-                    separate_list_its(ast, state, true);
+                    separate_list_its(child, state, true);
                 }
                 pop_ident(state);
-                break;
+            } break;
             case SPECIAL_FORM_DEFUN: {
                 push_ident(state, 2);
                 // First 3 elements on same line

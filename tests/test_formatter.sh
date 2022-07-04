@@ -38,7 +38,7 @@ test_src="(defun f (x) (when (< (g x) 3) (h x 2)))"
 test_out=$(cat <<- EOF 
 (defun f (x)
   (when (< (g x) 3)
-     (h x 2)))
+    (h x 2)))
 EOF
 )
 run_test "closing parens" "$test_out" "$test_src"
