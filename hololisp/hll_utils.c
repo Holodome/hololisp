@@ -2,6 +2,7 @@
 
 // 2008 edition of the POSIX standard (IEEE Standard 1003.1-2008)
 #define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE 
 
 #include <assert.h>
 #include <limits.h>
