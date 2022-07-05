@@ -1,4 +1,4 @@
-#include "lisp_std.h"
+#include "hll_lisp_std.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -8,8 +8,8 @@
 #include "hll_error_reporter.h"
 #include "hll_lexer.h"
 #include "hll_lisp.h"
+#include "hll_lisp_gc.h"
 #include "hll_reader.h"
-#include "lisp_gc.h"
 
 static char const *
 get_lisp_function_name(char const *name) {

@@ -9,61 +9,55 @@
 
 #include "hll_lexer.h"
 #include "hll_utils.h"
-#define HLMA_STATIC
-#define HLMA_IMPL
-#include "hll_memory_arena.h"
 
 #ifndef HLL_FORMATTER_CLI
 #define HLL_FORMATTER_CLI 1
 #endif
 
-hllf_settings
-hllf_default_settings(void) {
-    hllf_settings settings = { 0 };
+typedef enum {
+    COMMENT_OTHER = 0x0,
+    COMMENT_LINE_END = 0x1,
+} comment_kind;
 
-    settings.tab_size = 1;
+static comment_kind
+get_comment_kind(char const *str) {
+    comment_kind kind = COMMENT_OTHER;
 
-    return settings;
-}
-
-static size_t
-decide_size_for_string_builder(size_t source_size) {
-    return source_size * 3 / 2;
-}
-
-typedef struct {
-    char *buffer;
-    size_t buffer_size;
-    size_t written;
-
-    size_t grow_inc;
-} string_builder;
-
-static string_builder
-create_string_builder(size_t size) {
-    string_builder b = { 0 };
-
-    b.buffer = calloc(size, 1);
-    b.buffer_size = size;
-    b.grow_inc = 4096;
-
-    return b;
-}
-
-static void
-string_builder_printf(string_builder *b, char const *fmt, ...) {
-    char buffer[4096];
-    va_list args;
-    va_start(args, fmt);
-    size_t written = vsnprintf(buffer, sizeof(buffer), fmt, args);
-
-    if (b->written + written > b->buffer_size) {
-        b->buffer_size += b->grow_inc;
-        b->buffer = realloc(b->buffer, b->buffer_size);
+    // If this is single ; comment.
+    if (*str != ';') {
+        kind = COMMENT_LINE_END;
     }
 
-    strcpy(b->buffer + b->written, buffer);
-    b->written += written;
+    return kind;
+}
+
+typedef enum {
+    SPECIAL_FORM_NONE = 0x0,
+    SPECIAL_FORM_FUNC_CALL = 0x1,
+    SPECIAL_FORM_IF = 0x2,
+    SPECIAL_FORM_WHEN = 0x3,
+    SPECIAL_FORM_UNLESS = 0x4,
+    SPECIAL_FORM_DEFUN = 0x5,
+    SPECIAL_FORM_LET = 0x6,
+} special_form_kind;
+
+static special_form_kind
+special_form_from_str(char const *str) {
+    special_form_kind kind = SPECIAL_FORM_NONE;
+
+    if (strcmp(str, "if") == 0) {
+        kind = SPECIAL_FORM_IF;
+    } else if (strcmp(str, "when") == 0) {
+        kind = SPECIAL_FORM_WHEN;
+    } else if (strcmp(str, "unless") == 0) {
+        kind = SPECIAL_FORM_UNLESS;
+    } else if (strcmp(str, "defun") == 0) {
+        kind = SPECIAL_FORM_DEFUN;
+    } else if (strcmp(str, "let") == 0) {
+        kind = SPECIAL_FORM_LET;
+    }
+
+    return kind;
 }
 
 typedef struct {
@@ -72,16 +66,69 @@ typedef struct {
     size_t data_length;
     size_t line;
     size_t column;
-} token;
+} lexeme;
+
+typedef struct fmt_ast {
+    struct fmt_ast *up;
+    struct fmt_ast *next;
+
+    bool is_list;
+    lexeme *lex;
+    special_form_kind special_form;
+    size_t element_count;
+    struct fmt_ast *first_child;
+    struct fmt_ast *last_child;
+} fmt_ast;
+
+typedef struct fmt_state_ident {
+    struct fmt_state_ident *next;
+    uint32_t ident;
+} fmt_state_ident;
 
 typedef struct {
-    token *tokens;
-    size_t token_count;
-    hlma_arena arena;
-} token_array;
+    uint32_t ident;
+    fmt_state_ident *stack;
+    fmt_state_ident *freelist;
+    hll_memory_arena *arena;
+    hll_string_builder *sb;
+} fmt_state;
+
+static void
+push_ident(fmt_state *state, uint32_t ident) {
+    fmt_state_ident *it = state->freelist;
+    if (it) {
+        state->freelist = it->next;
+        memset(it, 0, sizeof(fmt_state_ident));
+    } else {
+        it = hll_memory_arena_alloc(state->arena, sizeof(fmt_state_ident));
+    }
+
+    it->ident = ident;
+    state->ident += ident;
+
+    it->next = state->stack;
+    state->stack = it;
+}
+
+static void
+pop_ident(fmt_state *state) {
+    assert(state->stack);
+    fmt_state_ident *it = state->stack;
+    state->stack = it->next;
+
+    assert(state->ident >= it->ident);
+    state->ident -= it->ident;
+    it->next = state->freelist;
+    state->freelist = it;
+}
 
 static size_t
-count_tokens(char const *source) {
+decide_size_for_string_builder(size_t source_size) {
+    return source_size * 3 / 2;
+}
+
+static size_t
+count_lexemes(char const *source) {
     hll_lexer lexer = hll_lexer_create(source, NULL, 0);
     lexer.is_ext = 1;
 
@@ -102,7 +149,8 @@ count_tokens(char const *source) {
 }
 
 static void
-read_tokens(char const *source, token_array *array) {
+read_lexemes(char const *source, lexeme *lexemes, size_t lexeme_count,
+             hll_memory_arena *arena) {
     size_t cursor = 0;
 
     char buffer[4096];
@@ -120,11 +168,11 @@ read_tokens(char const *source, token_array *array) {
             break;
         }
 
-        assert(cursor < array->token_count);
-        token *tok = array->tokens + cursor;
-        tok->kind = lexer.token_kind;
-        tok->line = lexer.token_line;
-        tok->column = lexer.token_column;
+        assert(cursor < lexeme_count);
+        lexeme *it = lexemes + cursor;
+        it->kind = lexer.token_kind;
+        it->line = lexer.token_line;
+        it->column = lexer.token_column;
         switch (lexer.token_kind) {
         default:
             HLL_UNREACHABLE;
@@ -132,9 +180,9 @@ read_tokens(char const *source, token_array *array) {
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
         case HLL_TOK_EXT_COMMENT:
-            tok->data = hlma_alloc(&array->arena, lexer.token_length + 1);
-            tok->data_length = lexer.token_length;
-            memcpy((void *)tok->data, lexer.buffer, lexer.token_length);
+            it->data = hll_memory_arena_alloc(arena, lexer.token_length + 1);
+            it->data_length = lexer.token_length;
+            memcpy((void *)it->data, lexer.buffer, lexer.token_length);
             break;
         case HLL_TOK_DOT:
         case HLL_TOK_LPAREN:
@@ -147,156 +195,326 @@ read_tokens(char const *source, token_array *array) {
         hll_lexer_eat(&lexer);
     }
 
-    assert(cursor == array->token_count);
+    assert(cursor == lexeme_count);
 }
-
-static token_array
-read_lisp_code_into_tokens(char const *source) {
-    token_array array = { 0 };
-    size_t token_count = count_tokens(source);
-    array.tokens = hlma_alloc(&array.arena, sizeof(token) * token_count);
-    array.token_count = token_count;
-    read_tokens(source, &array);
-    return array;
-}
-
-typedef struct fmt_list_stack {
-    struct fmt_list_stack *next;
-    uint32_t element_count;
-    uint32_t ident;
-} fmt_list_stack;
-
-typedef struct {
-    hlma_arena arena;
-    uint32_t ident;
-    fmt_list_stack *ident_stack;
-    fmt_list_stack *ident_freelist;
-    uint32_t parens_depth;
-} formatter_ctx;
 
 static void
-push_ident(formatter_ctx *ctx, uint32_t ident) {
-    fmt_list_stack *it = ctx->ident_freelist;
-    if (!it) {
-        it = hlma_alloc(&ctx->arena, sizeof(fmt_list_stack));
+read_lisp_code_into_lexemes(char const *source, lexeme **lexemes,
+                            size_t *lexeme_count, hll_memory_arena *arena) {
+    size_t count = count_lexemes(source);
+    lexeme *its = hll_memory_arena_alloc(arena, sizeof(lexeme) * count);
+    read_lexemes(source, its, count, arena);
+
+    *lexemes = its;
+    *lexeme_count = count;
+}
+
+static void
+append_child(fmt_ast *ast, fmt_ast *new) {
+    ++ast->element_count;
+    if (!ast->first_child) {
+        ast->first_child = ast->last_child = new;
     } else {
-        memset(it, 0, sizeof(fmt_list_stack));
-    }
-    it->ident = ident;
-
-    it->next = ctx->ident_stack;
-    ctx->ident_stack = it;
-    ctx->ident += ident;
-}
-
-static void
-pop_ident(formatter_ctx *ctx) {
-    assert(ctx->ident_stack);
-    fmt_list_stack *it = ctx->ident_stack;
-    ctx->ident_stack = it->next;
-
-    assert(ctx->ident >= it->ident);
-    ctx->ident -= it->ident;
-
-    it->next = ctx->ident_freelist;
-    ctx->ident_freelist = it;
-}
-
-static void
-ident(formatter_ctx *ctx, string_builder *sb) {
-    if (ctx->ident) {
-        string_builder_printf(sb, "%*s", ctx->ident, "");
+        ast->last_child->next = new;
+        ast->last_child = new;
     }
 }
 
-static void
-format_with_tokens(token_array *array, string_builder *sb,
-                   hllf_settings *settings) {
-    (void)settings;
-    formatter_ctx ctx = { 0 };
+static fmt_ast *
+build_ast(lexeme *lexemes, size_t lexeme_count, hll_memory_arena *arena) {
+    fmt_ast *ast = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+    ast->is_list = true;
 
-    /* token _last_token = { 0 }; */
-    /* token *last_token = &_last_token; */
-    for (size_t cursor = 0; cursor < array->token_count; ++cursor) {
-        token *tok = array->tokens + cursor;
-        /* { */
-        /*     size_t newline_count = tok->line - last_token->line; */
-        /*     while (newline_count--) { */
-        /*         string_builder_printf(sb, "\n"); */
-        /*     } */
-        /* } */
+    for (size_t i = 0; i < lexeme_count; ++i) {
+        lexeme *it = lexemes + i;
 
-        switch (tok->kind) {
+        switch (it->kind) {
         default:
             HLL_UNREACHABLE;
             break;
-        case HLL_TOK_NUMI:
-        case HLL_TOK_SYMB:
-            if (ctx.ident_stack && ctx.ident_stack->element_count) {
-                string_builder_printf(sb, "\n");
-                ident(&ctx, sb);
+        case HLL_TOK_LPAREN: {
+            fmt_ast *new = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+            new->lex = it;
+            new->is_list = true;
+            new->up = ast;
+            append_child(ast, new);
+            ast = new;
+        } break;
+        case HLL_TOK_RPAREN:
+            if (ast->first_child && !ast->first_child->is_list) {
+                ast->special_form =
+                    special_form_from_str(ast->first_child->lex->data);
+                if (!ast->special_form) {
+                    ast->special_form = SPECIAL_FORM_FUNC_CALL;
+                }
             }
-            string_builder_printf(sb, "%s", tok->data);
-            if (ctx.ident_stack) {
-                ++ctx.ident_stack->element_count;
+            if (ast->up) {
+                ast = ast->up;
             }
-            break;
-        case HLL_TOK_EXT_COMMENT:
             break;
         case HLL_TOK_DOT:
-            string_builder_printf(sb, ".");
-            break;
-        case HLL_TOK_LPAREN:
-            ident(&ctx, sb);
-            if (ctx.ident_stack && ctx.ident_stack->element_count) {
-                ++ctx.ident_stack->element_count;
-                string_builder_printf(sb, "\n");
-                ident(&ctx, sb);
-            }
-            if (ctx.ident_stack) {
-                ++ctx.ident_stack->element_count;
-            }
-            string_builder_printf(sb, "(");
-            push_ident(&ctx, settings->tab_size);
-            break;
-        case HLL_TOK_RPAREN:
-            string_builder_printf(sb, ")");
-            pop_ident(&ctx);
-            if (!ctx.ident_stack) {
-                string_builder_printf(sb, "\n");
-            }
-            break;
-        case HLL_TOK_QUOTE:
-            string_builder_printf(sb, "'");
-            break;
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
+        case HLL_TOK_EXT_COMMENT:
+        case HLL_TOK_QUOTE: {
+            fmt_ast *new = hll_memory_arena_alloc(arena, sizeof(fmt_ast));
+            new->lex = it;
+            append_child(ast, new);
+        } break;
         }
-
-        /* last_token = tok; */
     }
 
-    hlma_clear(&ctx.arena);
+    return ast;
+}
+
+static void
+fmt_newline(fmt_state *state) {
+    hll_string_builder_printf(state->sb, "\n");
+    if (state->ident) {
+        hll_string_builder_printf(state->sb, "%*s", state->ident, "");
+    }
+}
+
+static void
+separate_list_its(fmt_ast *ast, fmt_state *state, bool allow_newline) {
+    if (ast->next) {
+        if (ast->next->lex->line == ast->lex->line &&
+            ast->lex->kind != HLL_TOK_QUOTE) {
+            hll_string_builder_printf(state->sb, " ");
+        } else if (ast->next->lex->line != ast->lex->line && allow_newline) {
+            // Comment is making a newline on its own
+            if (ast->lex->kind != HLL_TOK_EXT_COMMENT ||
+#if 0
+                get_comment_kind(ast->lex->data) != COMMENT_OTHER) {
+#else
+                false) {
+#endif 
+                fmt_newline(state);
+        }
+    }
+}
+}
+
+static void
+fmt_ast_recursive(fmt_ast *ast, fmt_state *state) {
+    if (ast->is_list) {
+        if (ast->first_child->lex->line == ast->last_child->lex->line &&
+            (ast->special_form == SPECIAL_FORM_NONE ||
+             ast->special_form == SPECIAL_FORM_FUNC_CALL)) {
+            hll_string_builder_printf(state->sb, "(");
+            for (fmt_ast *child = ast->first_child; child;
+                 child = child->next) {
+                fmt_ast_recursive(child, state);
+                separate_list_its(child, state, false);
+            }
+            hll_string_builder_printf(state->sb, ")");
+        } else {
+            hll_string_builder_printf(state->sb, "(");
+            switch (ast->special_form) {
+            case SPECIAL_FORM_NONE: {
+                push_ident(state, 1);
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    separate_list_its(child, state, true);
+                }
+                pop_ident(state);
+            } break;
+            case SPECIAL_FORM_DEFUN: {
+                push_ident(state, 2);
+                // First 3 elements on same line
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 2) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 2) {
+                        fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                pop_ident(state);
+            } break;
+            case SPECIAL_FORM_LET: {
+                // First 2 on same line
+                size_t idx = 0;
+                bool has_ident = false;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    if (idx < 1) {
+                        fmt_ast_recursive(child, state);
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (let (<first>
+                        push_ident(state, strlen("(let "));
+                        fmt_ast_recursive(child, state);
+                        pop_ident(state);
+                        push_ident(state, 2);
+                        fmt_newline(state);
+                        has_ident = true;
+                    } else {
+                        fmt_ast_recursive(child, state);
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
+            case SPECIAL_FORM_WHEN:
+            case SPECIAL_FORM_UNLESS: {
+                push_ident(state, 2);
+                // First 2 on same line
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                pop_ident(state);
+            } break;
+            case SPECIAL_FORM_IF: {
+                // First 2 on same line
+                size_t idx = 0;
+                bool has_ident = false;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (if <first>...
+                        push_ident(state, strlen("(if "));
+                        fmt_newline(state);
+                        has_ident = true;
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
+            case SPECIAL_FORM_FUNC_CALL: {
+                // First 2 on same line
+                bool has_ident = false;
+                size_t idx = 0;
+                for (fmt_ast *child = ast->first_child; child;
+                     child = child->next) {
+                    fmt_ast_recursive(child, state);
+                    if (idx < 1) {
+                        hll_string_builder_printf(state->sb, " ");
+                    } else if (idx == 1) {
+                        // (<name> <first>...
+                        has_ident = true;
+                        push_ident(state,
+                                   1 + ast->first_child->lex->data_length + 1);
+                        fmt_newline(state);
+                    } else {
+                        separate_list_its(child, state, true);
+                    }
+                    ++idx;
+                }
+                if (has_ident) {
+                    pop_ident(state);
+                }
+            } break;
+            }
+            hll_string_builder_printf(state->sb, ")");
+        }
+    } else {
+        switch (ast->lex->kind) {
+        default:
+            HLL_UNREACHABLE;
+            break;
+        case HLL_TOK_EXT_COMMENT: {
+            // decide what type of comment is it
+            comment_kind kind = get_comment_kind(ast->lex->data);
+            switch (kind) {
+            default:
+                HLL_UNREACHABLE;
+            case COMMENT_OTHER:
+            other:
+                // Format all comments that are not at the end of the line on
+                // the same identation is code
+                hll_string_builder_printf(state->sb, ";%s", ast->lex->data);
+                fmt_newline(state);
+                break;
+            case COMMENT_LINE_END:
+                goto other;
+#if 0
+                // Comments at line end should be aligned by the largest
+                // identation of consequetive lines
+                // But this a bit too complicated
+                // We have to switch from writing to single buffer to having individual buffers for lines
+                hll_string_builder_printf(state->sb, "  ;%s", ast->lex->data);
+                fmt_newline(state);
+#endif
+                break;
+            }
+        } break;
+        case HLL_TOK_NUMI:
+        case HLL_TOK_SYMB:
+            hll_string_builder_printf(state->sb, "%s", ast->lex->data);
+            break;
+        case HLL_TOK_DOT:
+            hll_string_builder_printf(state->sb, ".");
+            break;
+        case HLL_TOK_LPAREN:
+            hll_string_builder_printf(state->sb, "(");
+            break;
+        case HLL_TOK_RPAREN:
+            hll_string_builder_printf(state->sb, ")");
+            break;
+        case HLL_TOK_QUOTE:
+            hll_string_builder_printf(state->sb, "'");
+            break;
+        }
+    }
+}
+
+static void
+format_with_ast(fmt_ast *ast, hll_string_builder *sb, hll_memory_arena *arena) {
+    fmt_state state = { 0 };
+    state.arena = arena;
+    state.sb = sb;
+    for (fmt_ast *child = ast->first_child; child; child = child->next) {
+        fmt_ast_recursive(child, &state);
+        hll_string_builder_printf(sb, "\n");
+    }
 }
 
 hllf_format_result
-hllf_format(char const *source, size_t source_length, hllf_settings *settings) {
-    token_array tokens = read_lisp_code_into_tokens(source);
-#if 0
-    for (size_t i = 0; i < tokens.token_count; ++i) {
-        printf("Token %zu:%zu:%zu: kind: %u, data; %s\n", i,
-               tokens.tokens[i].line, tokens.tokens[i].column,
-               tokens.tokens[i].kind, tokens.tokens[i].data);
-    }
-#endif
+hllf_format(char const *source, size_t source_length) {
+    hll_memory_arena arena = { 0 };
+
+    lexeme *lexemes = NULL;
+    size_t lexeme_count = 0;
+    read_lisp_code_into_lexemes(source, &lexemes, &lexeme_count, &arena);
 
     size_t sb_size = decide_size_for_string_builder(source_length);
-    string_builder sb = create_string_builder(sb_size);
+    hll_string_builder sb = hll_create_string_builder(sb_size);
 
-    format_with_tokens(&tokens, &sb, settings);
-    hlma_clear(&tokens.arena);
+    fmt_ast *ast = build_ast(lexemes, lexeme_count, &arena);
+    format_with_ast(ast, &sb, &arena);
 
     hllf_format_result result = { 0 };
     result.data = sb.buffer;
     result.data_size = sb.written;
+
+    hll_memory_arena_clear(&arena);
 
     return result;
 }
@@ -308,7 +526,7 @@ hllf_format_free(char const *text) {
 
 #if HLL_FORMATTER_CLI
 typedef struct {
-    int is_valid;
+    bool is_valid;
     char const *in_filename;
     char const *out_filename;
 } cli_options;
@@ -320,81 +538,10 @@ parse_cli_args(int argc, char const **argv) {
     if (argc == 2) {
         opts.in_filename = argv[0];
         opts.out_filename = argv[1];
-        opts.is_valid = 1;
+        opts.is_valid = true;
     }
 
     return opts;
-}
-
-typedef struct {
-    char const *data;
-    size_t data_size;
-} read_file_result;
-
-// TODO: This is not correct error handling
-static read_file_result
-read_entire_file(char const *filename) {
-    FILE *file;
-    if (hll_open_file(&file, filename, "r") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto error;
-    }
-
-    size_t fsize;
-    if (hll_get_file_size(file, &fsize) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    char *file_contents = calloc(fsize + 1, 1);
-    if (fread(file_contents, fsize, 1, file) != 1) {
-        fprintf(stderr, "Failed to read file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-        goto error;
-    }
-
-    read_file_result result = { 0 };
-    result.data = file_contents;
-    result.data_size = fsize;
-
-    return result;
-close_file_error:
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-    }
-error:
-    exit(1);
-}
-
-static void
-write_to_file(char const *filename, char const *data, size_t data_size) {
-    FILE *file;
-    if (hll_open_file(&file, filename, "w") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto error;
-    }
-
-    if (fwrite(data, data_size, 1, file) != 1) {
-        fprintf(stderr, "Failed to write data to file '%s'\n", filename);
-        goto close_file_error;
-    }
-
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-        goto error;
-    }
-
-    return;
-close_file_error:
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-    }
-error:
-    exit(1);
 }
 
 int
@@ -405,13 +552,26 @@ main(int argc, char const **argv) {
         return EXIT_FAILURE;
     }
 
-    read_file_result file_contents = read_entire_file(opts.in_filename);
-    hllf_settings settings = hllf_default_settings();
-    hllf_format_result formatted =
-        hllf_format(file_contents.data, file_contents.data_size, &settings);
-    write_to_file(opts.out_filename, formatted.data, formatted.data_size);
+    char *file_contents = NULL;
+    size_t file_size = 0;
+    hll_fs_io_result read_result =
+        hll_read_entire_file(opts.in_filename, &file_contents, &file_size);
+    if (read_result != HLL_FS_IO_OK) {
+        fprintf(stderr, "Failed to load code to format from file '%s': %s\n",
+                opts.in_filename, hll_get_fs_io_result_string(read_result));
+        return EXIT_FAILURE;
+    }
 
-    free(formatted.data);
+    hllf_format_result formatted = hllf_format(file_contents, file_size);
+
+    hll_fs_io_result write_result = hll_write_to_file(
+        opts.out_filename, formatted.data, formatted.data_size);
+    if (read_result != HLL_FS_IO_OK) {
+        fprintf(stderr, "Failed to write formatted code to file '%s': %s\n",
+                opts.out_filename, hll_get_fs_io_result_string(write_result));
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
 #endif

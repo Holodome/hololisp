@@ -487,3 +487,5 @@ build/
 codecov
 cov.json
 .ccls-cache
+.vimrc
+.nvimrc

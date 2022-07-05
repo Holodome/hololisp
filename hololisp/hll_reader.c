@@ -7,7 +7,7 @@
 #include "hll_error_reporter.h"
 #include "hll_lexer.h"
 #include "hll_lisp.h"
-#include "lisp_gc.h"
+#include "hll_lisp_gc.h"
 
 static hll_source_location
 get_source_loc(hll_reader *reader) {
