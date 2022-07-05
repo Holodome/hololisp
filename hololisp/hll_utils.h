@@ -2,6 +2,7 @@
 #define __HLL_UTILS_H__
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "hll_ext.h"
 
