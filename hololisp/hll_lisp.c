@@ -104,7 +104,7 @@ hll_print(hll_ctx *ctx, void *file_, hll_obj *obj) {
 
     switch (obj->kind) {
     default:
-        assert(0);
+        HLL_UNREACHABLE;
         break;
     case HLL_OBJ_CONS:
         fprintf(file, "(");
@@ -197,7 +197,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
 
     switch (obj->kind) {
     default:
-        assert(0);
+        HLL_UNREACHABLE;
         break;
     case HLL_OBJ_BIND:
     case HLL_OBJ_NIL:

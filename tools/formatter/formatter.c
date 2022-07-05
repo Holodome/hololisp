@@ -15,6 +15,23 @@
 #endif
 
 typedef enum {
+    COMMENT_OTHER = 0x0,
+    COMMENT_LINE_END = 0x1,
+} comment_kind;
+
+static comment_kind
+get_comment_kind(char const *str) {
+    comment_kind kind = COMMENT_OTHER;
+
+    // If this is single ; comment.
+    if (*str != ';') {
+        kind = COMMENT_LINE_END;
+    }
+
+    return kind;
+}
+
+typedef enum {
     SPECIAL_FORM_NONE = 0x0,
     SPECIAL_FORM_FUNC_CALL = 0x1,
     SPECIAL_FORM_IF = 0x2,
@@ -265,9 +282,17 @@ separate_list_its(fmt_ast *ast, fmt_state *state, bool allow_newline) {
             ast->lex->kind != HLL_TOK_QUOTE) {
             hll_string_builder_printf(state->sb, " ");
         } else if (ast->next->lex->line != ast->lex->line && allow_newline) {
-            fmt_newline(state);
+            // Comment is making a newline on its own
+            if (ast->lex->kind != HLL_TOK_EXT_COMMENT ||
+#if 0
+                get_comment_kind(ast->lex->data) != COMMENT_OTHER) {
+#else
+                false) {
+#endif 
+                fmt_newline(state);
         }
     }
+}
 }
 
 static void
@@ -414,8 +439,32 @@ fmt_ast_recursive(fmt_ast *ast, fmt_state *state) {
         default:
             HLL_UNREACHABLE;
             break;
-        case HLL_TOK_EXT_COMMENT:
-            break;
+        case HLL_TOK_EXT_COMMENT: {
+            // decide what type of comment is it
+            comment_kind kind = get_comment_kind(ast->lex->data);
+            switch (kind) {
+            default:
+                HLL_UNREACHABLE;
+            case COMMENT_OTHER:
+            other:
+                // Format all comments that are not at the end of the line on
+                // the same identation is code
+                hll_string_builder_printf(state->sb, ";%s", ast->lex->data);
+                fmt_newline(state);
+                break;
+            case COMMENT_LINE_END:
+                goto other;
+#if 0
+                // Comments at line end should be aligned by the largest
+                // identation of consequetive lines
+                // But this a bit too complicated
+                // We have to switch from writing to single buffer to having individual buffers for lines
+                hll_string_builder_printf(state->sb, "  ;%s", ast->lex->data);
+                fmt_newline(state);
+#endif
+                break;
+            }
+        } break;
         case HLL_TOK_NUMI:
         case HLL_TOK_SYMB:
             hll_string_builder_printf(state->sb, "%s", ast->lex->data);
