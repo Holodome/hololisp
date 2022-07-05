@@ -1,15 +1,13 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "error_reporter.h"
-#include "lexer.h"
-#include "lisp.h"
-#include "lisp_std.h"
-#include "reader.h"
-#include "utils.h"
+#include "hll_error_reporter.h"
+#include "hll_lexer.h"
+#include "hll_lisp.h"
+#include "hll_reader.h"
+#include "hll_utils.h"
 
 typedef struct {
     char const *filename;
@@ -18,7 +16,7 @@ typedef struct {
 static void
 help(void) {
     printf(
-        "OVERVIEW: toy lisp interprenter\n"
+        "OVERVIEW: toy lisp interpreter\n"
         "\n"
         "USAGE: hololisp file\n");
 }
@@ -130,7 +128,7 @@ close_file_error:
         fprintf(stderr, "Failed to close file '%s'\n", filename);
     }
 error:
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }
 
 static int
@@ -187,6 +185,4 @@ main(int argc, char const **argv) {
     } else {
         return execute_file(opts.filename);
     }
-
-    return EXIT_SUCCESS;
 }

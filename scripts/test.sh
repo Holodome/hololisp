@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# set -x
+
 unit_test_files=$(find build -type f -name "*.test" -exec echo {} \+)
 test_script_files=$(find tests -type f -name "*.sh" -exec echo {} \+)
 
@@ -9,8 +11,7 @@ true > "$failed_tests_file"
 success_count=0
 error_count=0
 
-executables_failed=0
-failed_executables=
+failed_executables=()
 
 process_test () {
     executable=$1 ok_pattern=$2
@@ -19,18 +20,17 @@ process_test () {
     exec_result=$($executable 2> /dev/null)
     exit_code=$?
 
-    ok_count=$(echo "$exec_result" | grep -ocF "$ok_pattern")
-    failed_count=$(echo "$exec_result" | grep -ocF "$fail_pattern")
+    ok_count=$(echo "$exec_result" | grep -ocF "$ok_pattern" || :)
+    failed_count=$(echo "$exec_result" | grep -ocF "$fail_pattern" || :)
 
     if [ "$failed_count" != 0 ]; then
-        failed_lines=$(echo "$exec_result" | grep -F "$fail_pattern")
+        failed_lines=$(echo "$exec_result" | grep -F "$fail_pattern" || :)
         echo -e "\e[1;93m>>>\e[1;0m $executable" >> "$failed_tests_file"
         echo "$failed_lines" >> "$failed_tests_file"
     fi
 
     if [ "$exit_code" != 0 ]; then
-        executables_failed=$((executables_failed + 1))
-        failed_executables="$executables_failed $executable"
+        failed_executables+=("$executable")
     fi
 
     success_count=$((success_count + ok_count))
@@ -49,8 +49,8 @@ total_test_count=$((success_count + error_count))
 echo -e "\e[1;32mTESTS PASSED\e[1;0m $success_count/$total_test_count"
 
 exit_code=0
-if [ "$error_count" != 0 ] || [ "$executables_failed" != 0 ] ; then
-    echo -e "\e[1;31m$error_count Failed ($executables_failed execs: $failed_executables)\e[0m"
+if [ "$error_count" != 0 ] || [ "${#failed_executables[@]}" != 0 ] ; then
+    echo -e "\e[1;31m$error_count Failed (${#failed_executables[@]} execs: ${failed_executables[*]})\e[0m"
     cat "$failed_tests_file"
     exit_code=1
 fi

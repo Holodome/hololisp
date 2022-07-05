@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "hll_ext.h"
+
 struct hll_lexer;
 struct hll_ctx;
 struct hll_obj;
@@ -20,7 +22,7 @@ typedef struct hll_reader {
 /// Enumeration of result codes of reading.
 /// This is the way read results should be handled.
 ///
-/// A litle rationale on exit codes: It could be enought to use just three
+/// A little rationale on exit codes: It could be enough to use just three
 /// results: ok, eof, error. Different error codes have little reason to exist
 /// since they all will be handled it same way: Abort the program. But error
 /// codes are quite handy for testing error reporting so are left as is for now
@@ -50,10 +52,7 @@ char const *hll_read_result_str(hll_read_result res);
 
 hll_reader hll_reader_create(struct hll_lexer *lexer, struct hll_ctx *ctx);
 
-hll_read_result hll_read(hll_reader *reader, struct hll_obj **head)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((__warn_unused_result__))
-#endif
-    ;
+HLL_NODISCARD
+hll_read_result hll_read(hll_reader *reader, struct hll_obj **head);
 
 #endif

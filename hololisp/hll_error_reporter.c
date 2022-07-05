@@ -1,4 +1,4 @@
-#include "error_reporter.h"
+#include "hll_error_reporter.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "utils.h"
+#include "hll_utils.h"
 
 #define ERROR_STRING "\033[31;1merror\033[0m"
 #define NOTE_STRING "\033[90;1mnote\033[1m"

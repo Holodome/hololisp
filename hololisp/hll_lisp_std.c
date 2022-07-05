@@ -1,15 +1,15 @@
-#include "lisp_std.h"
+#include "hll_lisp_std.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "error_reporter.h"
-#include "lexer.h"
-#include "lisp.h"
-#include "lisp_gc.h"
-#include "reader.h"
+#include "hll_error_reporter.h"
+#include "hll_lexer.h"
+#include "hll_lisp.h"
+#include "hll_lisp_gc.h"
+#include "hll_reader.h"
 
 static char const *
 get_lisp_function_name(char const *name) {
@@ -468,7 +468,7 @@ STD_FUNC(nth) {
 
     int64_t count = hll_unwrap_int(count_obj)->value;
     if (count < 0) {
-        hll_report_error(ctx->reporter, "nth expects nonnegative count");
+        hll_report_error(ctx->reporter, "nth expects non negative count");
         return hll_make_nil(ctx);
     }
 
@@ -491,7 +491,7 @@ STD_FUNC(nthcdr) {
 
     int64_t count = hll_unwrap_int(hll_unwrap_car(args))->value;
     if (count < 0) {
-        hll_report_error(ctx->reporter, "nthcdr expects nonnegative count");
+        hll_report_error(ctx->reporter, "nthcdr expects non negative count");
         return hll_make_nil(ctx);
     }
 
@@ -947,4 +947,3 @@ STD_FUNC(clrscr) {
     printf("\033[2J");
     return hll_make_nil(ctx);
 }
-

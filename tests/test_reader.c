@@ -1,8 +1,8 @@
-#include "../src/error_reporter.h"
-#include "../src/lexer.h"
-#include "../src/lisp.h"
-#include "../src/reader.h"
-#include "../src/lisp_gc.h"
+#include "../hololisp/hll_error_reporter.h"
+#include "../hololisp/hll_lexer.h"
+#include "../hololisp/hll_lisp.h"
+#include "../hololisp/hll_lisp_gc.h"
+#include "../hololisp/hll_reader.h"
 #include "acutest.h"
 
 static void
@@ -248,7 +248,7 @@ test_reader_returns_eof_arbitrary_amount_of_times(void) {
 }
 
 static void
-test_reader_reports_stary_rparen(void) {
+test_reader_reports_stray_rparen(void) {
     char const *source = ")";
     char buffer[4096];
 
@@ -365,7 +365,7 @@ TEST_LIST = { TCASE(test_reader_reports_eof),
               TCASE(test_reader_parses_nested_lists),
               TCASE(test_reader_reports_unclosed_list),
               TCASE(test_reader_returns_eof_arbitrary_amount_of_times),
-              TCASE(test_reader_reports_stary_rparen),
+              TCASE(test_reader_reports_stray_rparen),
               TCASE(test_reader_parses_nil),
               TCASE(test_reader_parses_simple_dotted_cons),
               TCASE(test_reader_parses_dotted_list),

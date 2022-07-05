@@ -1,21 +1,7 @@
-# Makefile
-# 28.5.2022 Holodome
-# An attempt to Make kinda universal Makefile for C
-#
-# Notes:
-# 1. Must have target directory separate from source directories (otherwise 'clean' would delete everything)
-# 2. Source code directory must not have subdirectories
-#
-# Separate from that, all variables should be freely configurable
-
-#
-# Constants
-#
-
-TARGET = hololisp
-SRC_DIR = src
+SRC_DIR = hololisp
 OUT_DIR = build
-# If you want to compile for debugging, run 'make CFLAGS=-g'
+TARGET = $(OUT_DIR)/hololisp
+LIB = $(OUT_DIR)/hololisp.a
 CFLAGS = -O2
 
 ifneq (,$(COV))
@@ -25,17 +11,21 @@ endif
 LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 LOCAL_LDFLAGS = -pthread -lm
 
-# Flags used to generate .d files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
+
+ifneq (,$(DEBUG))
+	CFLAGS=-g
+endif 
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
+OBJS_BUT_MAIN = $(filter-out $(OUT_DIR)/main.o, $(OBJS))
 
 #
 # Program rules
 #
 
-all: $(OUT_DIR) $(TARGET)
+all: $(OUT_DIR) $(TARGET) tools
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
@@ -43,13 +33,13 @@ $(OUT_DIR):
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
 $(TARGET): $(OBJS) 
-	$(CC) $(COVERAGE_FLAGS) -o $(OUT_DIR)/$@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
+	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
+
+$(LIB): $(OBJS_BUT_MAIN)
+	ar rcs $@ $^
 
 $(OUT_DIR)/%.o: $(SRC_DIR)/%.c 
 	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
-
-run: $(TARGET) 
-	$(OUT_DIR)/$(TARGET)
 
 clean:
 	rm -rf $(OUT_DIR) 
@@ -66,7 +56,6 @@ UNIT_TEST_SRCS = $(wildcard $(TEST_DIR)/*.c)
 UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
 UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
-	
 
 -include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
@@ -85,4 +74,14 @@ test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
 
-.PHONY: all test clean 
+
+FORMATTER = $(OUT_DIR)/hololisp-format
+FORMATTER_DIR = tools/formatter
+FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
+
+$(FORMATTER): $(FORMATTER_SRCS) $(LIB)
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -o $@ $^
+
+tools: $(FORMATTER)
+
+.PHONY: all test clean tools

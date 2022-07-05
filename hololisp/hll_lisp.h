@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ext.h"
+#include "hll_ext.h"
 
 struct hll_lexer;
 struct hll_ctx;
@@ -29,7 +29,7 @@ char const *hll_get_obj_kind_str(hll_obj_kind kind);
 /// All lisp objects are represented in abstract hierarchy, similar to
 /// inheritance. Internally lisp object are located in memory as
 /// *hll_obj* and body right after that, whilst total size of object
-/// being sum of head and body sizes. Allocaing objects this way lets us manage
+/// being sum of head and body sizes. Allocating objects this way lets us manage
 /// their memory more freely and not worrying about fragmentation too much
 /// because that is a job of garbage collector. Because we have enumeration of
 /// all possible kinds we are free to make our own memory-efficient allocator.
@@ -138,4 +138,3 @@ void hll_dump_object_desc(void *file, hll_obj *object);
 #endif
 
 #endif
-

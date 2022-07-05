@@ -1,14 +1,13 @@
-#include "lisp.h"
+#include "hll_lisp.h"
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "error_reporter.h"
-#include "lisp_gc.h"
-#include "lisp_std.h"
+#include "hll_error_reporter.h"
+#include "hll_lisp_gc.h"
+#include "hll_lisp_std.h"
 
 char const *
 hll_get_obj_kind_str(hll_obj_kind kind) {
@@ -105,7 +104,7 @@ hll_print(hll_ctx *ctx, void *file_, hll_obj *obj) {
 
     switch (obj->kind) {
     default:
-        assert(0);
+        HLL_UNREACHABLE;
         break;
     case HLL_OBJ_CONS:
         fprintf(file, "(");
@@ -198,7 +197,7 @@ hll_eval(hll_ctx *ctx, hll_obj *obj) {
 
     switch (obj->kind) {
     default:
-        assert(0);
+        HLL_UNREACHABLE;
         break;
     case HLL_OBJ_BIND:
     case HLL_OBJ_NIL:

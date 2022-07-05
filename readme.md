@@ -7,16 +7,16 @@ Simple minimal lisp dialect runtime.
 
 ## Goals and design
 
-The goal is to provide simple embeddable version of lisp that can be used as a playground for exploring various interprenter design and programming languages' ideas.
+The goal is to provide simple embeddable version of lisp that can be used as a playground for exploring various interpreter design and programming languages' ideas.
 C was chosen because of its ease of use and integration into other systems.
 
-One of the most important points in designing this project is simplicity. It is easy to get overwhelmed by features that are usually implemented in other lisp dialects. These may include JIT, static compilation, different kinds of memory managment techniques, code optimization and others. It has been decided that *hololisp* should support only minimal possible features that allow for its usage.
+One of the most important points in designing this project is simplicity. It is easy to get overwhelmed by features that are usually implemented in other lisp dialects. These may include JIT, static compilation, different kinds of memory management techniques, code optimization and others. It has been decided that *hololisp* should support only minimal possible features that allow for its usage.
 
 To clarify, this means that we do only interpretation of the source code but with optimization of tail calls and does not support any kind of compilation.
 
 ## Features 
 
-hololisp implements some of the common standard functions and features found in most popular lisp dialects, like [Common Lisp](https://common-lisp.net/) and [Scheme](https://www.scheme.com/tspl4/).
+hololisp implements some common standard functions and features found in most popular lisp dialects, like [Common Lisp](https://common-lisp.net/) and [Scheme](https://www.scheme.com/tspl4/).
 
 This lisp implementation supports basic data types:
 * Integers
@@ -37,7 +37,9 @@ Language features include:
 make
 ```
 
-hololisp is currently tested on arm64 MacOS and Linux amd64. The code uses some POSIX functions, so it is not portable to Windows without modification.
+hololisp is currently tested on arm64 macOS and Linux amd64. The code uses some POSIX functions, so it is not portable to Windows without modification.
+
+By default, hololisp is compiled in release mode. If you want to compile in debug mode add `DEBUG=1` flag to make.
 
 ## Testing
 
@@ -50,12 +52,12 @@ done is .sh files found in tests directory.
 
 Code coverage can be collected if non-empty *COV* flag is passed to make:
 ```bash
-make test COV=1
+make test DEBUG=1 COV=1
 ```
 
 ## Usage
 
-Program can be run in two modes: Interactive REPL traditional to lisp interprenters and executing scripts.
+Program can be run in two modes: Interactive REPL traditional to lisp interpreters and executing scripts.
 To execute script pass its name to the program executable:
 
 ```bash
@@ -74,5 +76,5 @@ hololisp> (+ x (* x 100))
 10100
 ```
 
-Examples can be found in the *examples* folder.
+Examples can be found in the '*examples*' folder.
 

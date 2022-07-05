@@ -1,9 +1,8 @@
-#include "lexer.h"
+#include "hll_lexer.h"
 
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
-#include <stdio.h>
 
 #define MAX_ALLOWED_INT_VALUE (INT64_MAX / 10LL)
 
@@ -77,7 +76,7 @@ try_to_parse_number(char const *start, char const *end, int64_t *number) {
             is_number = 1;
         }
 
-        if (is_number && (is_number = (cursor == end))) {
+        if (is_number && cursor == end) {
             *number = value * multiplier;
             result.is_valid = 1;
         }
@@ -96,7 +95,7 @@ typedef struct {
 /*
  * Reads lisp symbol from given cursor and writes it to buffer.
  * If buffer size is less that symbol length, skip characters until symbol end.
- * Return number of bytes written, which can be used to detect buffer undeflow.
+ * Return number of bytes written, which can be used to detect buffer overflow.
  * Number of bytes doesn't include terminating symbol.
  */
 static eat_symbol_result
@@ -132,13 +131,58 @@ eat_symbol(char *buffer, size_t buffer_size, char const *cursor_) {
     return result;
 }
 
+typedef struct {
+    int should_generate_token;
+    int is_overflow;
+} handle_comment_result;
+
+static handle_comment_result
+handle_comment(hll_lexer *lexer) {
+    assert(*lexer->cursor == ';');
+    handle_comment_result result = { 0 };
+
+    if (!lexer->is_ext) {
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+        } while (cp != '\n' && cp);
+    } else if (lexer->buffer != NULL) {
+        char *write = lexer->buffer;
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+            // TODO: This is incorrect in cases of loop end due to post
+            // condition
+            if (write < lexer->buffer + lexer->buffer_size && cp != '\n') {
+                *write++ = cp;
+            }
+        } while (cp != '\n' && cp);
+
+        if (lexer->buffer + lexer->buffer_size != write) {
+            lexer->token_length = write - lexer->buffer;
+            *write = 0;
+        } else {
+            result.is_overflow = 1;
+        }
+        result.should_generate_token = 1;
+    } else {
+        uint8_t cp;
+        do {
+            cp = *++lexer->cursor;
+        } while (cp != '\n' && cp);
+        result.should_generate_token = 1;
+    }
+
+    return result;
+}
+
 hll_lex_result
 hll_lexer_peek(hll_lexer *lexer) {
     hll_lex_result result = HLL_LEX_OK;
 
     /* This is short-circuiting branch for testing null buffer.
-     This shouldn't be ever hit during normal execution so we don't care if this
-     is ugly */
+     This shouldn't be ever hit during normal execution, so we don't care if
+     this is ugly */
     int is_finished = lexer->cursor == NULL ||
                       (lexer->already_met_eof && !lexer->should_return_old);
     if (is_finished) {
@@ -179,9 +223,14 @@ hll_lexer_peek(hll_lexer *lexer) {
         // Comments
         //
         else if (cp == ';') {
-            do {
-                cp = *++lexer->cursor;
-            } while (cp != '\n' && cp);
+            handle_comment_result res = handle_comment(lexer);
+            if (res.should_generate_token) {
+                if (res.is_overflow) {
+                    result = HLL_LEX_BUF_OVERFLOW;
+                }
+                is_finished = 1;
+                lexer->token_kind = HLL_TOK_EXT_COMMENT;
+            }
         }
         //
         // Individual characters
@@ -211,7 +260,7 @@ hll_lexer_peek(hll_lexer *lexer) {
                 result = HLL_LEX_BUF_OVERFLOW;
             } else {
                 lexer->token_kind = HLL_TOK_SYMB;
-                // TODO: don't like that we have to parse multpile times
+                // TODO: don't like that we have to parse multiple times
                 parse_number_result parse_number_res = try_to_parse_number(
                     lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
                 if (parse_number_res.is_valid) {

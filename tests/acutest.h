@@ -34,7 +34,7 @@
 /* By default, "acutest.h" provides the main program entry point (function
  * main()). However, if the test suite is composed of multiple source files
  * which include "acutest.h", then this causes a problem of multiple main()
- * definitions. To avoid this problem, #define macro TEST_NO_MAIN in all
+ * definitions. To avoid this issue, #define macro TEST_NO_MAIN in all
  * compilation units but one.
  */
 
@@ -60,7 +60,7 @@
  */
 #define TEST_LIST const struct acutest_test_ acutest_list_[]
 
-/* Macros for testing whether an unit test succeeds or fails. These macros
+/* Macros for testing whether a unit test succeeds or fails. These macros
  * can be used arbitrarily in functions implementing the unit tests.
  *
  * If any condition fails throughout execution of a test, the test fails.
@@ -93,7 +93,7 @@
  * As a side effect of such abortion, your unit tests may cause memory leaks,
  * unflushed file descriptors, and other phenomena caused by the abortion.
  *
- * Therefore you should not use these as a general replacement for TEST_CHECK.
+ * Therefore, you should not use these as a general replacement for TEST_CHECK.
  * Use it with some caution, especially if your test causes some other side
  * effects to the outside world (e.g. communicating with some server, inserting
  * into a database etc.).
@@ -187,7 +187,7 @@
 #define TEST_CASE_MAXSIZE 64
 #endif
 
-/* printf-like macro for outputting an extra information about a failure.
+/* printf-like macro for outputting extra information about a failure.
  *
  * Intended use is to output some computed output versus the expected value,
  * e.g. like this:
@@ -325,7 +325,7 @@
 #endif
 
 /* Note our global private identifiers end with '_' to mitigate risk of clash
- * with the unit tests implementation. */
+ * with the unit tests' implementation. */
 
 #ifdef __cplusplus
 extern "C" {
