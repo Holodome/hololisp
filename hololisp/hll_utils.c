@@ -1,13 +1,14 @@
 #include "hll_utils.h"
 
 // 2008 edition of the POSIX standard (IEEE Standard 1003.1-2008)
-/* #define _POSIX_C_SOURCE 200809L */
+#define _POSIX_C_SOURCE 200809L
+#define _POSIX_SOURCE 200809L
+#define _GNU_SOURCE 1
 
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
-#define _GNU_SOURCE 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
