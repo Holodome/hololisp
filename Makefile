@@ -1,6 +1,5 @@
 SRC_DIR = hololisp
 OUT_DIR = build
-TARGET = $(OUT_DIR)/hololisp
 LIB = $(OUT_DIR)/hololisp.a
 CFLAGS = -O2
 
@@ -9,7 +8,7 @@ ifneq (,$(COV))
 endif 
 # To separate CLI-settable parameters from constant. These are constant
 LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
-LOCAL_LDFLAGS = -pthread -lm
+LOCAL_LDFLAGS = 
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
@@ -25,15 +24,12 @@ OBJS_BUT_MAIN = $(filter-out $(OUT_DIR)/main.o, $(OBJS))
 # Program rules
 #
 
-all: $(OUT_DIR) $(TARGET) tools
+all: $(OUT_DIR) $(CLI) tools
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
 
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
-
-$(TARGET): $(OBJS) 
-	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
 
 $(LIB): $(OBJS_BUT_MAIN)
 	ar rcs $@ $^
@@ -76,12 +72,25 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 
 
 FORMATTER = $(OUT_DIR)/hololisp-format
-FORMATTER_DIR = tools/formatter
-FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
+FMT_SRCS = $(wildcard tools/fmt/*.c)
+FMT_OBJS = $(FMT_SRCS:tools/fmt/%.c=$(OUT_DIR)/fmt_%.o)
 
-$(FORMATTER): $(FORMATTER_SRCS) $(LIB)
+$(FORMATTER): $(FMT_OBJS) $(LIB)
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -o $@ $^
 
-tools: $(FORMATTER)
+$(OUT_DIR)/fmt_%.o: tools/fmt/%.c
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $^
+
+CLI = $(OUT_DIR)/hololisp
+CLI_SRCS = $(wildcard tools/cli/*.c)
+CLI_OBJS = $(CLI_SRCS:tools/cli/%.c=$(OUT_DIR)/cli_%.o)
+
+$(CLI): $(CLI_OBJS) $(LIB)
+	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
+
+$(OUT_DIR)/cli_%.o: tools/cli/%.c
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $^
+
+tools: $(FORMATTER) $(CLI)
 
 .PHONY: all test clean tools
