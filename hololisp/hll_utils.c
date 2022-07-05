@@ -2,8 +2,10 @@
 
 // 2008 edition of the POSIX standard (IEEE Standard 1003.1-2008)
 #define _POSIX_C_SOURCE 200809L
-#define _POSIX_SOURCE 200809L
 #define _GNU_SOURCE 1
+// For some reason we can obtain realpath definition only with these macros
+#define __USE_XOPEN_EXTENDED
+#define __USE_MISC
 
 #include <assert.h>
 #include <limits.h>
