@@ -310,45 +310,6 @@ hll_std_int_le(hll_ctx *ctx, hll_obj *args) {
     return hll_make_true(ctx);
 }
 
-static hll_obj *
-uber_car_cdr(hll_ctx *ctx, hll_obj *args, char const *ops) {
-    if (hll_list_length(args) != 1) {
-        hll_report_error(ctx->reporter, "c%sr must have exactly 1 argument",
-                         ops);
-        return hll_make_nil(ctx);
-    }
-
-    hll_obj *result = hll_eval(ctx, hll_unwrap_car(args));
-
-    char const *op = ops + strlen(ops) - 1;
-    while (op >= ops && result->kind != HLL_OBJ_NIL) {
-        if (result->kind != HLL_OBJ_CONS) {
-            hll_report_error(ctx->reporter,
-                             "c%sr argument must be well-formed list", ops);
-            return hll_make_nil(ctx);
-        }
-
-        if (*op == 'a') {
-            result = hll_unwrap_car(result);
-        } else if (*op == 'd') {
-            result = hll_unwrap_cdr(result);
-        } else {
-            HLL_UNREACHABLE;
-        }
-
-        --op;
-    }
-
-    return result;
-}
-
-#define _HLL_CAR_CDR(_letters)                                     \
-    hll_obj *hll_std_c##_letters##r(hll_ctx *ctx, hll_obj *args) { \
-        return uber_car_cdr(ctx, args, #_letters);                 \
-    }
-_HLL_ENUMERATE_CAR_CDR
-#undef _HLL_CAR_CDR
-
 struct hll_obj *
 hll_std_if(struct hll_ctx *ctx, struct hll_obj *args) {
     CHECK_HAS_ATLEAST_N_ARGS(2);
@@ -946,4 +907,36 @@ STD_FUNC(clrscr) {
     (void)args;
     printf("\033[2J");
     return hll_make_nil(ctx);
+}
+
+STD_FUNC(car) {
+    CHECK_HAS_N_ARGS(1);
+    
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *evaled = hll_eval(ctx, obj);
+    hll_obj *result = NULL;
+    if (evaled->kind == HLL_OBJ_NIL) {
+        result = hll_make_nil(ctx);
+    } else {
+        CHECK_TYPE(evaled, HLL_OBJ_CONS, "argument");
+        result = hll_unwrap_car(evaled);
+    }
+
+    return result;
+}
+
+STD_FUNC(cdr) {
+    CHECK_HAS_N_ARGS(1);
+    
+    hll_obj *obj = hll_unwrap_car(args);
+    hll_obj *evaled = hll_eval(ctx, obj);
+    hll_obj *result = NULL;
+    if (evaled->kind == HLL_OBJ_NIL) {
+        result = hll_make_nil(ctx);
+    } else {
+        CHECK_TYPE(evaled, HLL_OBJ_CONS, "argument");
+        result = hll_unwrap_cdr(evaled);
+    }
+
+    return result;
 }

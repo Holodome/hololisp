@@ -8,42 +8,6 @@
 struct hll_ctx;
 struct hll_obj;
 
-#define _HLL_ENUMERATE_CAR_CDR \
-    _HLL_CAR_CDR(a)            \
-    _HLL_CAR_CDR(d)            \
-    _HLL_CAR_CDR(aa)           \
-    _HLL_CAR_CDR(ad)           \
-    _HLL_CAR_CDR(da)           \
-    _HLL_CAR_CDR(dd)           \
-    _HLL_CAR_CDR(aaa)          \
-    _HLL_CAR_CDR(aad)          \
-    _HLL_CAR_CDR(ada)          \
-    _HLL_CAR_CDR(add)          \
-    _HLL_CAR_CDR(daa)          \
-    _HLL_CAR_CDR(dad)          \
-    _HLL_CAR_CDR(dda)          \
-    _HLL_CAR_CDR(ddd)          \
-    _HLL_CAR_CDR(aaaa)         \
-    _HLL_CAR_CDR(aaad)         \
-    _HLL_CAR_CDR(aada)         \
-    _HLL_CAR_CDR(aadd)         \
-    _HLL_CAR_CDR(adaa)         \
-    _HLL_CAR_CDR(adad)         \
-    _HLL_CAR_CDR(adda)         \
-    _HLL_CAR_CDR(addd)         \
-    _HLL_CAR_CDR(daaa)         \
-    _HLL_CAR_CDR(daad)         \
-    _HLL_CAR_CDR(dada)         \
-    _HLL_CAR_CDR(dadd)         \
-    _HLL_CAR_CDR(ddaa)         \
-    _HLL_CAR_CDR(ddad)         \
-    _HLL_CAR_CDR(ddda)         \
-    _HLL_CAR_CDR(dddd)
-
-#define _HLL_CAR_CDR_STD_FUNC(_letters) \
-    _HLL_STD_FUNC(c##_letters##r, "c" #_letters "r")
-#define _HLL_CAR_CDR _HLL_CAR_CDR_STD_FUNC
-
 #define _HLL_ENUMERATE_STD_FUNCS      \
     _HLL_STD_FUNC(print, "print")     \
     _HLL_STD_FUNC(add, "+")           \
@@ -94,8 +58,8 @@ struct hll_obj;
     _HLL_STD_FUNC(setq, "setq")       \
     _HLL_STD_FUNC(rand, "rand")       \
     _HLL_STD_FUNC(clrscr, "clrscr")   \
-    _HLL_STD_FUNC(rem, "rem")         \
-    _HLL_ENUMERATE_CAR_CDR
+    _HLL_STD_FUNC(car, "car")   \
+    _HLL_STD_FUNC(cdr, "cdr")   \
 
 #define _HLL_STD_FUNC(_name, ...)                                 \
     HLL_DECL struct hll_obj *hll_std_##_name(struct hll_ctx *ctx, \

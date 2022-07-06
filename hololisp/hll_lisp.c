@@ -8,6 +8,8 @@
 #include "hll_error_reporter.h"
 #include "hll_lisp_gc.h"
 #include "hll_lisp_std.h"
+#include "hll_lexer.h"
+#include "hll_reader.h"
 
 char const *
 hll_get_obj_kind_str(hll_obj_kind kind) {
@@ -303,6 +305,57 @@ hll_create_ctx(hll_error_reporter *reporter) {
 #undef _HLL_CAR_CDR
 #undef BIND
 #undef STR_LEN
+
+    static char const *std_source =
+        "\n"
+        "(defun caar (x)             (car (car x)))\n"
+        "(defun cadr (x)             (car (cdr x)))\n"
+        "(defun cdar (x)             (cdr (car x)))\n"
+        "(defun cddr (x)             (cdr (cdr x)))\n"
+        "(defun caaar (x)       (car (car (car x))))\n"
+        "(defun caadr (x)       (car (car (cdr x))))\n"
+        "(defun cadar (x)       (car (cdr (car x))))\n"
+        "(defun caddr (x)       (car (cdr (cdr x))))\n"
+        "(defun cdaar (x)       (cdr (car (car x))))\n"
+        "(defun cdadr (x)       (cdr (car (cdr x))))\n"
+        "(defun cddar (x)       (cdr (cdr (car x))))\n"
+        "(defun cdddr (x)       (cdr (cdr (cdr x))))\n"
+        "(defun caaaar (x) (car (car (car (car x)))))\n"
+        "(defun caaadr (x) (car (car (car (cdr x)))))\n"
+        "(defun caadar (x) (car (car (cdr (car x)))))\n"
+        "(defun caaddr (x) (car (car (cdr (cdr x)))))\n"
+        "(defun cadaar (x) (car (cdr (car (car x)))))\n"
+        "(defun cadadr (x) (car (cdr (car (cdr x)))))\n"
+        "(defun caddar (x) (car (cdr (cdr (car x)))))\n"
+        "(defun cadddr (x) (car (cdr (cdr (cdr x)))))\n"
+        "(defun cdaaar (x) (cdr (car (car (car x)))))\n"
+        "(defun cdaadr (x) (cdr (car (car (cdr x)))))\n"
+        "(defun cdadar (x) (cdr (car (cdr (car x)))))\n"
+        "(defun cdaddr (x) (cdr (car (cdr (cdr x)))))\n"
+        "(defun cddaar (x) (cdr (cdr (car (car x)))))\n"
+        "(defun cddadr (x) (cdr (cdr (car (cdr x)))))\n"
+        "(defun cdddar (x) (cdr (cdr (cdr (car x)))))\n"
+        "(defun cddddr (x) (cdr (cdr (cdr (cdr x)))))\n"
+        "\n"
+        "(defun rem (x y)\n"
+        "  (- x (* (/ x y) y)))\n"
+        "\n";
+
+    char buffer[4096];
+    hll_lexer lexer = hll_lexer_create(std_source, buffer, sizeof(buffer));
+    hll_reader reader = hll_reader_create(&lexer, &ctx);
+    for (;;) {
+        hll_obj *obj;
+        hll_read_result parse_result = hll_read(&reader, &obj);
+        if (parse_result == HLL_READ_EOF) {
+            break;
+        } else if (parse_result != HLL_READ_OK) {
+            assert(0);
+        } else {
+            hll_eval(&ctx, obj);
+            assert(!ctx.reporter->has_error);
+        }
+    }
 
     return ctx;
 }
