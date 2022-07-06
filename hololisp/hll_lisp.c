@@ -6,9 +6,9 @@
 #include <string.h>
 
 #include "hll_error_reporter.h"
+#include "hll_lexer.h"
 #include "hll_lisp_gc.h"
 #include "hll_lisp_std.h"
-#include "hll_lexer.h"
 #include "hll_reader.h"
 
 char const *

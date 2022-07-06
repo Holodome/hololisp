@@ -911,7 +911,7 @@ STD_FUNC(clrscr) {
 
 STD_FUNC(car) {
     CHECK_HAS_N_ARGS(1);
-    
+
     hll_obj *obj = hll_unwrap_car(args);
     hll_obj *evaled = hll_eval(ctx, obj);
     hll_obj *result = NULL;
@@ -927,7 +927,7 @@ STD_FUNC(car) {
 
 STD_FUNC(cdr) {
     CHECK_HAS_N_ARGS(1);
-    
+
     hll_obj *obj = hll_unwrap_car(args);
     hll_obj *evaled = hll_eval(ctx, obj);
     hll_obj *result = NULL;

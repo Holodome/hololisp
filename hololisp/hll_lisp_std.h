@@ -58,8 +58,8 @@ struct hll_obj;
     _HLL_STD_FUNC(setq, "setq")       \
     _HLL_STD_FUNC(rand, "rand")       \
     _HLL_STD_FUNC(clrscr, "clrscr")   \
-    _HLL_STD_FUNC(car, "car")   \
-    _HLL_STD_FUNC(cdr, "cdr")   \
+    _HLL_STD_FUNC(car, "car")         \
+    _HLL_STD_FUNC(cdr, "cdr")
 
 #define _HLL_STD_FUNC(_name, ...)                                 \
     HLL_DECL struct hll_obj *hll_std_##_name(struct hll_ctx *ctx, \
