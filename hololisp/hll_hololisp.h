@@ -14,14 +14,21 @@ typedef void hll_error_fn(struct hll_vm *vm, uint32_t line,
 
 typedef void hll_write_fn(struct hll_vm *vm, char const *text);
 
+// This is semantic trickery to allow forward-declaring error reporting function.
+typedef struct hll_error_reporter {
+    void *user_data;
+    /// The callback used when user reports to errors.
+    /// If this is NULL, no errors shall be reported
+    hll_error_fn *error_fn;
+} hll_error_reporter;
+
 typedef struct hll_config {
     /// The callback used when user prints message (printf for example).
     /// If this is NULL, nothing shall be printed.
     hll_write_fn *write_fn;
 
-    /// The callback used when user reports to errors.
-    /// If this is NULL, no errors shall be reported
-    hll_error_fn *error_fn;
+    // Error reporting mechanism.
+    hll_error_reporter error_reporter;
 
     /// Initial size of head before first garbage collection.
     /// Default value is 10MB

@@ -9,7 +9,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+struct hll_config;
+
 typedef struct hll_vm {
+    struct hll_config *config;
 } hll_vm;
 
 #endif
