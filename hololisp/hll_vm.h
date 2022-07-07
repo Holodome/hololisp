@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct {
+typedef struct hll_vm {
 } hll_vm;
 
 #endif

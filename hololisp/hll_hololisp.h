@@ -9,16 +9,8 @@
 
 struct hll_vm;
 
-typedef enum {
-    /// A syntax resolution error detected at compile time.
-    HLL_ERR_COMPILE,
-    /// Runtime error.
-    HLL_ERR_RUNTIME,
-} hll_error_kind;
-
-typedef void hll_error_fn(struct hll_vm *vm, hll_error_kind kind,
-                          char const *module, uint32_t line, uint32_t column,
-                          char const *message);
+typedef void hll_error_fn(struct hll_vm *vm, uint32_t line,
+                          uint32_t column, char const *message);
 
 typedef void hll_write_fn(struct hll_vm *vm, char const *text);
 
