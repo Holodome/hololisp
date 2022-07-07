@@ -260,7 +260,6 @@ hll_lexer_peek(hll_lexer *lexer) {
                 result = HLL_LEX_BUF_OVERFLOW;
             } else {
                 lexer->token_kind = HLL_TOK_SYMB;
-                // TODO: don't like that we have to parse multiple times
                 parse_number_result parse_number_res = try_to_parse_number(
                     lexer->cursor, eat_symb_res.cursor, &lexer->token_int);
                 if (parse_number_res.is_valid) {
