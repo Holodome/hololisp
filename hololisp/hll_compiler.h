@@ -25,58 +25,38 @@ typedef enum {
     /// '
     HLL_TOK_QUOTE,
     /// Unexpected sequence of tokens.
-    HLl_TOK_UNEXPECTED
+    HLL_TOK_UNEXPECTED
 } hll_token_kind ;
 
 /// Coupled token definition.
 typedef struct {
     hll_token_kind kind;
-    uint32_t line;
-    uint32_t column;
+    size_t offset;
     uint32_t length;
     int64_t value;
     char const *start;
 } hll_token;
-
-typedef enum {
-    HLL_LEX_START,
-    HLL_LEX_NUMBER,
-    HLL_LEX_DOTS,
-    HLL_LEX_SYMB,
-    HLL_LEX_UNEXPECTED,
-
-    HLL_LEX_FIN,
-    HLL_LEX_FIN_LPAREN,
-    HLL_LEX_FIN_RPAREN,
-    HLL_LEX_FIN_QUOTE,
-    HLL_LEX_FIN_NUMBER,
-    HLL_LEX_FIN_DOTS,
-    HLL_LEX_FIN_SYMB,
-    HLL_LEX_FIN_EOF,
-    HLL_LEX_FIN_UNEXPECTED,
-} hll_lexer_state;
 
 /// Lexer is designed in way it is possible to use outside of compiler to allow
 /// asy writing of tools like syntax highlighter and code formatter.
 /// Thus is does not act as a individual step of translation but as
 /// helper for reader.
 typedef struct {
+    /// Needed for error reporting.
+    struct hll_vm *vm;
     /// If NULL, errors are not reported.
     hll_error_fn *error_fn;
     /// Mark that errors have been encountered during lexing.
     bool has_errors;
-
+    /// Current parsing location
     char const *cursor;
-    uint32_t line;
-    char const *line_start;
-
+    /// Input start. Used to calculate each token's offset
+    char const *input;
+    /// Next peeked token. Stores results of lexing
     hll_token next;
-    bool should_return_old;
 } hll_lexer;
 
-void hll_lexer_peek(hll_lexer *lexer);
-void hll_lexer_eat(hll_lexer *lexer);
-void hll_lexer_eat_peek(hll_lexer *lexer);
+void hll_lexer_next(hll_lexer *lexer);
 
 typedef enum {
     HLL_AST_NONE,
@@ -100,6 +80,8 @@ typedef struct hll_ast {
 } hll_ast;
 
 typedef struct {
+    /// Needed for error reporting.
+    struct hll_vm *vm;
     /// If NULL, errors are not reported.
     hll_error_fn *error_fn;
     /// Mark that errors have been encountered during parsing.

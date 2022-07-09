@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "hll_hololisp.h"
 #include "hll_mem.h"
@@ -13,11 +15,12 @@ hll_compile(struct hll_vm *vm, char const *source) {
     hll_memory_arena compilation_arena = { 0 };
 
     hll_lexer lexer = { 0 };
-    lexer.cursor = source;
+    lexer.vm = vm;
     lexer.error_fn = vm->config.error_fn;
-    lexer.line_start = source;
+    lexer.input = lexer.cursor = source;
 
     hll_reader reader = { 0 };
+    reader.vm = vm;
     reader.error_fn = vm->config.error_fn;
     reader.lexer = &lexer;
     reader.arena = &compilation_arena;
@@ -94,48 +97,66 @@ _get_equivalence_class(char symb) {
     return eqc;
 }
 
-static inline hll_lexer_state
-_get_next_state(hll_lexer_state state, _hll_lexer_equivalence_class eqc) {
+typedef enum {
+    _HLL_LEX_START,
+    _HLL_LEX_NUMBER,
+    _HLL_LEX_DOTS,
+    _HLL_LEX_SYMB,
+    _HLL_LEX_UNEXPECTED,
+
+    _HLL_LEX_FIN,
+    _HLL_LEX_FIN_LPAREN,
+    _HLL_LEX_FIN_RPAREN,
+    _HLL_LEX_FIN_QUOTE,
+    _HLL_LEX_FIN_NUMBER,
+    _HLL_LEX_FIN_DOTS,
+    _HLL_LEX_FIN_SYMB,
+    _HLL_LEX_FIN_EOF,
+    _HLL_LEX_FIN_UNEXPECTED,
+} _hll_lexer_state;
+
+static inline _hll_lexer_state
+_get_next_state(_hll_lexer_state state, _hll_lexer_equivalence_class eqc) {
     switch (state) {
     default: assert(0); break;
-    case HLL_LEX_START:
+    case _HLL_LEX_START:
         switch (eqc) {
-        case _HLL_LEX_EQC_OTHER: state = HLL_LEX_UNEXPECTED; break;
-        case _HLL_LEX_EQC_NUMBER: state = HLL_LEX_NUMBER; break;
-        case _HLL_LEX_EQC_LPAREN: state = HLL_LEX_FIN_LPAREN; break;
-        case _HLL_LEX_EQC_RPAREN: state = HLL_LEX_FIN_RPAREN; break;
-        case _HLL_LEX_EQC_QUOTE: state = HLL_LEX_FIN_QUOTE; break;
-        case _HLL_LEX_EQC_DOT: state = HLL_LEX_DOTS; break;
-        case _HLL_LEX_EQC_SYMB: state = HLL_LEX_SYMB; break;
+        case _HLL_LEX_EQC_OTHER: state = _HLL_LEX_UNEXPECTED; break;
+        case _HLL_LEX_EQC_NUMBER: state = _HLL_LEX_NUMBER; break;
+        case _HLL_LEX_EQC_LPAREN: state = _HLL_LEX_FIN_LPAREN; break;
+        case _HLL_LEX_EQC_RPAREN: state = _HLL_LEX_FIN_RPAREN; break;
+        case _HLL_LEX_EQC_QUOTE: state = _HLL_LEX_FIN_QUOTE; break;
+        case _HLL_LEX_EQC_DOT: state = _HLL_LEX_DOTS; break;
+        case _HLL_LEX_EQC_SYMB: state = _HLL_LEX_SYMB; break;
         case _HLL_LEX_EQC_SPACE: /* nop */ break;
-        case _HLL_LEX_EQC_EOF: state = HLL_LEX_FIN_EOF; break;
+        case _HLL_LEX_EQC_EOF: state = _HLL_LEX_FIN_EOF; break;
         }
         break;
-    case HLL_LEX_NUMBER:
+    case _HLL_LEX_NUMBER:
         switch (eqc) {
-        default: state = HLL_LEX_FIN_NUMBER; break;
+        default: state = _HLL_LEX_FIN_NUMBER; break;
         case _HLL_LEX_EQC_NUMBER: /* nop */ break;
         case _HLL_LEX_EQC_DOT:
-        case _HLL_LEX_EQC_SYMB: state = HLL_LEX_SYMB; break;
+        case _HLL_LEX_EQC_SYMB: state = _HLL_LEX_SYMB; break;
         }
         break;
-    case HLL_LEX_DOTS:
+    case _HLL_LEX_DOTS:
         switch (eqc) {
-        default: state = HLL_LEX_FIN_DOTS; break;
+        default: state = _HLL_LEX_FIN_DOTS; break;
         case _HLL_LEX_EQC_DOT: /* nop */ break;
         case _HLL_LEX_EQC_NUMBER:
-        case _HLL_LEX_EQC_SYMB: state = HLL_LEX_SYMB; break;
+        case _HLL_LEX_EQC_SYMB: state = _HLL_LEX_SYMB; break;
         }
-    case HLL_LEX_SYMB:
+    case _HLL_LEX_SYMB:
         switch (eqc) {
-        default: state = HLL_LEX_FIN_SYMB; break;
+        default: state = _HLL_LEX_FIN_SYMB; break;
         case _HLL_LEX_EQC_NUMBER:
         case _HLL_LEX_EQC_DOT:
         case _HLL_LEX_EQC_SYMB: break;
         }
-    case HLL_LEX_UNEXPECTED:
+    case _HLL_LEX_UNEXPECTED:
         switch (eqc) {
-        default: state = HLL_LEX_FIN_UNEXPECTED; break;
+        default: state = _HLL_LEX_FIN_UNEXPECTED; break;
         case _HLL_LEX_EQC_OTHER: /* nop */ break;
         }
     }
@@ -145,65 +166,75 @@ _get_next_state(hll_lexer_state state, _hll_lexer_equivalence_class eqc) {
 
 static void
 _lexer_error(hll_lexer *lexer, char const *fmt, ...) {
+    lexer->has_errors = true;
+    if (lexer->error_fn != NULL) {
+        char buffer[4096];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        va_end(args);
+
+        // TODO: Line and column numbers
+        lexer->error_fn(lexer->vm, 0, 0, buffer);
+    }
 }
 
 void
-hll_lexer_peek(hll_lexer *lexer) {
+hll_lexer_next(hll_lexer *lexer) {
     /// Pull it from structure so there is better chance in ends up in
     /// register.
     char const *cursor = lexer->cursor;
     char const *token_start = cursor;
-    hll_lexer_state state = HLL_LEX_START;
+    _hll_lexer_state state = _HLL_LEX_START;
     do {
         _hll_lexer_equivalence_class eqc = _get_equivalence_class(*cursor++);
         state = _get_next_state(state, eqc);
-    } while (state < HLL_LEX_FIN);
+    } while (state < _HLL_LEX_FIN);
 
     lexer->next.start = cursor;
     lexer->next.length = cursor - token_start;
 
     switch (state) {
     default: assert(0); break;
-    case HLL_LEX_FIN_LPAREN: lexer->next.kind = HLL_TOK_LPAREN; break;
-    case HLL_LEX_FIN_RPAREN: lexer->next.kind = HLL_TOK_RPAREN; break;
-    case HLL_LEX_FIN_QUOTE: lexer->next.kind = HLL_TOK_QUOTE; break;
-    case HLL_LEX_FIN_DOTS: {
+    case _HLL_LEX_FIN_LPAREN: lexer->next.kind = HLL_TOK_LPAREN; break;
+    case _HLL_LEX_FIN_RPAREN: lexer->next.kind = HLL_TOK_RPAREN; break;
+    case _HLL_LEX_FIN_QUOTE: lexer->next.kind = HLL_TOK_QUOTE; break;
+    case _HLL_LEX_FIN_DOTS: {
+        --cursor;
         if (lexer->next.length == 1) {
             lexer->next.kind = HLL_TOK_DOT;
         } else {
             _lexer_error(lexer, "Symbol consists of only dots");
-            lexer->next.kind = HLl_TOK_UNEXPECTED;
+            lexer->next.kind = HLL_TOK_SYMB;
         }
     } break;
-    case HLL_LEX_FIN_NUMBER: {
+    case _HLL_LEX_FIN_NUMBER: {
+        --cursor;
         assert(sizeof(long long) == sizeof(int64_t));
         int64_t value = strtoll(cursor, NULL, 10);
         if (errno == ERANGE) {
-            _lexer_error(lexer, "Number literal was too large");
+            _lexer_error(lexer, "Number literal is too large");
             value = 0;
         }
 
+        lexer->next.kind = HLL_TOK_INT;
         lexer->next.value = value;
     } break;
-    case HLL_LEX_FIN_SYMB: lexer->next.kind = HLL_TOK_SYMB; break;
-    case HLL_LEX_FIN_EOF:
+    case _HLL_LEX_FIN_SYMB:
+        --cursor;
+        lexer->next.kind = HLL_TOK_SYMB;
+        break;
+    case _HLL_LEX_FIN_EOF:
         --cursor;
         lexer->next.kind = HLL_TOK_EOF;
         break;
-    case HLL_LEX_FIN_UNEXPECTED: lexer->next.kind = HLl_TOK_ERROR; break;
+    case _HLL_LEX_FIN_UNEXPECTED:
+        --cursor;
+        lexer->next.kind = HLL_TOK_UNEXPECTED;
+        break;
     }
 
     lexer->cursor = cursor;
-}
-
-void
-hll_lexer_eat(hll_lexer *lexer) {
-}
-
-void
-hll_lexer_eat_peek(hll_lexer *lexer) {
-    hll_lexer_eat(lexer);
-    hll_lexer_peek(lexer);
 }
 
 hll_ast *
