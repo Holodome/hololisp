@@ -25,12 +25,13 @@ read_entire_file(char const *filename) {
 
     char *buffer = malloc(file_size + 1);
     if (buffer == NULL) {
-        exit(1);
+        fclose(f);
+        return NULL;
     }
 
     if (fread(buffer, file_size, 1, f) != 1) {
         free(buffer);
-        fclose(file);
+        fclose(f);
         return NULL;
     }
 
@@ -59,7 +60,7 @@ main(int argc, char const **argv) {
     }
 
     struct hll_vm *vm = hll_make_vm(NULL);
-    hll_interpret_result result = hll_interpret(vm, filename, file_contents);
+    hll_interpret_result result = hll_interpret(vm, file_contents);
 
     int rc = EXIT_SUCCESS;
     switch (result) {

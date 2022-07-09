@@ -5,8 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-struct hll_vm;
-struct hll_error_reporter;
+#include "hll_hololisp.h"
 
 /// Kinds of tokens recognized by lexer.
 typedef enum {
@@ -44,7 +43,7 @@ typedef struct {
 /// helper for reader.
 typedef struct {
     /// If NULL, errors are not reported.
-    struct hll_error_reporter *error_reporter;
+    hll_error_fn *error_fn;
     /// Mark that errors have been encountered during lexing.
     bool has_errors;
     /// Buffer where strings should be written.
@@ -53,7 +52,6 @@ typedef struct {
 
     char const *cursor;
     uint32_t line;
-    char const *token_start;
     char const *line_start;
 
     hll_token next;
@@ -87,7 +85,7 @@ typedef struct hll_ast {
 
 typedef struct {
     /// If NULL, errors are not reported.
-    struct hll_error_reporter *error_reporter;
+    hll_error_fn *error_fn;
     /// Mark that errors have been encountered during parsing.
     bool has_errors;
 

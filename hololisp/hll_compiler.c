@@ -11,11 +11,11 @@ hll_compile(struct hll_vm *vm, char const *source) {
 
     hll_lexer lexer = { 0 };
     lexer.cursor = source;
-    lexer.error_reporter = &vm->config->error_reporter;
-    lexer.token_start = lexer.line_start = source;
+    lexer.error_fn = vm->config.error_fn;
+    lexer.line_start = source;
 
     hll_reader reader = { 0 };
-    reader.error_reporter = &vm->config->error_reporter;
+    reader.error_fn = vm->config.error_fn;
     reader.lexer = &lexer;
     reader.arena = &arena;
 

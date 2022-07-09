@@ -14,21 +14,14 @@ typedef void hll_error_fn(struct hll_vm *vm, uint32_t line,
 
 typedef void hll_write_fn(struct hll_vm *vm, char const *text);
 
-// This is semantic trickery to allow forward-declaring error reporting function.
-typedef struct hll_error_reporter {
-    void *user_data;
-    /// The callback used when user reports to errors.
-    /// If this is NULL, no errors shall be reported
-    hll_error_fn *error_fn;
-} hll_error_reporter;
-
 typedef struct hll_config {
     /// The callback used when user prints message (printf for example).
     /// If this is NULL, nothing shall be printed.
     hll_write_fn *write_fn;
 
-    // Error reporting mechanism.
-    hll_error_reporter error_reporter;
+    /// THe callback used when error is reported.
+    /// If this is NULL, nothing happens.
+    hll_error_fn *error_fn;
 
     /// Initial size of head before first garbage collection.
     /// Default value is 10MB
@@ -46,6 +39,9 @@ typedef struct hll_config {
     /// trigger next garbage collection in percent of current size.
     /// Default value is 50
     size_t heap_grow_percent;
+
+    /// Any data user wants to be accessed through callback functions.
+    void *user_data;
 } hll_config;
 
 typedef enum {
@@ -62,7 +58,7 @@ struct hll_vm *hll_make_vm(hll_config const *config);
 void hll_delete_vm(struct hll_vm *vm);
 
 /// Runs given source as hololisp code. Name is meta information.
-hll_interpret_result hll_interpret(struct hll_vm *vm, char const *name,
+hll_interpret_result hll_interpret(struct hll_vm *vm,
                                    char const *source);
 
 #endif

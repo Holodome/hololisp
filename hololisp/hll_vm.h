@@ -9,10 +9,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct hll_config;
+#include "hll_hololisp.h"
 
 typedef struct hll_vm {
-    struct hll_config *config;
+    struct hll_config config;
 } hll_vm;
+
+hll_interpret_result hll_interpret_bytecode(hll_vm *vm, void *bytecode);
 
 #endif
