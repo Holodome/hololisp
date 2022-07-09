@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "hll_hololisp.h"
+#include "hll_mem.h"
 
 /// Kinds of tokens recognized by lexer.
 typedef enum {
@@ -36,6 +37,24 @@ typedef struct {
     int64_t value;
     char const *start;
 } hll_token;
+
+typedef enum {
+    HLL_LEX_START,
+    HLL_LEX_NUMBER,
+    HLL_LEX_DOTS,
+    HLL_LEX_SYMB,
+    HLL_LEX_UNEXPECTED,
+
+    HLL_LEX_FIN,
+    HLL_LEX_FIN_LPAREN,
+    HLL_LEX_FIN_RPAREN,
+    HLL_LEX_FIN_QUOTE,
+    HLL_LEX_FIN_NUMBER,
+    HLL_LEX_FIN_DOTS,
+    HLL_LEX_FIN_SYMB,
+    HLL_LEX_FIN_EOF,
+    HLL_LEX_FIN_UNEXPECTED,
+} hll_lexer_state;
 
 /// Lexer is designed in way it is possible to use outside of compiler to allow
 /// asy writing of tools like syntax highlighter and code formatter.
@@ -88,15 +107,19 @@ typedef struct {
     hll_error_fn *error_fn;
     /// Mark that errors have been encountered during parsing.
     bool has_errors;
-
+    /// Lexer used for reading.
+    /// Reader process all tokens produced by lexer until EOF, so lifetime of
+    /// this lexer is associated with reader.
     hll_lexer *lexer;
+    /// This is the arena that is used for allocating AST nodes during parsing.
+    /// After work with AST is finished, they can all be freed at once.
     struct hll_memory_arena *arena;
 } hll_reader;
 
 hll_ast *hll_read_ast(hll_reader *reader);
 
 typedef struct {
-    struct hll_memory_arena *string_arena;
+    void *a;
 } hll_compiler;
 
 void *hll_compile_ast(hll_compiler *compiler, hll_ast *ast);
