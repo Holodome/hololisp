@@ -7,7 +7,7 @@ IndentWidth: 4
 AlwaysBreakAfterDefinitionReturnType: All
 IndentCaseLabels: false
 AllowShortBlocksOnASingleLine: Never
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
