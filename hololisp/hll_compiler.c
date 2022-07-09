@@ -29,3 +29,16 @@ hll_compile(struct hll_vm *vm, char const *source) {
 
     return result;
 }
+
+hll_ast *
+hll_read_ast(hll_reader *reader) {
+    (void)reader;
+    return NULL;
+}
+
+void *
+hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
+    (void)compiler;
+    (void)ast;
+    return NULL;
+}

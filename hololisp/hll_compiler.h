@@ -80,7 +80,7 @@ typedef struct hll_ast {
             struct hll_ast *car;
             struct hll_ast *cdr;
         } cons;
-    } body;
+    } as;
 } hll_ast;
 
 typedef struct {
