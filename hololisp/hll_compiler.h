@@ -24,8 +24,8 @@ typedef enum {
     HLL_TOK_RPAREN,
     /// '
     HLL_TOK_QUOTE,
-    /// Error
-    HLl_TOK_ERROR
+    /// Unexpected sequence of tokens.
+    HLl_TOK_UNEXPECTED
 } hll_token_kind ;
 
 /// Coupled token definition.
@@ -65,9 +65,6 @@ typedef struct {
     hll_error_fn *error_fn;
     /// Mark that errors have been encountered during lexing.
     bool has_errors;
-    /// Buffer where strings should be written.
-    char *buffer;
-    size_t buffer_size;
 
     char const *cursor;
     uint32_t line;

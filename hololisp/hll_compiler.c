@@ -1,6 +1,8 @@
 #include "hll_compiler.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #include "hll_hololisp.h"
 #include "hll_mem.h"
@@ -141,6 +143,10 @@ _get_next_state(hll_lexer_state state, _hll_lexer_equivalence_class eqc) {
     return state;
 }
 
+static void
+_lexer_error(hll_lexer *lexer, char const *fmt, ...) {
+}
+
 void
 hll_lexer_peek(hll_lexer *lexer) {
     /// Pull it from structure so there is better chance in ends up in
@@ -153,18 +159,38 @@ hll_lexer_peek(hll_lexer *lexer) {
         state = _get_next_state(state, eqc);
     } while (state < HLL_LEX_FIN);
 
-    size_t token_len = cursor - token_start;
+    lexer->next.start = cursor;
+    lexer->next.length = cursor - token_start;
 
     switch (state) {
     default: assert(0); break;
-    case HLL_LEX_FIN_LPAREN: break;
-    case HLL_LEX_FIN_RPAREN: break;
-    case HLL_LEX_FIN_DOTS: break;
-    case HLL_LEX_FIN_QUOTE: break;
-    case HLL_LEX_FIN_NUMBER: break;
-    case HLL_LEX_FIN_SYMB: break;
-    case HLL_LEX_FIN_EOF: break;
-    case HLL_LEX_FIN_UNEXPECTED: break;
+    case HLL_LEX_FIN_LPAREN: lexer->next.kind = HLL_TOK_LPAREN; break;
+    case HLL_LEX_FIN_RPAREN: lexer->next.kind = HLL_TOK_RPAREN; break;
+    case HLL_LEX_FIN_QUOTE: lexer->next.kind = HLL_TOK_QUOTE; break;
+    case HLL_LEX_FIN_DOTS: {
+        if (lexer->next.length == 1) {
+            lexer->next.kind = HLL_TOK_DOT;
+        } else {
+            _lexer_error(lexer, "Symbol consists of only dots");
+            lexer->next.kind = HLl_TOK_UNEXPECTED;
+        }
+    } break;
+    case HLL_LEX_FIN_NUMBER: {
+        assert(sizeof(long long) == sizeof(int64_t));
+        int64_t value = strtoll(cursor, NULL, 10);
+        if (errno == ERANGE) {
+            _lexer_error(lexer, "Number literal was too large");
+            value = 0;
+        }
+
+        lexer->next.value = value;
+    } break;
+    case HLL_LEX_FIN_SYMB: lexer->next.kind = HLL_TOK_SYMB; break;
+    case HLL_LEX_FIN_EOF:
+        --cursor;
+        lexer->next.kind = HLL_TOK_EOF;
+        break;
+    case HLL_LEX_FIN_UNEXPECTED: lexer->next.kind = HLl_TOK_ERROR; break;
     }
 
     lexer->cursor = cursor;
