@@ -30,7 +30,7 @@ $(OUT_DIR):
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $^
+	$(CC) -o $@ $(LDFLAGS) $^
 
 $(OUT_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  

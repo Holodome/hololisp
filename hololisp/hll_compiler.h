@@ -24,6 +24,8 @@ typedef enum {
     HLL_TOK_RPAREN,
     /// '
     HLL_TOK_QUOTE,
+    /// Comment
+    HLL_TOK_COMMENT,
     /// Unexpected sequence of tokens.
     HLL_TOK_UNEXPECTED
 } hll_token_kind ;
@@ -34,7 +36,6 @@ typedef struct {
     size_t offset;
     uint32_t length;
     int64_t value;
-    char const *start;
 } hll_token;
 
 /// Lexer is designed in way it is possible to use outside of compiler to allow
@@ -42,10 +43,8 @@ typedef struct {
 /// Thus is does not act as a individual step of translation but as
 /// helper for reader.
 typedef struct {
-    /// Needed for error reporting.
+    /// Used for error reporting. If NULL, no errors are reported
     struct hll_vm *vm;
-    /// If NULL, errors are not reported.
-    hll_error_fn *error_fn;
     /// Mark that errors have been encountered during lexing.
     bool has_errors;
     /// Current parsing location
@@ -56,6 +55,7 @@ typedef struct {
     hll_token next;
 } hll_lexer;
 
+void hll_lexer_init(hll_lexer *lexer, char const *input, struct hll_vm *vm);
 void hll_lexer_next(hll_lexer *lexer);
 
 typedef enum {
