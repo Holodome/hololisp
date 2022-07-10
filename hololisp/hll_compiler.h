@@ -1,9 +1,9 @@
 #ifndef __HLL_COMPILER_H__
 #define __HLL_COMPILER_H__
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "hll_hololisp.h"
 #include "hll_mem.h"
@@ -28,7 +28,7 @@ typedef enum {
     HLL_TOK_COMMENT,
     /// Unexpected sequence of tokens.
     HLL_TOK_UNEXPECTED
-} hll_token_kind ;
+} hll_token_kind;
 
 /// Coupled token definition.
 typedef struct {
@@ -59,8 +59,7 @@ void hll_lexer_init(hll_lexer *lexer, char const *input, struct hll_vm *vm);
 void hll_lexer_next(hll_lexer *lexer);
 
 typedef enum {
-    HLL_AST_NONE,
-    HLL_AST_NIL,
+    HLL_AST_NIL = 0x1,
     HLL_AST_TRUE,
     HLL_AST_INT,
     HLL_AST_CONS,
@@ -82,8 +81,6 @@ typedef struct hll_ast {
 typedef struct {
     /// Needed for error reporting.
     struct hll_vm *vm;
-    /// If NULL, errors are not reported.
-    hll_error_fn *error_fn;
     /// Mark that errors have been encountered during parsing.
     bool has_errors;
     /// Lexer used for reading.
@@ -95,6 +92,8 @@ typedef struct {
     struct hll_memory_arena *arena;
 } hll_reader;
 
+void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
+                     hll_memory_arena *arena, struct hll_vm *vm);
 hll_ast *hll_read_ast(hll_reader *reader);
 
 typedef struct {
@@ -106,9 +105,10 @@ void *hll_compile_ast(hll_compiler *compiler, hll_ast *ast);
 /// Compiles hololisp code as a hololisp bytecode.
 /// Because internally lisp is represented as a tree of conses (lists),
 /// we first transform code into lisp AST and then by traversing it compile it.
-/// Though it is possible to compile simple code using stack-based traversal of tree instead of
-/// compiling it to AST it the first place, but lisp is different from other simple
-/// languages that it has macro system. Macros operate on AST, thus we have to go through the AST step.
+/// Though it is possible to compile simple code using stack-based traversal of
+/// tree instead of compiling it to AST it the first place, but lisp is
+/// different from other simple languages that it has macro system. Macros
+/// operate on AST, thus we have to go through the AST step.
 void *hll_compile(struct hll_vm *vm, char const *source);
 
 #endif

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hll_hololisp.h"
@@ -20,7 +21,6 @@ hll_compile(struct hll_vm *vm, char const *source) {
 
     hll_reader reader = { 0 };
     reader.vm = vm;
-    reader.error_fn = vm->config.error_fn;
     reader.lexer = &lexer;
     reader.arena = &compilation_arena;
 
@@ -60,6 +60,8 @@ _get_equivalence_class(char symb) {
     case '\'': eqc = _HLL_LEX_EQC_QUOTE; break;
     case '.': eqc = _HLL_LEX_EQC_DOT; break;
     case '\0': eqc = _HLL_LEX_EQC_EOF; break;
+    case '\n': eqc = _HLL_LEX_EQC_NEWLINE; break;
+    case ';': eqc = _HLL_LEX_EQC_COMMENT; break;
     case '1': case '2': case '3':
     case '4': case '5': case '6':
     case '7': case '8': case '9':
@@ -80,10 +82,6 @@ _get_equivalence_class(char symb) {
         eqc = _HLL_LEX_EQC_SYMB; break;
     case ' ': case '\t': case '\f': case '\r': case '\v':
         eqc = _HLL_LEX_EQC_SPACE; break;
-    case '\n':
-        eqc = _HLL_LEX_EQC_NEWLINE; break;
-    case ';':
-        eqc = _HLL_LEX_EQC_COMMENT; break;
     }
 
     // clang-format on
@@ -279,10 +277,182 @@ hll_lexer_next(hll_lexer *lexer) {
     }
 }
 
+void
+hll_reader_init(hll_reader *reader, hll_lexer *lexer, hll_memory_arena *arena,
+                struct hll_vm *vm) {
+    memset(reader, 0, sizeof(hll_reader));
+    reader->lexer = lexer;
+    reader->arena = arena;
+    reader->vm = vm;
+}
+
+typedef enum {
+    _HLL_READ_LIST,
+    _HLL_READ_QUOTE,
+    _HLL_READ_DOT,
+} _hll_ast_read_entry_kind;
+
+// This represents non-finished linked list in terms of lisp objects.
+typedef struct {
+    _hll_ast_read_entry_kind kind;
+    hll_ast *first;
+    hll_ast *last;
+} _hll_ast_read_entry;
+
+static bool
+append_to_entry(_hll_ast_read_entry *entry, hll_ast *cons) {
+    if (entry->first != NULL) {
+        entry->last->as.cons.cdr = cons;
+        entry->last = cons;
+    } else {
+        entry->first = entry->last = cons;
+    }
+
+    return entry->kind != _HLL_READ_LIST;
+}
+
+static void
+finalize_entry(_hll_ast_read_entry *target, _hll_ast_read_entry *src) {
+    switch (src->kind) {
+    case _HLL_READ_LIST: {
+        hll_ast *list = stack[stack_index--].first;
+        if (list == NULL) {
+            list = nil;
+        }
+        _APPEND_TO_LIST(list);
+    } break;
+    }
+}
+
+static void
+_reader_error(hll_reader *reader, char const *fmt, ...) {
+    reader->has_errors = true;
+    if (reader->vm != NULL) {
+        char buffer[4096];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        va_end(args);
+
+        // TODO: Line and column numbers
+        reader->vm->config.error_fn(reader->vm, 0, 0, buffer);
+    }
+}
+
 hll_ast *
 hll_read_ast(hll_reader *reader) {
-    (void)reader;
-    return NULL;
+    _hll_ast_read_entry *stack = NULL;
+    uint32_t stack_index = 0;
+    // Global scope is made a cons linked list not to introduce too big
+    // difference from all other ast nodes.
+    // Note that despite this being a correct lisp object, compiler treats
+    // it simply as list
+    hll_sb_push(stack, (_hll_ast_read_entry){ 0 });
+
+    hll_ast *nil = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    nil->kind = HLL_AST_NIL;
+    hll_ast *true_ = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    true_->kind = HLL_AST_TRUE;
+    (void)true_;
+    hll_ast *quote_symb =
+        hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    quote_symb->kind = HLL_AST_SYMB;
+    quote_symb->as.symb = "quote";
+
+#define FINALIZE_ENTRY                                      \
+    do {                                                    \
+        assert(stack_index);                                \
+        _hll_ast_read_entry *entry = stack + stack_index--; \
+        finalize_entry(stack + stack_index, entry);         \
+    } while (0)
+
+#define _APPEND_TO_LIST(_ast)                                       \
+    do {                                                            \
+        hll_ast *cons =                                             \
+            hll_memory_arena_alloc(reader->arena, sizeof(hll_ast)); \
+        cons->kind = HLL_AST_CONS;                                  \
+        cons->as.cons.car = _ast;                                   \
+        cons->as.cons.cdr = nil;                                    \
+        if (append_to_entry(stack + stack_index, cons)) {           \
+            FINALIZE_ENTRY;                                         \
+        }                                                           \
+    } while (0)
+
+    bool is_finished = false;
+    while (!is_finished) {
+        hll_lexer_next(reader->lexer);
+
+        switch (reader->lexer->next.kind) {
+        case HLL_TOK_EOF: is_finished = true; break;
+        case HLL_TOK_INT: {
+            hll_ast *ast =
+                hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+            ast->kind = HLL_AST_INT;
+            ast->as.num = reader->lexer->next.value;
+            _APPEND_TO_LIST(ast);
+        } break;
+        case HLL_TOK_SYMB: {
+            if (reader->lexer->next.length == 1 &&
+                reader->lexer->input[reader->lexer->next.offset] == 't') {
+                _APPEND_TO_LIST(true_);
+                break;
+            }
+
+            hll_ast *ast =
+                hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+            ast->kind = HLL_AST_SYMB;
+            ast->as.symb = hll_memory_arena_alloc(
+                reader->arena, reader->lexer->next.length + 1);
+            strncpy((void *)ast->as.symb,
+                    reader->lexer->input + reader->lexer->next.offset,
+                    reader->lexer->next.length);
+            ast->as.num = reader->lexer->next.value;
+            _APPEND_TO_LIST(ast);
+        } break;
+        case HLL_TOK_LPAREN: {
+            hll_sb_push(stack, (_hll_ast_read_entry){ 0 });
+            ++stack_index;
+        } break;
+        case HLL_TOK_RPAREN: {
+            if (stack_index == 0) {
+                _reader_error(reader, "Stray right parenthesis");
+                break;
+            }
+
+            FINALIZE_ENTRY;
+
+        } break;
+        case HLL_TOK_QUOTE: {
+            hll_sb_push(stack,
+                        (_hll_ast_read_entry){ .kind = _HLL_READ_QUOTE });
+        } break;
+        case HLL_TOK_DOT:
+            if (stack[stack_index - 1].first == NULL) {
+                _reader_error(reader, "Dot in list without first element");
+            }
+            hll_sb_push(stack, (_hll_ast_read_entry){ .kind = _HLL_READ_DOT });
+            break;
+        case HLL_TOK_COMMENT: /* nop */ break;
+        case HLL_TOK_UNEXPECTED:
+            _reader_error(reader, "Unexpected characters");
+            break;
+        }
+    }
+
+    if (stack_index) {
+        _reader_error(reader, "Unterminated list definitions: %u", stack_index);
+    }
+
+#undef FINALIZE_ENTRY
+#undef _APPEND_TO_LIST
+
+    hll_ast *result = stack->first;
+    if (result == NULL) {
+        result = nil;
+    }
+    hll_sb_free(stack);
+
+    return result;
 }
 
 void *

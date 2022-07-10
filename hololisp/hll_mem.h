@@ -19,8 +19,9 @@ typedef struct {
 #define _hll_sb_size(_a) (_hll_sb_header(_a)->size)
 #define _hll_sb_capacity(_a) (_hll_sb_header(_a)->capacity)
 
+#define _hll_sb_has_space(_a, _n) (((_a) != NULL) && ((_n) < _hll_sb_capacity(_a)))
 #define _hll_sb_needgrow(_a, _n) (((_a) == NULL) || (_hll_sb_size(_a) + (_n) >= _hll_sb_capacity(_a)))
-#define _hll_sb_maybegrow(_a, _n) (_hll_sb_needgrow(_a, _n) ? hll_sb_grow(_a, _n) : 0)
+#define _hll_sb_maybegrow(_a, _n) (_hll_sb_needgrow(_a, _n) ? _hll_sb_grow(_a, _n) : 0)
 #define _hll_sb_grow(_a, _b) (*(void **)(&(_a)) = hll_sb_grow_impl((_a), (_b), sizeof(*(_a))))
 
 #define hll_sb_free(_a) (((_a) != NULL) ? free(_hll_sb_header(_a)),0 : 0)
