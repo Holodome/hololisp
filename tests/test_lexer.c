@@ -151,10 +151,10 @@ test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
 }
 
 static void
-test_lexer_skips_comments(void) {
+test_lexer_parses_comments(void) {
     char const *data =
         "hello ; this is comment\n"
-        "world ; this is comment too\n";
+        "world ; this is comment too";
     hll_lexer lexer;
     hll_lexer_init(&lexer, data, NULL);
 
@@ -164,7 +164,19 @@ test_lexer_skips_comments(void) {
 
     hll_lexer_next(&lexer);
     TEST_ASSERT(!lexer.has_errors);
+    TEST_ASSERT(lexer.next.kind == HLL_TOK_COMMENT);
+    TEST_ASSERT(strncmp(lexer.input + lexer.next.offset, "; this is comment",
+                        lexer.next.length) == 0);
+
+    hll_lexer_next(&lexer);
+    TEST_ASSERT(!lexer.has_errors);
     TEST_ASSERT(lexer.next.kind == HLL_TOK_SYMB);
+
+    hll_lexer_next(&lexer);
+    TEST_ASSERT(!lexer.has_errors);
+    TEST_ASSERT(lexer.next.kind == HLL_TOK_COMMENT);
+    TEST_ASSERT(strncmp(lexer.input + lexer.next.offset, "; this is comment too",
+                        lexer.next.length) == 0);
 
     hll_lexer_next(&lexer);
     TEST_ASSERT(!lexer.has_errors);
@@ -314,7 +326,7 @@ test_lexer_reports_too_big_integer(void) {
 TEST_LIST = { TCASE(test_lexer_parses_simple_symbol),
               TCASE(test_lexer_parses_number),
               TCASE(test_lexer_parse_basic_syntax_multiple_tokens),
-              TCASE(test_lexer_skips_comments),
+              TCASE(test_lexer_parses_comments),
               TCASE(test_lexer_dont_think_that_plus_and_minus_are_numbers),
               TCASE(test_lexer_skips_whitespace_symbols),
               TCASE(test_lexer_parses_dot),

@@ -108,6 +108,7 @@ typedef enum {
     _HLL_LEX_FIN_SYMB,
     _HLL_LEX_FIN_EOF,
     _HLL_LEX_FIN_UNEXPECTED,
+    _HLL_LEX_FIN_COMMENT,
 } _hll_lexer_state;
 
 static inline _hll_lexer_state
@@ -133,8 +134,8 @@ _get_next_state(_hll_lexer_state state, _hll_lexer_equivalence_class eqc) {
     case _HLL_LEX_COMMENT:
         switch (eqc) {
         default: /* nop */ break;
-        case _HLL_LEX_EQC_EOF: state = _HLL_LEX_FIN_EOF; break;
-        case _HLL_LEX_EQC_NEWLINE: state = _HLL_LEX_START; break;
+        case _HLL_LEX_EQC_EOF:
+        case _HLL_LEX_EQC_NEWLINE: state = _HLL_LEX_FIN_COMMENT; break;
         }
         break;
     case _HLL_LEX_SEEN_SIGN:
@@ -240,6 +241,7 @@ hll_lexer_next(hll_lexer *lexer) {
     case _HLL_LEX_FIN_NUMBER:
     case _HLL_LEX_FIN_SYMB:
     case _HLL_LEX_FIN_EOF:
+    case _HLL_LEX_FIN_COMMENT:
     case _HLL_LEX_FIN_UNEXPECTED: --cursor; break;
     }
     lexer->next.offset = token_start - lexer->input;
@@ -252,6 +254,10 @@ hll_lexer_next(hll_lexer *lexer) {
     case _HLL_LEX_FIN_LPAREN: lexer->next.kind = HLL_TOK_LPAREN; break;
     case _HLL_LEX_FIN_RPAREN: lexer->next.kind = HLL_TOK_RPAREN; break;
     case _HLL_LEX_FIN_QUOTE: lexer->next.kind = HLL_TOK_QUOTE; break;
+    case _HLL_LEX_FIN_SYMB: lexer->next.kind = HLL_TOK_SYMB; break;
+    case _HLL_LEX_FIN_EOF: lexer->next.kind = HLL_TOK_EOF; break;
+    case _HLL_LEX_FIN_UNEXPECTED: lexer->next.kind = HLL_TOK_UNEXPECTED; break;
+    case _HLL_LEX_FIN_COMMENT: lexer->next.kind = HLL_TOK_COMMENT; break;
     case _HLL_LEX_FIN_DOTS: {
         if (lexer->next.length == 1) {
             lexer->next.kind = HLL_TOK_DOT;
@@ -270,9 +276,6 @@ hll_lexer_next(hll_lexer *lexer) {
         lexer->next.kind = HLL_TOK_INT;
         lexer->next.value = value;
     } break;
-    case _HLL_LEX_FIN_SYMB: lexer->next.kind = HLL_TOK_SYMB; break;
-    case _HLL_LEX_FIN_EOF: lexer->next.kind = HLL_TOK_EOF; break;
-    case _HLL_LEX_FIN_UNEXPECTED: lexer->next.kind = HLL_TOK_UNEXPECTED; break;
     }
 }
 
