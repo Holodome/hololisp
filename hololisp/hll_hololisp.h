@@ -1,8 +1,8 @@
 ///
 /// hololisp public API definition.
 ///
-#ifndef __HLL_HOLOLISP_H__
-#define __HLL_HOLOLISP_H__
+#ifndef HLL_HOLOLISP_H
+#define HLL_HOLOLISP_H
 
 #include <stddef.h>
 #include <stdint.h>

@@ -1,5 +1,5 @@
-#ifndef __HLL_COMPILER_H__
-#define __HLL_COMPILER_H__
+#ifndef HLL_COMPILER_H
+#define HLL_COMPILER_H
 
 #include <stdbool.h>
 #include <stddef.h>

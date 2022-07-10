@@ -3,8 +3,8 @@
 /// Virtual machine is what is responsible for executing any hololisp code.
 
 ///
-#ifndef __HLL_VM_H__
-#define __HLL_VM_H__
+#ifndef HLL_VM_H
+#define HLL_VM_H
 
 #include <stdbool.h>
 #include <stdint.h>

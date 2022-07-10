@@ -1,5 +1,5 @@
-#ifndef __HLL_OBJ_H__
-#define __HLL_OBJ_H__
+#ifndef HLL_OBJ_H
+#define HLL_OBJ_H
 
 typedef enum {
     HLL_OBJ_NONE,

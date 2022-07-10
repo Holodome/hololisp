@@ -15,15 +15,15 @@ _align_forward_pow2(size_t value, size_t align) {
     return result;
 }
 
-static _hll_memory_arena_block *
+static hll_memory_arena_block *
 alloc_block(size_t size, size_t align) {
     size_t size_to_allocate =
-        _align_forward_pow2(size + sizeof(_hll_memory_arena_block), align);
+        _align_forward_pow2(size + sizeof(hll_memory_arena_block), align);
     void *memory = calloc(size_to_allocate, 1);
-    _hll_memory_arena_block *block = memory;
+    hll_memory_arena_block *block = memory;
 
     block->data = (char *)_align_forward_pow2(
-        (uintptr_t)block + sizeof(_hll_memory_arena_block), align);
+        (uintptr_t)block + sizeof(hll_memory_arena_block), align);
     block->size = size;
 
     return block;
@@ -35,7 +35,7 @@ hll_memory_arena_alloc(hll_memory_arena *arena, size_t size) {
         return NULL;
     }
 
-    _hll_memory_arena_block *block = arena->block;
+    hll_memory_arena_block *block = arena->block;
     size_t size_aligned = _align_forward_pow2(size, HLL_MEMORY_ARENA_ALIGN);
     if (block == NULL || block->used + size_aligned > block->size) {
         if (!arena->min_block_size) {
@@ -68,7 +68,7 @@ hll_memory_arena_alloc(hll_memory_arena *arena, size_t size) {
 
 static void
 _free_last_block(hll_memory_arena *arena) {
-    _hll_memory_arena_block *block = arena->block;
+    hll_memory_arena_block *block = arena->block;
     arena->block = block->next;
     free(block);
 }
@@ -95,7 +95,7 @@ hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
         return header + 1;
     }
 
-    hll_sb_header *header = _hll_sb_header(arr);
+    hll_sb_header *header = hll_sb_header(arr);
     size_t double_current = header->capacity * 2;
     size_t min_needed = header->size + inc;
 
