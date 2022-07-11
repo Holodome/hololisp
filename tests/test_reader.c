@@ -11,7 +11,6 @@ test_reader_reports_eof(void) {
     hll_reader_init(&reader, &lexer, &arena, NULL);
 
     hll_ast *ast = hll_read_ast(&reader);
-    __builtin_dump_struct(ast, &printf);
     TEST_ASSERT(ast->kind == HLL_AST_NIL);
 }
 
@@ -23,7 +22,6 @@ test_reader_parses_num(void) {
     hll_reader_init(&reader, &lexer, &arena, NULL);
 
     hll_ast *ast = hll_read_ast(&reader);
-//    __builtin_dump_struct(ast, &printf);
 
     TEST_ASSERT(ast->kind == HLL_AST_CONS);
     TEST_ASSERT(ast->as.cons.cdr->kind == HLL_AST_NIL);
@@ -102,7 +100,7 @@ test_reader_parses_nested_lists(void) {
     TEST_ASSERT(ast->kind == HLL_AST_CONS);
     TEST_ASSERT(ast->as.cons.car->kind == HLL_AST_SYMB);
     TEST_ASSERT(ast->as.cons.cdr->kind == HLL_AST_CONS);
-    ast = ast->as.cons.car;
+    ast = ast->as.cons.cdr;
     TEST_ASSERT(ast->kind == HLL_AST_CONS);
     TEST_ASSERT(ast->as.cons.car->kind == HLL_AST_CONS);
     {
@@ -116,7 +114,7 @@ test_reader_parses_nested_lists(void) {
         TEST_ASSERT(inner->as.cons.car->kind == HLL_AST_INT);
         TEST_ASSERT(inner->as.cons.cdr->kind == HLL_AST_NIL);
     }
-    ast = ast->as.cons.car;
+    ast = ast->as.cons.cdr;
     TEST_ASSERT(ast->kind == HLL_AST_CONS);
     TEST_ASSERT(ast->as.cons.car->kind == HLL_AST_SYMB);
     TEST_ASSERT(ast->as.cons.cdr->kind == HLL_AST_NIL);

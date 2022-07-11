@@ -13,24 +13,22 @@
 #include "hll_vm.h"
 
 void *
-hll_compile(struct hll_vm *vm, char const *source) {
+hll_compile(hll_vm *vm, char const *source) {
     hll_memory_arena compilation_arena = { 0 };
-
     hll_lexer lexer;
     hll_lexer_init(&lexer, source, vm);
-
-    hll_reader reader = { 0 };
-    reader.vm = vm;
-    reader.lexer = &lexer;
-    reader.arena = &compilation_arena;
+    hll_reader reader;
+    hll_reader_init(&reader, &lexer, &compilation_arena, vm);
 
     hll_ast *ast = hll_read_ast(&reader);
 
     hll_compiler compiler = { 0 };
-
     void *result = hll_compile_ast(&compiler, ast);
 
     hll_memory_arena_clear(&compilation_arena);
+    if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
+        result = NULL;
+    }
 
     return result;
 }
@@ -300,33 +298,76 @@ typedef struct {
     hll_ast *last;
 } hll_ast_read_entry;
 
+// hololisp has quite simple grammar. Naive way to program it
+// could be just to use recursive-descent parser.
+// However, since the only place lisp recurses is in lists,
+// it may not be so beneficial to use recursion here.
+// Instead, we turn in into push-down automata (PDA).
+/*
+ * Lisp grammar:
+ * expr = NUM | SYMB | list | 'expr
+ * list = '(' list-body ')'
+ * list-body = expr+ ('.' expr)?
+ *           | expr*
+ */
 typedef struct {
+    hll_memory_arena *arena;
     hll_ast_read_entry *stack;
     uint32_t stack_idx;
+    hll_ast *nil;
+    hll_ast *true_;
+    hll_ast *quote_symb;
 } hll_parse_state;
 
-static bool
-append_to_entry(hll_ast_read_entry *entry, hll_ast *cons) {
-    if (entry->first != NULL) {
-        entry->last->as.cons.cdr = cons;
-        entry->last = cons;
-    } else {
-        entry->first = entry->last = cons;
-    }
-
-    return entry->kind != HLL_READ_LIST;
-}
-
 static void
-finalize_entry(hll_ast_read_entry *target, hll_ast_read_entry *src) {
-    switch (src->kind) {
-    case HLL_READ_LIST: {
-        hll_ast *list = stack[stack_index--].first;
-        if (list == NULL) {
-            list = nil;
+add_object(hll_parse_state *state, hll_ast *ast) {
+    bool is_dot = false;
+    bool is_finished = false;
+    while (!is_finished) {
+        hll_ast_read_entry *entry = state->stack + state->stack_idx;
+
+        switch (entry->kind) {
+        case HLL_READ_LIST: {
+            if (!is_dot) {
+                hll_ast *cons =
+                    hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
+                cons->kind = HLL_AST_CONS;
+                cons->as.cons.car = ast;
+                cons->as.cons.cdr = state->nil;
+                if (entry->first != NULL) {
+                    entry->last->as.cons.cdr = cons;
+                    entry->last = cons;
+                } else {
+                    entry->first = entry->last = cons;
+                }
+            } else {
+                assert(entry->last != NULL);
+                entry->last->as.cons.cdr = ast;
+            }
+            is_finished = true;
+        } break;
+        case HLL_READ_QUOTE: {
+            hll_ast *b = hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
+            b->kind = HLL_AST_CONS;
+            b->as.cons.car = ast;
+            b->as.cons.cdr = state->nil;
+            hll_ast *a = hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
+            a->kind = HLL_AST_CONS;
+            a->as.cons.car = state->quote_symb;
+            a->as.cons.cdr = b;
+
+            assert(state->stack_idx);
+            hll_sb_pop(state->stack);
+            --state->stack_idx;
+            ast = a;
+        } break;
+        case HLL_READ_DOT: {
+            assert(state->stack_idx);
+            hll_sb_pop(state->stack);
+            --state->stack_idx;
+            is_dot = true;
+        } break;
         }
-        _APPEND_TO_LIST(list);
-    } break;
     }
 }
 
@@ -347,42 +388,23 @@ reader_error(hll_reader *reader, char const *fmt, ...) {
 
 hll_ast *
 hll_read_ast(hll_reader *reader) {
-    hll_ast_read_entry *stack = NULL;
-    uint32_t stack_index = 0;
+    hll_parse_state state = { 0 };
+    state.arena = reader->arena;
+    state.nil = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    state.nil->kind = HLL_AST_NIL;
+    state.true_ = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    state.true_->kind = HLL_AST_TRUE;
+    state.quote_symb =
+        hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+    state.quote_symb->kind = HLL_AST_SYMB;
+    state.quote_symb->as.symb = "quote";
+
     // Global scope is made a cons linked list not to introduce too big
     // difference from all other ast nodes.
     // Note that despite this being a correct lisp object, compiler treats
     // it simply as list
-    hll_sb_push(stack, (hll_ast_read_entry){ 0 });
+    hll_sb_push(state.stack, (hll_ast_read_entry){ 0 });
 
-    hll_ast *nil = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    nil->kind = HLL_AST_NIL;
-    hll_ast *true_ = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    true_->kind = HLL_AST_TRUE;
-    (void)true_;
-    hll_ast *quote_symb =
-        hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    quote_symb->kind = HLL_AST_SYMB;
-    quote_symb->as.symb = "quote";
-
-#define FINALIZE_ENTRY                                     \
-    do {                                                   \
-        assert(stack_index);                               \
-        hll_ast_read_entry *entry = stack + stack_index--; \
-        finalize_entry(stack + stack_index, entry);        \
-    } while (0)
-
-#define APPEND_TO_LIST(_ast)                                       \
-    do {                                                            \
-        hll_ast *cons =                                             \
-            hll_memory_arena_alloc(reader->arena, sizeof(hll_ast)); \
-        cons->kind = HLL_AST_CONS;                                  \
-        cons->as.cons.car = _ast;                                   \
-        cons->as.cons.cdr = nil;                                    \
-        if (append_to_entry(stack + stack_index, cons)) {           \
-            FINALIZE_ENTRY;                                         \
-        }                                                           \
-    } while (0)
 
     bool is_finished = false;
     while (!is_finished) {
@@ -395,12 +417,12 @@ hll_read_ast(hll_reader *reader) {
                 hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
             ast->kind = HLL_AST_INT;
             ast->as.num = reader->lexer->next.value;
-            APPEND_TO_LIST(ast);
+            add_object(&state, ast);
         } break;
         case HLL_TOK_SYMB: {
             if (reader->lexer->next.length == 1 &&
                 reader->lexer->input[reader->lexer->next.offset] == 't') {
-                APPEND_TO_LIST(true_);
+                add_object(&state, state.true_);
                 break;
             }
 
@@ -412,30 +434,44 @@ hll_read_ast(hll_reader *reader) {
             strncpy((void *)ast->as.symb,
                     reader->lexer->input + reader->lexer->next.offset,
                     reader->lexer->next.length);
-            ast->as.num = reader->lexer->next.value;
-            APPEND_TO_LIST(ast);
+            add_object(&state, ast);
         } break;
         case HLL_TOK_LPAREN: {
-            hll_sb_push(stack, (hll_ast_read_entry){ 0 });
-            ++stack_index;
+            hll_sb_push(state.stack, (hll_ast_read_entry){ 0 });
+            ++state.stack_idx;
         } break;
         case HLL_TOK_RPAREN: {
-            if (stack_index == 0) {
+            if (state.stack_idx == 0) {
                 reader_error(reader, "Stray right parenthesis");
                 break;
             }
 
-            FINALIZE_ENTRY;
-
+            hll_ast_read_entry *entry = state.stack + state.stack_idx--;
+            hll_sb_pop(state.stack);
+            if (entry->kind == HLL_READ_DOT) {
+                reader_error(reader, "Element after dot is missing");
+                break;
+            }
+            assert(entry->kind == HLL_READ_LIST);
+            hll_ast *ast = entry->first;
+            if (ast == NULL) {
+                ast = state.nil;
+            }
+            add_object(&state, ast);
         } break;
         case HLL_TOK_QUOTE: {
-            hll_sb_push(stack, (hll_ast_read_entry){ .kind = HLL_READ_QUOTE });
+            hll_sb_push(state.stack, (hll_ast_read_entry){ .kind = HLL_READ_QUOTE });
         } break;
         case HLL_TOK_DOT:
-            if (stack[stack_index - 1].first == NULL) {
-                reader_error(reader, "Dot in list without first element");
+            if (state.stack[state.stack_idx].kind != HLL_READ_LIST) {
+                reader_error(reader, "Dot in unexpected place");
+                break;
             }
-            hll_sb_push(stack, (hll_ast_read_entry){ .kind = HLL_READ_DOT });
+            if (state.stack[state.stack_idx].first == NULL) {
+                reader_error(reader, "Dot in list without first element");
+                break;
+            }
+            hll_sb_push(state.stack, (hll_ast_read_entry){ .kind = HLL_READ_DOT });
             break;
         case HLL_TOK_COMMENT: /* nop */ break;
         case HLL_TOK_UNEXPECTED:
@@ -444,18 +480,15 @@ hll_read_ast(hll_reader *reader) {
         }
     }
 
-    if (stack_index) {
-        reader_error(reader, "Unterminated list definitions: %u", stack_index);
+    if (state.stack_idx) {
+        reader_error(reader, "Unterminated list definitions: %u", state.stack_idx);
     }
 
-#undef FINALIZE_ENTRY
-#undef APPEND_TO_LIST
-
-    hll_ast *result = stack->first;
+    hll_ast *result = state.stack->first;
     if (result == NULL) {
-        result = nil;
+        result = state.nil;
     }
-    hll_sb_free(stack);
+    hll_sb_free(state.stack);
 
     return result;
 }

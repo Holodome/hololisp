@@ -97,7 +97,8 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
 hll_ast *hll_read_ast(hll_reader *reader);
 
 typedef struct {
-    void *a;
+    struct hll_vm *vm;
+    bool has_errors;
 } hll_compiler;
 
 void *hll_compile_ast(hll_compiler *compiler, hll_ast *ast);
