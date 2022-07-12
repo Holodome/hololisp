@@ -285,92 +285,6 @@ hll_reader_init(hll_reader *reader, hll_lexer *lexer, hll_memory_arena *arena,
     reader->vm = vm;
 }
 
-typedef enum {
-    HLL_READ_LIST,
-    HLL_READ_QUOTE,
-    HLL_READ_DOT,
-} hll_ast_read_entry_kind;
-
-// This represents non-finished linked list in terms of lisp objects.
-typedef struct {
-    hll_ast_read_entry_kind kind;
-    hll_ast *first;
-    hll_ast *last;
-} hll_ast_read_entry;
-
-// hololisp has quite simple grammar. Naive way to program it
-// could be just to use recursive-descent parser.
-// However, since the only place lisp recurses is in lists,
-// it may not be so beneficial to use recursion here.
-// Instead, we turn in into push-down automata (PDA).
-/*
- * Lisp grammar:
- * expr = NUM | SYMB | list | 'expr
- * list = '(' list-body ')'
- * list-body = expr+ ('.' expr)?
- *           | expr*
- */
-typedef struct {
-    hll_memory_arena *arena;
-    hll_ast_read_entry *stack;
-    uint32_t stack_idx;
-    hll_ast *nil;
-    hll_ast *true_;
-    hll_ast *quote_symb;
-} hll_parse_state;
-
-static void
-add_object(hll_parse_state *state, hll_ast *ast) {
-    bool is_dot = false;
-    bool is_finished = false;
-    while (!is_finished) {
-        hll_ast_read_entry *entry = state->stack + state->stack_idx;
-
-        switch (entry->kind) {
-        case HLL_READ_LIST: {
-            if (!is_dot) {
-                hll_ast *cons =
-                    hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
-                cons->kind = HLL_AST_CONS;
-                cons->as.cons.car = ast;
-                cons->as.cons.cdr = state->nil;
-                if (entry->first != NULL) {
-                    entry->last->as.cons.cdr = cons;
-                    entry->last = cons;
-                } else {
-                    entry->first = entry->last = cons;
-                }
-            } else {
-                assert(entry->last != NULL);
-                entry->last->as.cons.cdr = ast;
-            }
-            is_finished = true;
-        } break;
-        case HLL_READ_QUOTE: {
-            hll_ast *b = hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
-            b->kind = HLL_AST_CONS;
-            b->as.cons.car = ast;
-            b->as.cons.cdr = state->nil;
-            hll_ast *a = hll_memory_arena_alloc(state->arena, sizeof(hll_ast));
-            a->kind = HLL_AST_CONS;
-            a->as.cons.car = state->quote_symb;
-            a->as.cons.cdr = b;
-
-            assert(state->stack_idx);
-            hll_sb_pop(state->stack);
-            --state->stack_idx;
-            ast = a;
-        } break;
-        case HLL_READ_DOT: {
-            assert(state->stack_idx);
-            hll_sb_pop(state->stack);
-            --state->stack_idx;
-            is_dot = true;
-        } break;
-        }
-    }
-}
-
 static void
 reader_error(hll_reader *reader, char const *fmt, ...) {
     reader->has_errors = true;
@@ -386,111 +300,183 @@ reader_error(hll_reader *reader, char const *fmt, ...) {
     }
 }
 
-hll_ast *
-hll_read_ast(hll_reader *reader) {
-    hll_parse_state state = { 0 };
-    state.arena = reader->arena;
-    state.nil = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    state.nil->kind = HLL_AST_NIL;
-    state.true_ = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    state.true_->kind = HLL_AST_TRUE;
-    state.quote_symb =
-        hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-    state.quote_symb->kind = HLL_AST_SYMB;
-    state.quote_symb->as.symb = "quote";
+static void
+peek_token(hll_reader *reader) {
+    if (reader->should_return_old_token) {
+        return;
+    }
 
-    // Global scope is made a cons linked list not to introduce too big
-    // difference from all other ast nodes.
-    // Note that despite this being a correct lisp object, compiler treats
-    // it simply as list
-    hll_sb_push(state.stack, (hll_ast_read_entry){ 0 });
-
-
-    bool is_finished = false;
-    while (!is_finished) {
+    bool is_done = false;
+    while (!is_done) {
         hll_lexer_next(reader->lexer);
-
-        switch (reader->lexer->next.kind) {
-        case HLL_TOK_EOF: is_finished = true; break;
-        case HLL_TOK_INT: {
-            hll_ast *ast =
-                hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-            ast->kind = HLL_AST_INT;
-            ast->as.num = reader->lexer->next.value;
-            add_object(&state, ast);
-        } break;
-        case HLL_TOK_SYMB: {
-            if (reader->lexer->next.length == 1 &&
-                reader->lexer->input[reader->lexer->next.offset] == 't') {
-                add_object(&state, state.true_);
-                break;
-            }
-
-            hll_ast *ast =
-                hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
-            ast->kind = HLL_AST_SYMB;
-            ast->as.symb = hll_memory_arena_alloc(
-                reader->arena, reader->lexer->next.length + 1);
-            strncpy((void *)ast->as.symb,
-                    reader->lexer->input + reader->lexer->next.offset,
-                    reader->lexer->next.length);
-            add_object(&state, ast);
-        } break;
-        case HLL_TOK_LPAREN: {
-            hll_sb_push(state.stack, (hll_ast_read_entry){ 0 });
-            ++state.stack_idx;
-        } break;
-        case HLL_TOK_RPAREN: {
-            if (state.stack_idx == 0) {
-                reader_error(reader, "Stray right parenthesis");
-                break;
-            }
-
-            hll_ast_read_entry *entry = state.stack + state.stack_idx--;
-            hll_sb_pop(state.stack);
-            if (entry->kind == HLL_READ_DOT) {
-                reader_error(reader, "Element after dot is missing");
-                break;
-            }
-            assert(entry->kind == HLL_READ_LIST);
-            hll_ast *ast = entry->first;
-            if (ast == NULL) {
-                ast = state.nil;
-            }
-            add_object(&state, ast);
-        } break;
-        case HLL_TOK_QUOTE: {
-            hll_sb_push(state.stack, (hll_ast_read_entry){ .kind = HLL_READ_QUOTE });
-        } break;
-        case HLL_TOK_DOT:
-            if (state.stack[state.stack_idx].kind != HLL_READ_LIST) {
-                reader_error(reader, "Dot in unexpected place");
-                break;
-            }
-            if (state.stack[state.stack_idx].first == NULL) {
-                reader_error(reader, "Dot in list without first element");
-                break;
-            }
-            hll_sb_push(state.stack, (hll_ast_read_entry){ .kind = HLL_READ_DOT });
-            break;
-        case HLL_TOK_COMMENT: /* nop */ break;
-        case HLL_TOK_UNEXPECTED:
-            reader_error(reader, "Unexpected characters");
-            break;
+        if (reader->lexer->next.kind == HLL_TOK_COMMENT) {
+        } else if (reader->lexer->next.kind == HLL_TOK_UNEXPECTED) {
+            reader_error(reader, "Unexpected token");
+        } else {
+            is_done = true;
         }
     }
 
-    if (state.stack_idx) {
-        reader_error(reader, "Unterminated list definitions: %u", state.stack_idx);
+    reader->should_return_old_token = true;
+}
+
+static void 
+eat_token(hll_reader *reader) {
+    reader->should_return_old_token = false;
+}
+
+static hll_ast *
+read_list(hll_reader *reader) {
+    peek_token(reader);
+    assert(reader->lexer->next.kind == HLL_TOK_LPAREN);
+    // Now we expect at least one list element followed by others ending either
+    // with right paren or dot, element and right paren Now check if we don't
+    // have first element
+    if (reader->lexer->next.kind == HLL_TOK_DOT) {
+        reader_error(reader, "Stray dot as first element of list");
+    } else if (reader->lexer->next.kind == HLL_TOK_EOF) {
+        reader_error(reader, "Missing closing paren (eof encountered)");
+        result = HLL_READ_MISSING_RPAREN;
+        goto error;
+    } else if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
+        // If we encounter right paren right away, do early return and skip
+        // unneeded stuff.
+        *head = hll_make_nil(ctx);
+        /* set_source_loc_(*head, list_start_loc); */
+        hll_lexer_eat(lexer);
+        return HLL_READ_OK;
     }
 
-    hll_ast *result = state.stack->first;
-    if (result == NULL) {
-        result = state.nil;
-    }
-    hll_sb_free(state.stack);
+    hll_obj *list_head;
+    hll_obj *list_tail;
+    // Read the first element
+    {
+        hll_obj *car = NULL;
+        if ((result = hll_read(reader, &car)) != HLL_READ_OK) {
+            goto error;
+        }
 
+        list_head = list_tail = hll_make_cons(ctx, car, hll_make_nil(ctx));
+        /* set_source_loc_(list_head, list_start_loc); */
+    }
+
+    // Now enter the loop of parsing other list elements.
+    for (;;) {
+        lex_result = hll_lexer_peek(lexer);
+        if (lex_result != HLL_LEX_OK) {
+            reader_error(reader,
+                         "Lexing failed when parsing element of list: %s",
+                         hll_lex_result_str(lex_result));
+            result = HLL_READ_LEX_FAILED;
+            goto error;
+        } else if (reader->lexer->next.kind == HLL_TOK_EOF) {
+            reader_error(reader, "Missing closing paren (eof encountered)");
+            result = HLL_READ_MISSING_RPAREN;
+            goto error;
+        } else if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
+            // Rparen means that we should exit.
+            hll_lexer_eat(lexer);
+            *head = list_head;
+            return HLL_READ_OK;
+        } else if (reader->lexer->next.kind == HLL_TOK_DOT) {
+            // After dot there should be one more list element and closing paren
+            hll_lexer_eat(lexer);
+            if ((result = hll_read(reader, &hll_unwrap_cons(list_tail)->cdr)) !=
+                HLL_READ_OK) {
+                goto error;
+            }
+
+            // Now peek what we expect to be right paren
+            lex_result = hll_lexer_peek(lexer);
+            if (lex_result != HLL_LEX_OK) {
+                reader_error(
+                    reader,
+                    "Lexing failed when parsing element after dot of list: %s",
+                    hll_lex_result_str(lex_result));
+                result = HLL_READ_LEX_FAILED;
+                goto error;
+            }
+
+            if (reader->lexer->next.kind != HLL_TOK_RPAREN) {
+                reader_error(reader, "Missing closing paren after dot");
+                result = HLL_READ_MISSING_RPAREN;
+                goto error;
+            }
+            hll_lexer_eat(lexer);
+            *head = list_head;
+            return HLL_READ_OK;
+        }
+
+        // If token is non-terminating, add one more element to list
+        hll_obj *obj = NULL;
+        if ((result = hll_read(reader, &obj)) != HLL_READ_OK) {
+            goto error;
+        }
+
+        hll_unwrap_cons(list_tail)->cdr =
+            hll_make_cons(ctx, obj, hll_make_nil(ctx));
+        list_tail = hll_unwrap_cons(list_tail)->cdr;
+    }
+
+    assert(!"Unreachable");
+error:
+    hll_report_note_verbose(ctx->reporter, &list_start_loc,
+                            "When reading list");
     return result;
+}
+
+static hll_ast *
+read_expr(hll_reader *reader) {
+    hll_ast *ast = reader->nil;
+    next_token(reader);
+    switch (reader->lexer->next.kind) {
+    case HLL_TOK_EOF: break;
+    case HLL_TOK_INT:
+        ast = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+        ast->kind = HLL_AST_INT;
+        ast->as.num = reader->lexer->next.value;
+        break;
+    case HLL_TOK_SYMB:
+        if (reader->lexer->next.length == 1 &&
+            reader->lexer->input[reader->lexer->next.offset] == 't') {
+            ast = reader->true_;
+            break;
+        }
+
+        ast = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+        ast->kind = HLL_AST_SYMB;
+        ast->as.symb = hll_memory_arena_alloc(reader->arena,
+                                              reader->lexer->next.length + 1);
+        strncpy((void *)ast->as.symb,
+                reader->lexer->input + reader->lexer->next.offset,
+                reader->lexer->next.length);
+        break;
+    case HLL_TOK_LPAREN: ast = read_list(reader); break;
+    case HLL_TOK_QUOTE: {
+        hll_ast *b = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+        b->kind = HLL_AST_CONS;
+        b->as.cons.car = ast;
+        b->as.cons.cdr = reader->nil;
+        hll_ast *a = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
+        a->kind = HLL_AST_CONS;
+        a->as.cons.car = reader->quote_symb;
+        a->as.cons.cdr = b;
+        ast = a;
+    } break;
+    case HLL_TOK_COMMENT:
+    case HLL_TOK_UNEXPECTED:
+        // These code paths should be covered in next_token()
+        assert(0);
+        break;
+    default:
+        reader_error(reader, "Unexpected token when parsing expression");
+        break;
+    }
+    return ast;
+}
+
+hll_ast *
+hll_read_ast(hll_reader *reader) {
 }
 
 void *

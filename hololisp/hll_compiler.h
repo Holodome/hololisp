@@ -90,6 +90,11 @@ typedef struct {
     /// This is the arena that is used for allocating AST nodes during parsing.
     /// After work with AST is finished, they can all be freed at once.
     struct hll_memory_arena *arena;
+
+    hll_ast *nil;
+    hll_ast *true_;
+    hll_ast *quote_symb;
+    bool should_return_old_token;
 } hll_reader;
 
 void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
