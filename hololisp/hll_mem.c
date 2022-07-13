@@ -99,8 +99,10 @@ hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
     size_t double_current = header->capacity * 2;
     size_t min_needed = header->size + inc;
 
-    size_t new_capacity = double_current > min_needed ? double_current : min_needed;
-    void *result = realloc(header, sizeof(hll_sb_header) + stride * new_capacity);
+    size_t new_capacity =
+        double_current > min_needed ? double_current : min_needed;
+    void *result =
+        realloc(header, sizeof(hll_sb_header) + stride * new_capacity);
     header = result;
     header->capacity = new_capacity;
     return header + 1;

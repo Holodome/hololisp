@@ -217,10 +217,8 @@ test_reader_parses_quote(void) {
     TEST_ASSERT(ast->as.cons.cdr->kind == HLL_AST_NIL);
 }
 
-#define TCASE(_name)  \
-    {                 \
-#_name, _name \
-    }
+#define TCASE(_name) \
+    { #_name, _name }
 
 TEST_LIST = { TCASE(test_reader_reports_eof),
               TCASE(test_reader_parses_num),

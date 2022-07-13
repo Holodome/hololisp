@@ -72,8 +72,7 @@ main(int argc, char const **argv) {
         fprintf(stderr, "Runtime error\n");
         rc = EXIT_FAILURE;
         break;
-    case HLL_RESULT_OK:
-        break;
+    case HLL_RESULT_OK: break;
     }
 
     hll_delete_vm(vm);

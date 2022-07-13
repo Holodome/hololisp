@@ -527,24 +527,12 @@ ACUTEST_ATTRIBUTE_(format(printf, 2, 3))
     {
         const char *col_str;
         switch (color) {
-        case ACUTEST_COLOR_GREEN_:
-            col_str = "\033[0;32m";
-            break;
-        case ACUTEST_COLOR_RED_:
-            col_str = "\033[0;31m";
-            break;
-        case ACUTEST_COLOR_GREEN_INTENSIVE_:
-            col_str = "\033[1;32m";
-            break;
-        case ACUTEST_COLOR_RED_INTENSIVE_:
-            col_str = "\033[1;31m";
-            break;
-        case ACUTEST_COLOR_DEFAULT_INTENSIVE_:
-            col_str = "\033[1m";
-            break;
-        default:
-            col_str = "\033[0m";
-            break;
+        case ACUTEST_COLOR_GREEN_: col_str = "\033[0;32m"; break;
+        case ACUTEST_COLOR_RED_: col_str = "\033[0;31m"; break;
+        case ACUTEST_COLOR_GREEN_INTENSIVE_: col_str = "\033[1;32m"; break;
+        case ACUTEST_COLOR_RED_INTENSIVE_: col_str = "\033[1;31m"; break;
+        case ACUTEST_COLOR_DEFAULT_INTENSIVE_: col_str = "\033[1m"; break;
+        default: col_str = "\033[0m"; break;
         }
         printf("%s", col_str);
         n = printf("%s", buffer);
@@ -561,12 +549,8 @@ ACUTEST_ATTRIBUTE_(format(printf, 2, 3))
         GetConsoleScreenBufferInfo(h, &info);
 
         switch (color) {
-        case ACUTEST_COLOR_GREEN_:
-            attr = FOREGROUND_GREEN;
-            break;
-        case ACUTEST_COLOR_RED_:
-            attr = FOREGROUND_RED;
-            break;
+        case ACUTEST_COLOR_GREEN_: attr = FOREGROUND_GREEN; break;
+        case ACUTEST_COLOR_RED_: attr = FOREGROUND_RED; break;
         case ACUTEST_COLOR_GREEN_INTENSIVE_:
             attr = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
             break;
@@ -577,9 +561,7 @@ ACUTEST_ATTRIBUTE_(format(printf, 2, 3))
             attr = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED |
                    FOREGROUND_INTENSITY;
             break;
-        default:
-            attr = 0;
-            break;
+        default: attr = 0; break;
         }
         if (attr != 0)
             SetConsoleTextAttribute(h, attr);
@@ -1128,11 +1110,8 @@ acutest_run_(const struct acutest_test_ *test, int index, int master_index) {
             waitpid(pid, &exit_code, 0);
             if (WIFEXITED(exit_code)) {
                 switch (WEXITSTATUS(exit_code)) {
-                case 0:
-                    failed = 0;
-                    break; /* test has passed. */
-                case 1:    /* noop */
-                    break; /* "normal" failure. */
+                case 0: failed = 0; break; /* test has passed. */
+                case 1: /* noop */ break;  /* "normal" failure. */
                 default:
                     acutest_error_("Unexpected exit code [%d]",
                                    WEXITSTATUS(exit_code));
@@ -1141,30 +1120,14 @@ acutest_run_(const struct acutest_test_ *test, int index, int master_index) {
                 char tmp[32];
                 const char *signame;
                 switch (WTERMSIG(exit_code)) {
-                case SIGINT:
-                    signame = "SIGINT";
-                    break;
-                case SIGHUP:
-                    signame = "SIGHUP";
-                    break;
-                case SIGQUIT:
-                    signame = "SIGQUIT";
-                    break;
-                case SIGABRT:
-                    signame = "SIGABRT";
-                    break;
-                case SIGKILL:
-                    signame = "SIGKILL";
-                    break;
-                case SIGSEGV:
-                    signame = "SIGSEGV";
-                    break;
-                case SIGILL:
-                    signame = "SIGILL";
-                    break;
-                case SIGTERM:
-                    signame = "SIGTERM";
-                    break;
+                case SIGINT: signame = "SIGINT"; break;
+                case SIGHUP: signame = "SIGHUP"; break;
+                case SIGQUIT: signame = "SIGQUIT"; break;
+                case SIGABRT: signame = "SIGABRT"; break;
+                case SIGKILL: signame = "SIGKILL"; break;
+                case SIGSEGV: signame = "SIGSEGV"; break;
+                case SIGILL: signame = "SIGILL"; break;
+                case SIGTERM: signame = "SIGTERM"; break;
                 default:
                     sprintf(tmp, "signal %d", WTERMSIG(exit_code));
                     signame = tmp;
@@ -1203,12 +1166,8 @@ acutest_run_(const struct acutest_test_ *test, int index, int master_index) {
             failed = (exitCode != 0);
             if (exitCode > 1) {
                 switch (exitCode) {
-                case 3:
-                    acutest_error_("Aborted.");
-                    break;
-                case 0xC0000005:
-                    acutest_error_("Access violation.");
-                    break;
+                case 3: acutest_error_("Aborted."); break;
+                case 0xC0000005: acutest_error_("Access violation."); break;
                 default:
                     acutest_error_("Test ended in an unexpected way [%lu].",
                                    exitCode);
@@ -1517,9 +1476,7 @@ static const ACUTEST_CMDLINE_OPTION_ acutest_cmdline_options_[] = {
 static int
 acutest_cmdline_callback_(int id, const char *arg) {
     switch (id) {
-    case 's':
-        acutest_skip_mode_ = 1;
-        break;
+    case 's': acutest_skip_mode_ = 1; break;
 
     case 'e':
         if (arg == NULL || strcmp(arg, "always") == 0) {
@@ -1538,9 +1495,7 @@ acutest_cmdline_callback_(int id, const char *arg) {
         }
         break;
 
-    case 'E':
-        acutest_no_exec_ = 1;
-        break;
+    case 'E': acutest_no_exec_ = 1; break;
 
     case 't':
 #if defined ACUTEST_WIN_ || defined ACUTEST_HAS_POSIX_TIMER_
@@ -1561,13 +1516,9 @@ acutest_cmdline_callback_(int id, const char *arg) {
 #endif
         break;
 
-    case 'S':
-        acutest_no_summary_ = 1;
-        break;
+    case 'S': acutest_no_summary_ = 1; break;
 
-    case 'T':
-        acutest_tap_ = 1;
-        break;
+    case 'T': acutest_tap_ = 1; break;
 
     case 'l':
         acutest_list_names_();
@@ -1579,9 +1530,7 @@ acutest_cmdline_callback_(int id, const char *arg) {
             (arg != NULL ? atoi(arg) : acutest_verbose_level_ + 1);
         break;
 
-    case 'q':
-        acutest_verbose_level_ = 0;
-        break;
+    case 'q': acutest_verbose_level_ = 0; break;
 
     case 'c':
         if (arg == NULL || strcmp(arg, "always") == 0) {
@@ -1600,9 +1549,7 @@ acutest_cmdline_callback_(int id, const char *arg) {
         }
         break;
 
-    case 'C':
-        acutest_colorize_ = 0;
-        break;
+    case 'C': acutest_colorize_ = 0; break;
 
     case 'h':
         acutest_help_();

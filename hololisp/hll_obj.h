@@ -13,6 +13,4 @@ typedef enum {
     HLL_OBJ_FUNC,
 } hll_object_kind;
 
-
-
 #endif

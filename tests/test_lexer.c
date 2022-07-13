@@ -175,8 +175,8 @@ test_lexer_parses_comments(void) {
     hll_lexer_next(&lexer);
     TEST_ASSERT(!lexer.has_errors);
     TEST_ASSERT(lexer.next.kind == HLL_TOK_COMMENT);
-    TEST_ASSERT(strncmp(lexer.input + lexer.next.offset, "; this is comment too",
-                        lexer.next.length) == 0);
+    TEST_ASSERT(strncmp(lexer.input + lexer.next.offset,
+                        "; this is comment too", lexer.next.length) == 0);
 
     hll_lexer_next(&lexer);
     TEST_ASSERT(!lexer.has_errors);
@@ -318,10 +318,8 @@ test_lexer_reports_too_big_integer(void) {
     TEST_ASSERT(lexer.next.kind == HLL_TOK_EOF);
 }
 
-#define TCASE(_name)  \
-    {                 \
-#_name, _name \
-    }
+#define TCASE(_name) \
+    { #_name, _name }
 
 TEST_LIST = { TCASE(test_lexer_parses_simple_symbol),
               TCASE(test_lexer_parses_number),

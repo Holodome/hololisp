@@ -9,8 +9,8 @@
 
 struct hll_vm;
 
-typedef void hll_error_fn(struct hll_vm *vm, uint32_t line,
-                          uint32_t column, char const *message);
+typedef void hll_error_fn(struct hll_vm *vm, uint32_t line, uint32_t column,
+                          char const *message);
 
 typedef void hll_write_fn(struct hll_vm *vm, char const *text);
 
@@ -58,7 +58,6 @@ struct hll_vm *hll_make_vm(hll_config const *config);
 void hll_delete_vm(struct hll_vm *vm);
 
 /// Runs given source as hololisp code. Name is meta information.
-hll_interpret_result hll_interpret(struct hll_vm *vm,
-                                   char const *source);
+hll_interpret_result hll_interpret(struct hll_vm *vm, char const *source);
 
 #endif

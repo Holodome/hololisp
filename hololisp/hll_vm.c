@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hll_hololisp.h"
 #include "hll_compiler.h"
+#include "hll_hololisp.h"
 
 static void
 default_error_fn(hll_vm *vm, uint32_t line, uint32_t column,
