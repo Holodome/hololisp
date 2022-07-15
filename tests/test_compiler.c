@@ -161,6 +161,33 @@ test_compiler_compiles_quote(void) {
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
 
+static void
+test_lambda_application_working(void) {
+    char const *source = "((lambda (x) (* x 2)) 10)";
+    uint8_t bytecode[] = {
+        // (x)
+        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_SYMB, 0x00, 0x00,
+        HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+        // (* x 2)
+        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_SYMB, 0x00, 0x01,
+        HLL_BYTECODE_APPEND, HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_APPEND,
+        HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+        // lambda
+        HLL_BYTECODE_MAKE_LAMBDA,
+        // (10)
+        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST, 0x00, 0x01,
+        HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+        // (lambda... 10)
+        HLL_BYTECODE_CALL, HLL_BYTECODE_END
+    };
+    hll_vm *vm = hll_make_vm(NULL);
+
+    hll_bytecode *result = hll_compile(vm, source);
+    TEST_ASSERT(result != NULL);
+
+    TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
+}
+
 #define TCASE(_name)  \
     {                 \
 #_name, _name \
@@ -170,4 +197,5 @@ TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_compiler_compiles_addition),
               TCASE(test_compiler_compiles_complex_arithmetic_operation),
               TCASE(test_compiler_compiles_if),
-              TCASE(test_compiler_compiles_quote) };
+              TCASE(test_compiler_compiles_quote),
+              TCASE(test_lambda_application_working) };

@@ -665,12 +665,27 @@ compile_special_form(hll_compiler *compiler, hll_ast *args,
             char *jump_out = emit_u16(compiler->bytecode, 0);
             write_u16_be(jump_false, jump_out + 2 - jump_false);
             compile_expression(compiler, neg_arm);
-            write_u16_be(jump_out, get_current_op_ptr(compiler->bytecode) -
-                                       jump_out);
+            write_u16_be(jump_out,
+                         get_current_op_ptr(compiler->bytecode) - jump_out);
         }
     } break;
     case HLL_FORM_DEFUN: break;
-    case HLL_FORM_LAMBDA: break;
+    case HLL_FORM_LAMBDA: {
+        size_t length = ast_list_length(args);
+        if (length != 2) {
+            compiler_error(compiler, "'lambda' expects exactly 2 arguments");
+        } else {
+            hll_ast *params = args->as.cons.car;
+            hll_ast *body = args->as.cons.cdr;
+            assert(body->kind == HLL_AST_CONS);
+            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
+            body = body->as.cons.car;
+
+            compile_expression(compiler, params);
+            compile_expression(compiler, body);
+            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
+        }
+    } break;
     case HLL_FORM_PROGN: break;
     case HLL_FORM_SETF: break;
     case HLL_FORM_SETQ: break;

@@ -20,19 +20,22 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
                 (long long unsigned)(instruction - bytecode->ops - 1));
         ++counter;
         switch (op) {
+        case HLL_BYTECODE_MAKE_LAMBDA: fprintf(file, "MAKELAMBDA\n"); break;
         case HLL_BYTECODE_JT: {
             uint8_t high = *instruction++;
             uint8_t low = *instruction++;
             uint16_t offset = ((uint16_t)high) << 8 | low;
-            fprintf(file, "JT %" PRIx16 " (->#%llX)\n", offset,
-                    (long long unsigned)(instruction + offset - bytecode->ops - 2));
+            fprintf(
+                file, "JT %" PRIx16 " (->#%llX)\n", offset,
+                (long long unsigned)(instruction + offset - bytecode->ops - 2));
         } break;
         case HLL_BYTECODE_JN: {
             uint8_t high = *instruction++;
             uint8_t low = *instruction++;
             uint16_t offset = ((uint16_t)high) << 8 | low;
-            fprintf(file, "JN %" PRIx16 " (->#%llX)\n", offset,
-                    (long long unsigned)(instruction + offset - bytecode->ops - 2));
+            fprintf(
+                file, "JN %" PRIx16 " (->#%llX)\n", offset,
+                (long long unsigned)(instruction + offset - bytecode->ops - 2));
         } break;
         case HLL_BYTECODE_FIND: fprintf(file, "FIND\n"); break;
         case HLL_BYTECODE_NIL: fprintf(file, "NIL\n"); break;
@@ -58,7 +61,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
                 fprintf(file, "SYMB %s\n", bytecode->symbol_pool[idx]);
             }
         } break;
-        case HLL_BYTECODE_APPEND: fprintf(file, "MAKECONS\n"); break;
+        case HLL_BYTECODE_APPEND: fprintf(file, "APPEND\n"); break;
         case HLL_BYTECODE_SETCAR: fprintf(file, "SETCAR\n"); break;
         case HLL_BYTECODE_SETCDR: fprintf(file, "SETCDR\n"); break;
         case HLL_BYTECODE_CALL: fprintf(file, "CALL\n"); break;

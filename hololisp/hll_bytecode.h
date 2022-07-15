@@ -28,6 +28,8 @@ typedef enum {
     HLL_BYTECODE_JT,
     // Jump if nil
     HLL_BYTECODE_JN,
+    // Create function
+    HLL_BYTECODE_MAKE_LAMBDA,
 } hll_bytecode_op;
 
 typedef struct hll_bytecode {
