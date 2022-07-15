@@ -11,9 +11,10 @@ typedef enum {
     HLL_BYTECODE_NIL,
     HLL_BYTECODE_TRUE,
     HLL_BYTECODE_CONST,
-    HLL_BYTECODE_MAKE_CONS,
+    HLL_BYTECODE_APPEND,
 
     HLL_BYTECODE_SYMB,
+    HLL_BYTECODE_FIND,
 
     HLL_BYTECODE_SETCAR,
     HLL_BYTECODE_SETCDR,
@@ -23,6 +24,10 @@ typedef enum {
     HLL_BYTECODE_CDR,
     HLL_BYTECODE_EVAL,
     HLL_BYTECODE_POP,
+    // Jump if true
+    HLL_BYTECODE_JT,
+    // Jump if nil
+    HLL_BYTECODE_JN,
 } hll_bytecode_op;
 
 typedef struct hll_bytecode {

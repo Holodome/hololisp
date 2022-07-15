@@ -53,7 +53,7 @@ hll_delete_vm(hll_vm *vm) {
 
 hll_interpret_result
 hll_interpret(hll_vm *vm, char const *source) {
-    void *bytecode = hll_compile(vm, source);
+    hll_bytecode *bytecode = hll_compile(vm, source);
     if (bytecode == NULL) {
         return HLL_RESULT_COMPILE_ERROR;
     }

@@ -477,21 +477,98 @@ hll_read_ast(hll_reader *reader) {
     return list_head;
 }
 
-void
+static size_t
+ast_list_length(hll_ast *ast) {
+    size_t length = 0;
+
+    for (; ast->kind == HLL_AST_CONS; ast = ast->as.cons.cdr) {
+        ++length;
+    }
+
+    return length;
+}
+
+static void
+compiler_error(hll_compiler *compiler, char const *fmt, ...) {
+    compiler->has_errors = true;
+    if (compiler->vm != NULL) {
+        char buffer[4096];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        va_end(args);
+
+        // TODO: Line and column numbers
+        compiler->vm->config.error_fn(compiler->vm, 0, 0, buffer);
+    }
+}
+
+typedef enum {
+    HLL_FORM_REGULAR,
+    HLL_FORM_QUOTE,
+    HLL_FORM_IF,
+    HLL_FORM_DEFUN,
+    HLL_FORM_LAMBDA,
+    HLL_FORM_PROGN,
+    HLL_FORM_SETF,
+    HLL_FORM_SETQ,
+    HLL_FORM_DEFVAR,
+} hll_form_kind;
+
+static hll_form_kind
+get_form_kind(char const *symb) {
+    hll_form_kind kind = HLL_FORM_REGULAR;
+    if (strcmp(symb, "quote") == 0) {
+        kind = HLL_FORM_QUOTE;
+    } else if (strcmp(symb, "if") == 0) {
+        kind = HLL_FORM_IF;
+    } else if (strcmp(symb, "defun") == 0) {
+        kind = HLL_FORM_DEFUN;
+    } else if (strcmp(symb, "lambda") == 0) {
+        kind = HLL_FORM_LAMBDA;
+    } else if (strcmp(symb, "progn") == 0) {
+        kind = HLL_FORM_PROGN;
+    } else if (strcmp(symb, "setf") == 0) {
+        kind = HLL_FORM_SETF;
+    } else if (strcmp(symb, "setq") == 0) {
+        kind = HLL_FORM_SETQ;
+    } else if (strcmp(symb, "defvar") == 0) {
+        kind = HLL_FORM_DEFVAR;
+    }
+
+    return kind;
+}
+
+static char *
+get_current_op_ptr(hll_bytecode *bytecode) {
+    assert(bytecode->ops != NULL);
+    return (char *)bytecode->ops + hll_sb_len(bytecode->ops);
+}
+
+uint8_t *
 emit_u8(hll_bytecode *bytecode, uint8_t byte) {
     hll_sb_push(bytecode->ops, byte);
+    return bytecode->ops + hll_sb_len(bytecode->ops) - 1;
 }
 
-void
+uint8_t *
 emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
     assert(op <= 0xFF);
-    emit_u8(bytecode, op);
+    return emit_u8(bytecode, op);
 }
 
-void
+static void
+write_u16_be(char *data_c, uint16_t value) {
+    uint8_t *data = (uint8_t *)data_c;
+    *data++ = (value >> 8) & 0xFF;
+    *data = value & 0xFF;
+}
+
+char *
 emit_u16(hll_bytecode *bytecode, uint16_t value) {
     emit_u8(bytecode, (value >> 8) & 0xFF);
     emit_u8(bytecode, value & 0xFF);
+    return (char *)bytecode->ops + hll_sb_len(bytecode->ops) - 2;
 }
 
 static uint16_t
@@ -529,6 +606,77 @@ add_symbol_and_return_its_index(hll_compiler *compiler, char const *symb) {
 }
 
 static void compile_expression(hll_compiler *compiler, hll_ast *ast);
+static void compile_eval_expression(hll_compiler *compiler, hll_ast *ast);
+
+static void
+compile_function_call(hll_compiler *compiler, hll_ast *list) {
+    hll_ast *fn = list->as.cons.car;
+    compile_eval_expression(compiler, fn);
+    // Now make arguments
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    for (hll_ast *arg = list->as.cons.cdr; arg->kind != HLL_AST_NIL;
+         arg = arg->as.cons.cdr) {
+        assert(arg->kind == HLL_AST_CONS);
+        hll_ast *obj = arg->as.cons.car;
+        compile_eval_expression(compiler, obj);
+        emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    }
+    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
+}
+
+static void
+compile_special_form(hll_compiler *compiler, hll_ast *args,
+                     hll_form_kind kind) {
+    switch (kind) {
+    case HLL_FORM_REGULAR: assert(!"Unreachable"); break;
+    case HLL_FORM_QUOTE:
+        if (args->kind != HLL_AST_CONS) {
+            compiler_error(compiler, "'quote' form must have an argument");
+        } else {
+            if (args->as.cons.cdr->kind != HLL_AST_NIL) {
+                compiler_error(compiler,
+                               "'quote' form must have exactly one argument");
+            }
+            compile_expression(compiler, args->as.cons.car);
+        }
+        break;
+    case HLL_FORM_IF: {
+        size_t length = ast_list_length(args);
+        if (length != 2 && length != 3) {
+            compiler_error(compiler, "'if' form expects 2 or 3 arguments");
+        } else {
+            hll_ast *cond = args->as.cons.car;
+            compile_expression(compiler, cond);
+            hll_ast *pos_arm = args->as.cons.cdr;
+            assert(pos_arm->kind == HLL_AST_CONS);
+            hll_ast *neg_arm = pos_arm->as.cons.cdr;
+            if (neg_arm->kind == HLL_AST_CONS) {
+                neg_arm = neg_arm->as.cons.car;
+            }
+
+            pos_arm = pos_arm->as.cons.car;
+            emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+            char *jump_false = emit_u16(compiler->bytecode, 0);
+            compile_expression(compiler, pos_arm);
+            emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+            emit_op(compiler->bytecode, HLL_BYTECODE_JT);
+            char *jump_out = emit_u16(compiler->bytecode, 0);
+            write_u16_be(jump_false, jump_out + 2 - jump_false);
+            compile_expression(compiler, neg_arm);
+            write_u16_be(jump_out, get_current_op_ptr(compiler->bytecode) -
+                                       jump_out);
+        }
+    } break;
+    case HLL_FORM_DEFUN: break;
+    case HLL_FORM_LAMBDA: break;
+    case HLL_FORM_PROGN: break;
+    case HLL_FORM_SETF: break;
+    case HLL_FORM_SETQ: break;
+    case HLL_FORM_DEFVAR: break;
+    }
+}
 
 static void
 compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
@@ -544,25 +692,19 @@ compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
         assert(ast->kind == HLL_AST_CONS);
         // Get fn
         hll_ast *fn = ast->as.cons.car;
-        compile_eval_expression(compiler, fn);
-        // Now make arguments
-        emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-        emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-        for (hll_ast *arg = ast->as.cons.cdr; arg->kind != HLL_AST_NIL;
-             arg = arg->as.cons.cdr) {
-            assert(arg->kind == HLL_AST_CONS);
-            hll_ast *obj = arg->as.cons.car;
-            compile_eval_expression(compiler, obj);
-            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_CONS);
+        hll_form_kind form_kind;
+        if (fn->kind == HLL_AST_SYMB &&
+            (form_kind = get_form_kind(fn->as.symb)) != HLL_FORM_REGULAR) {
+            compile_special_form(compiler, ast->as.cons.cdr, form_kind);
+        } else {
+            compile_function_call(compiler, ast);
         }
-        emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-        emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
     } break;
     case HLL_AST_SYMB:
         emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
         emit_u16(compiler->bytecode,
                  add_symbol_and_return_its_index(compiler, ast->as.symb));
-        emit_op(compiler->bytecode, HLL_BYTECODE_EVAL);
+        emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
         break;
     default: assert(!"Unreachable"); break;
     }
@@ -589,7 +731,7 @@ compile_expression(hll_compiler *compiler, hll_ast *ast) {
             assert(arg->kind == HLL_AST_CONS);
             hll_ast *obj = arg->as.cons.car;
             compile_expression(compiler, obj);
-            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_CONS);
+            emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
         }
         emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     } break;
