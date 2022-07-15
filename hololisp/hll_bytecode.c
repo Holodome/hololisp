@@ -31,7 +31,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             uint8_t high = *instruction++;
             uint8_t low = *instruction++;
             uint16_t offset = ((uint16_t)high) << 8 | low;
-            fprintf(file, "JT %" PRIx16 " (->#%llX)\n", offset,
+            fprintf(file, "JN %" PRIx16 " (->#%llX)\n", offset,
                     (long long unsigned)(instruction + offset - bytecode->ops - 2));
         } break;
         case HLL_BYTECODE_FIND: fprintf(file, "FIND\n"); break;
