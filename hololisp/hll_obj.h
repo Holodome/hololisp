@@ -1,8 +1,8 @@
 #ifndef HLL_OBJ_H
 #define HLL_OBJ_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct hll_vm;
 

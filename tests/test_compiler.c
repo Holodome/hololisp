@@ -188,10 +188,8 @@ test_lambda_application_working(void) {
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
 
-#define TCASE(_name)  \
-    {                 \
-#_name, _name \
-    }
+#define TCASE(_name) \
+    { #_name, _name }
 
 TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_compiler_compiles_addition),

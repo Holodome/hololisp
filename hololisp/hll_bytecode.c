@@ -62,12 +62,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             }
         } break;
         case HLL_BYTECODE_APPEND: fprintf(file, "APPEND\n"); break;
-        case HLL_BYTECODE_SETCAR: fprintf(file, "SETCAR\n"); break;
-        case HLL_BYTECODE_SETCDR: fprintf(file, "SETCDR\n"); break;
         case HLL_BYTECODE_CALL: fprintf(file, "CALL\n"); break;
-        case HLL_BYTECODE_CAR: fprintf(file, "CAR\n"); break;
-        case HLL_BYTECODE_CDR: fprintf(file, "CDR\n"); break;
-        case HLL_BYTECODE_EVAL: fprintf(file, "EVAL\n"); break;
         case HLL_BYTECODE_POP: fprintf(file, "POP\n"); break;
         default: fprintf(file, "<err>%hhx\n", (char unsigned)op); break;
         }
