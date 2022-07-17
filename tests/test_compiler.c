@@ -362,6 +362,190 @@ test_compiler_compiles_setf_cdr(void) {
     hll_bytecode *result = hll_compile(vm, source);
     TEST_ASSERT(result != NULL);
 
+    TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
+}
+
+static void
+test_compiler_basic_special_forms(void) {
+    char const *source =
+        "(let ((f (lambda (x) (* x 2))) (y (f 2)))"
+        "  (setf f (lambda (x) (f (f x))))\n"
+        "  (defvar l (list (if (= y 4) 1 0) (f 1)))\n"
+        "  (setf (car l) (* 100 (car l))))";
+    uint8_t bytecode[] = { // (f (lambda (x) (* x 2)))
+                           HLL_BYTECODE_PUSHENV,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x01,  // x
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x02,  // *
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x01,  // x
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x00,  // 2
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_MAKE_LAMBDA,
+                           HLL_BYTECODE_LET,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x03,  // y
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x00,  // 2
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_CALL,
+                           HLL_BYTECODE_LET,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x01,  // x
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x01,  // x
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_MAKE_LAMBDA,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_SETCDR,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x04,  // l
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x05,  // list
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x06,  // =
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x03,  // y
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x01,  // 4
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_CALL,
+                           HLL_BYTECODE_JN,
+                           0x00,
+                           0x09,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x02,  // 1
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_JN,
+                           0x00,
+                           0x05,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x03,  // 0
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x00,  // f
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x02,  // 1
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_CALL,
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_CALL,
+                           HLL_BYTECODE_LET,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x02, // *
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_CONST,
+                           0x00,
+                           0x04,  // 100
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x04, // l
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_CAR,
+                           HLL_BYTECODE_APPEND,
+                           HLL_BYTECODE_POP,
+                           HLL_BYTECODE_CALL,
+                           HLL_BYTECODE_SYMB,
+                           0x00,
+                           0x04,  // l
+                           HLL_BYTECODE_FIND,
+                           HLL_BYTECODE_CDR,
+                           HLL_BYTECODE_SETCAR,
+                           HLL_BYTECODE_POPENV,
+                           HLL_BYTECODE_END
+    };
+    hll_vm *vm = hll_make_vm(NULL);
+
+    hll_bytecode *result = hll_compile(vm, source);
+    TEST_ASSERT(result != NULL);
+
     hll_dump_bytecode(stdout, result);
 
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
@@ -381,4 +565,5 @@ TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_compiler_compiles_let),
               TCASE(test_compiler_compiles_let_with_body),
               TCASE(test_compiler_compiles_setf_symbol),
-              TCASE(test_compiler_compiles_setf_cdr) };
+              TCASE(test_compiler_compiles_setf_cdr),
+              TCASE(test_compiler_basic_special_forms) };

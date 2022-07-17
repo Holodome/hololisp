@@ -526,6 +526,8 @@ typedef enum {
     // let is different from defvar because it creates new lexical context
     // and puts variables there.
     HLL_FORM_LET,
+    HLL_FORM_CAR,
+    HLL_FORM_CDR,
 } hll_form_kind;
 
 static hll_form_kind
@@ -543,6 +545,10 @@ get_form_kind(char const *symb) {
         kind = HLL_FORM_DEFVAR;
     } else if (strcmp(symb, "let") == 0) {
         kind = HLL_FORM_LET;
+    } else if (strcmp(symb, "car") == 0) {
+        kind = HLL_FORM_CAR;
+    } else if (strcmp(symb, "cdr") == 0) {
+        kind = HLL_FORM_CDR;
     }
 
     return kind;
@@ -655,7 +661,7 @@ compile_if(hll_compiler *compiler, hll_ast *args) {
         compiler_error(compiler, "'if' form expects 2 or 3 arguments");
     } else {
         hll_ast *cond = args->as.cons.car;
-        compile_expression(compiler, cond);
+        compile_eval_expression(compiler, cond);
         hll_ast *pos_arm = args->as.cons.cdr;
         assert(pos_arm->kind == HLL_AST_CONS);
         hll_ast *neg_arm = pos_arm->as.cons.cdr;
@@ -666,12 +672,12 @@ compile_if(hll_compiler *compiler, hll_ast *args) {
         pos_arm = pos_arm->as.cons.car;
         emit_op(compiler->bytecode, HLL_BYTECODE_JN);
         char *jump_false = emit_u16(compiler->bytecode, 0);
-        compile_expression(compiler, pos_arm);
+        compile_eval_expression(compiler, pos_arm);
         emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
         emit_op(compiler->bytecode, HLL_BYTECODE_JN);
         char *jump_out = emit_u16(compiler->bytecode, 0);
         write_u16_be(jump_false, jump_out + 2 - jump_false);
-        compile_expression(compiler, neg_arm);
+        compile_eval_expression(compiler, neg_arm);
         write_u16_be(jump_out,
                      get_current_op_ptr(compiler->bytecode) - jump_out);
     }
@@ -828,6 +834,26 @@ compile_defvar(hll_compiler *compiler, hll_ast *args) {
 }
 
 static void
+compile_car(hll_compiler *compiler, hll_ast *args) {
+    if (ast_list_length(args) != 1) {
+        compiler_error(compiler, "'car' expects exactly 1 argument");
+    } else {
+        compile_eval_expression(compiler, args->as.cons.car);
+        emit_op(compiler->bytecode, HLL_BYTECODE_CAR);
+    }
+}
+
+static void
+compile_cdr(hll_compiler *compiler, hll_ast *args) {
+    if (ast_list_length(args) != 1) {
+        compiler_error(compiler, "'cdr' expects exactly 1 argument");
+    } else {
+        compile_eval_expression(compiler, args->as.cons.car);
+        emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    }
+}
+
+static void
 compile_form(hll_compiler *compiler, hll_ast *args, hll_form_kind kind) {
     switch (kind) {
     case HLL_FORM_REGULAR: compile_function_call(compiler, args); break;
@@ -837,6 +863,8 @@ compile_form(hll_compiler *compiler, hll_ast *args, hll_form_kind kind) {
     case HLL_FORM_LAMBDA: compile_lambda(compiler, args->as.cons.cdr); break;
     case HLL_FORM_SETF: compile_setf(compiler, args->as.cons.cdr); break;
     case HLL_FORM_DEFVAR: compile_defvar(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_CAR: compile_car(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_CDR: compile_cdr(compiler, args->as.cons.cdr); break;
     }
 }
 
@@ -851,7 +879,6 @@ compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
                  add_int_constant_and_return_its_index(compiler, ast->as.num));
         break;
     case HLL_AST_CONS: {
-        assert(ast->kind == HLL_AST_CONS);
         // Get fn
         hll_ast *fn = ast->as.cons.car;
         hll_form_kind kind = HLL_FORM_REGULAR;

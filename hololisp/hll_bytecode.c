@@ -46,8 +46,8 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             if (idx > +hll_sb_len(bytecode->constant_pool)) {
                 fprintf(file, "CONST <err>\n");
             } else {
-                fprintf(file, "CONST %" PRId64 "\n",
-                        bytecode->constant_pool[idx]);
+                fprintf(file, "CONST %" PRId64 " (%" PRId16 ")\n",
+                        bytecode->constant_pool[idx], idx);
             }
         } break;
         case HLL_BYTECODE_SYMB: {
@@ -57,7 +57,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             if (idx > +hll_sb_len(bytecode->symbol_pool)) {
                 fprintf(file, "SYMB <err>\n");
             } else {
-                fprintf(file, "SYMB %s\n", bytecode->symbol_pool[idx]);
+                fprintf(file, "SYMB %s (%" PRId16 ")\n", bytecode->symbol_pool[idx], idx);
             }
         } break;
         case HLL_BYTECODE_APPEND: fprintf(file, "APPEND\n"); break;
