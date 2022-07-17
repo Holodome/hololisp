@@ -17,6 +17,7 @@ typedef struct hll_vm {
     struct hll_config config;
 } hll_vm;
 
-hll_interpret_result hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode);
+hll_interpret_result hll_interpret_bytecode(hll_vm *vm,
+                                            struct hll_bytecode *bytecode);
 
 #endif

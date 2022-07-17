@@ -36,7 +36,8 @@ typedef enum {
     HLL_BYTECODE_MAKE_LAMBDA,
     // Defines new variable with given name in current env (lexical env).
     // If variable with same name is defined in current env, error.
-    // If variable with same name is defined in outer scope it is redefined in current.
+    // If variable with same name is defined in outer scope it is redefined in
+    // current.
     HLL_BYTECODE_LET,
     // Creates new variable scope context
     HLL_BYTECODE_PUSHENV,

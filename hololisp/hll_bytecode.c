@@ -25,7 +25,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
         case HLL_BYTECODE_CAR: fprintf(file, "CAR\n"); break;
         case HLL_BYTECODE_CDR: fprintf(file, "CDR\n"); break;
         case HLL_BYTECODE_PUSHENV: fprintf(file, "PUSHENV\n"); break;
-        case HLL_BYTECODE_POPENV: fprintf(file, "POPENV\n"); break ;
+        case HLL_BYTECODE_POPENV: fprintf(file, "POPENV\n"); break;
         case HLL_BYTECODE_LET: fprintf(file, "LET\n"); break;
         case HLL_BYTECODE_MAKE_LAMBDA: fprintf(file, "MAKELAMBDA\n"); break;
         case HLL_BYTECODE_JN: {
@@ -57,7 +57,8 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             if (idx > +hll_sb_len(bytecode->symbol_pool)) {
                 fprintf(file, "SYMB <err>\n");
             } else {
-                fprintf(file, "SYMB %s (%" PRId16 ")\n", bytecode->symbol_pool[idx], idx);
+                fprintf(file, "SYMB %s (%" PRId16 ")\n",
+                        bytecode->symbol_pool[idx], idx);
             }
         } break;
         case HLL_BYTECODE_APPEND: fprintf(file, "APPEND\n"); break;
