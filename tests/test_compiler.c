@@ -17,17 +17,17 @@ test_compiler_compiles_integer(void) {
 static void
 test_compiler_compiles_addition(void) {
     char const *source = "(+ 1 2)";
-    uint8_t bytecode[] = { // +
-                           HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
-                           // (1 2)
-                           HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
-                           // 1
-                           HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_APPEND,
-                           // 2
-                           HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_APPEND,
-                           HLL_BYTECODE_POP,
-                           // (+ 1 2)
-                           HLL_BYTECODE_CALL, HLL_BYTECODE_END
+    uint8_t bytecode[] = {
+        // +
+        HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
+        // (1 2)
+        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
+        // 1
+        HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_APPEND,
+        // 2
+        HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+        // (+ 1 2)
+        HLL_BYTECODE_CALL, HLL_BYTECODE_END
     };
     hll_vm *vm = hll_make_vm(NULL);
 
@@ -319,34 +319,50 @@ test_compiler_compiles_let_with_body(void) {
     hll_bytecode *result = hll_compile(vm, source);
     TEST_ASSERT(result != NULL);
 
-
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
 
 static void
 test_compiler_compiles_setf_symbol(void) {
     char const *source = "(defvar x) (setf x t)";
-    uint8_t bytecode[] = {
-        // defvar x
-        HLL_BYTECODE_SYMB,
-        0x00,
-        0x00,
-        HLL_BYTECODE_NIL,
-        HLL_BYTECODE_LET,
-        HLL_BYTECODE_POP,
-        // setf
-        HLL_BYTECODE_TRUE,
-        HLL_BYTECODE_SYMB,
-        0x00,
-        0x00,
-        HLL_BYTECODE_FIND,
-        HLL_BYTECODE_SETCDR,
-        HLL_BYTECODE_END
+    uint8_t bytecode[] = { // defvar x
+                           HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_LET, HLL_BYTECODE_POP,
+                           // setf
+                           HLL_BYTECODE_TRUE, HLL_BYTECODE_SYMB, 0x00, 0x00,
+                           HLL_BYTECODE_FIND, HLL_BYTECODE_SETCDR,
+                           HLL_BYTECODE_END
     };
     hll_vm *vm = hll_make_vm(NULL);
 
     hll_bytecode *result = hll_compile(vm, source);
     TEST_ASSERT(result != NULL);
+
+    TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
+}
+
+static void
+test_compiler_compiles_setf_cdr(void) {
+    char const *source = "(defvar x '(1)) (setf (cdr x) '(2))";
+    uint8_t bytecode[] = {
+        // defvar x
+        HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
+        HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+        HLL_BYTECODE_LET, HLL_BYTECODE_POP,
+        // setf
+        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST, 0x00, 0x01,
+        HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
+
+        HLL_BYTECODE_SYMB, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
+
+        HLL_BYTECODE_SETCDR, HLL_BYTECODE_END
+    };
+    hll_vm *vm = hll_make_vm(NULL);
+
+    hll_bytecode *result = hll_compile(vm, source);
+    TEST_ASSERT(result != NULL);
+
+    hll_dump_bytecode(stdout, result);
 
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
@@ -364,5 +380,5 @@ TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_lambda_application_working),
               TCASE(test_compiler_compiles_let),
               TCASE(test_compiler_compiles_let_with_body),
-TCASE(test_compiler_compiles_setf_symbol)
-};
+              TCASE(test_compiler_compiles_setf_symbol),
+              TCASE(test_compiler_compiles_setf_cdr) };
