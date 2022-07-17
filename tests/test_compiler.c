@@ -453,16 +453,11 @@ test_compiler_basic_special_forms(void) {
                            HLL_BYTECODE_SYMB,
                            0x00,
                            0x04,  // l
-                           HLL_BYTECODE_SYMB,
-                           0x00,
-                           0x05,  // list
-                           HLL_BYTECODE_FIND,
-                           HLL_BYTECODE_CDR,
                            HLL_BYTECODE_NIL,
                            HLL_BYTECODE_NIL,
                            HLL_BYTECODE_SYMB,
                            0x00,
-                           0x06,  // =
+                           0x05,  // =
                            HLL_BYTECODE_FIND,
                            HLL_BYTECODE_CDR,
                            HLL_BYTECODE_NIL,
@@ -508,7 +503,6 @@ test_compiler_basic_special_forms(void) {
                            HLL_BYTECODE_CALL,
                            HLL_BYTECODE_APPEND,
                            HLL_BYTECODE_POP,
-                           HLL_BYTECODE_CALL,
                            HLL_BYTECODE_LET,
                            HLL_BYTECODE_POP,
                            HLL_BYTECODE_SYMB,
@@ -543,6 +537,8 @@ test_compiler_basic_special_forms(void) {
 
     hll_bytecode *result = hll_compile(vm, source);
     TEST_ASSERT(result != NULL);
+
+    hll_dump_bytecode(stdout, result);
 
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }

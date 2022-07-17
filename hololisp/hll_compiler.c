@@ -507,8 +507,11 @@ compiler_error(hll_compiler *compiler, char const *fmt, ...) {
 // Denotes special forms in language.
 // Special forms are different from other lisp constructs because they require
 // special handling from compiler side.
-// Special form number is ought to be kept as small as possible to minimise
-// the work needed to be done by compiler.
+// However, this VM is different from other language ones because language
+// core contains semi-complex operations, like getting car and cdr.
+// Thus, a number a forms can be easily expressed through already
+// existent bytecode instructions. This is why things like car and cdr appear
+// here.
 typedef enum {
     HLL_FORM_REGULAR,
     // Quote returns unevaluated argument
@@ -528,6 +531,7 @@ typedef enum {
     HLL_FORM_LET,
     HLL_FORM_CAR,
     HLL_FORM_CDR,
+    HLL_FORM_LIST,
 } hll_form_kind;
 
 static hll_form_kind
@@ -549,6 +553,8 @@ get_form_kind(char const *symb) {
         kind = HLL_FORM_CAR;
     } else if (strcmp(symb, "cdr") == 0) {
         kind = HLL_FORM_CDR;
+    } else if (strcmp(symb, "list") == 0) {
+        kind = HLL_FORM_LIST;
     }
 
     return kind;
@@ -854,6 +860,20 @@ compile_cdr(hll_compiler *compiler, hll_ast *args) {
 }
 
 static void
+compile_list(hll_compiler *compiler, hll_ast *args) {
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    for (hll_ast *arg = args; arg->kind != HLL_AST_NIL;
+         arg = arg->as.cons.cdr) {
+        assert(arg->kind == HLL_AST_CONS);
+        hll_ast *obj = arg->as.cons.car;
+        compile_eval_expression(compiler, obj);
+        emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    }
+    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+}
+
+static void
 compile_form(hll_compiler *compiler, hll_ast *args, hll_form_kind kind) {
     switch (kind) {
     case HLL_FORM_REGULAR: compile_function_call(compiler, args); break;
@@ -865,6 +885,7 @@ compile_form(hll_compiler *compiler, hll_ast *args, hll_form_kind kind) {
     case HLL_FORM_DEFVAR: compile_defvar(compiler, args->as.cons.cdr); break;
     case HLL_FORM_CAR: compile_car(compiler, args->as.cons.cdr); break;
     case HLL_FORM_CDR: compile_cdr(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_LIST: compile_list(compiler, args->as.cons.cdr); break;
     }
 }
 
