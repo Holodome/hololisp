@@ -636,144 +636,207 @@ compile_function_call(hll_compiler *compiler, hll_ast *list) {
 }
 
 static void
-compile_special_form(hll_compiler *compiler, hll_ast *args,
-                     hll_form_kind kind) {
-    switch (kind) {
-    case HLL_FORM_REGULAR: assert(!"Unreachable"); break;
-    case HLL_FORM_QUOTE:
-        if (args->kind != HLL_AST_CONS) {
-            compiler_error(compiler, "'quote' form must have an argument");
-        } else {
-            if (args->as.cons.cdr->kind != HLL_AST_NIL) {
-                compiler_error(compiler,
-                               "'quote' form must have exactly one argument");
-            }
-            compile_expression(compiler, args->as.cons.car);
-        }
-        break;
-    case HLL_FORM_IF: {
-        size_t length = ast_list_length(args);
-        if (length != 2 && length != 3) {
-            compiler_error(compiler, "'if' form expects 2 or 3 arguments");
-        } else {
-            hll_ast *cond = args->as.cons.car;
-            compile_expression(compiler, cond);
-            hll_ast *pos_arm = args->as.cons.cdr;
-            assert(pos_arm->kind == HLL_AST_CONS);
-            hll_ast *neg_arm = pos_arm->as.cons.cdr;
-            if (neg_arm->kind == HLL_AST_CONS) {
-                neg_arm = neg_arm->as.cons.car;
-            }
-
-            pos_arm = pos_arm->as.cons.car;
-            emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-            char *jump_false = emit_u16(compiler->bytecode, 0);
-            compile_expression(compiler, pos_arm);
-            emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-            emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-            char *jump_out = emit_u16(compiler->bytecode, 0);
-            write_u16_be(jump_false, jump_out + 2 - jump_false);
-            compile_expression(compiler, neg_arm);
-            write_u16_be(jump_out,
-                         get_current_op_ptr(compiler->bytecode) - jump_out);
-        }
-    } break;
-    case HLL_FORM_LET: {
-        size_t length = ast_list_length(args);
-        if (length < 1) {
+compile_quote(hll_compiler *compiler, hll_ast *args) {
+    if (args->kind != HLL_AST_CONS) {
+        compiler_error(compiler, "'quote' form must have an argument");
+    } else {
+        if (args->as.cons.cdr->kind != HLL_AST_NIL) {
             compiler_error(compiler,
-                           "'let' special form requires variable declarations");
-        } else {
-            emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
-            for (hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
-                 let = let->as.cons.cdr) {
-                hll_ast *pair = let->as.cons.car;
-                assert(pair->kind == HLL_AST_CONS);
-                hll_ast *name = pair->as.cons.car;
-                hll_ast *value = pair->as.cons.cdr;
-                if (value->kind == HLL_AST_CONS) {
-                    assert(value->as.cons.cdr->kind == HLL_AST_NIL);
-                    value = value->as.cons.car;
-                }
-
-                assert(name->kind == HLL_AST_SYMB);
-                compile_expression(compiler, name);
-                compile_eval_expression(compiler, value);
-                emit_op(compiler->bytecode, HLL_BYTECODE_LET);
-            }
-
-            for (hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
-                 prog = prog->as.cons.cdr) {
-                compile_eval_expression(compiler, prog->as.cons.car);
-                if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
-                    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-                }
-            }
-
-            emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
+                           "'quote' form must have exactly one argument");
         }
-    } break;
-        //    case HLL_FORM_DEFUN: {
-        //        size_t length = ast_list_length(args);
-        //        if (length != 3) {
-        //            compiler_error(compiler, "'defun' expects exactly 3
-        //            arguments");
-        //        } else {
-        //            hll_ast *name = args->as.cons.car;
-        //            if (name->kind != HLL_AST_SYMB) {
-        //                compiler_error(compiler, "'defun' name must by a
-        //                symbol");
-        //            }
-        //            compile_expression(compiler, name);
-        //
-        //            args = args->as.cons.cdr;
-        //            hll_ast *params = args->as.cons.car;
-        //            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
-        //                 test = test->as.cons.cdr) {
-        //                if (test->as.cons.car->kind != HLL_AST_SYMB) {
-        //                    compiler_error(
-        //                        compiler,
-        //                        "'defun' parameter list must consist only of
-        //                        symbols");
-        //                }
-        //            }
-        //            hll_ast *body = args->as.cons.cdr;
-        //            assert(body->kind == HLL_AST_CONS);
-        //            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
-        //            body = body->as.cons.car;
-        //
-        //            compile_expression(compiler, params);
-        //            compile_expression(compiler, body);
-        //            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
-        //            emit_op(compiler->bytecode, HLL_BYTECODE_DEFVAR);
-        //        }
-        //    } break;
-    case HLL_FORM_LAMBDA: {
-        size_t length = ast_list_length(args);
-        if (length != 2) {
-            compiler_error(compiler, "'lambda' expects exactly 2 arguments");
-        } else {
-            hll_ast *params = args->as.cons.car;
-            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
-                 test = test->as.cons.cdr) {
-                if (test->as.cons.car->kind != HLL_AST_SYMB) {
-                    compiler_error(
-                        compiler,
-                        "'lambda' parameter list must consist only of symbols");
-                }
-            }
-            hll_ast *body = args->as.cons.cdr;
-            assert(body->kind == HLL_AST_CONS);
-            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
-            body = body->as.cons.car;
+        compile_expression(compiler, args->as.cons.car);
+    }
+}
 
-            compile_expression(compiler, params);
-            compile_expression(compiler, body);
-            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
+static void
+compile_if(hll_compiler *compiler, hll_ast *args) {
+    size_t length = ast_list_length(args);
+    if (length != 2 && length != 3) {
+        compiler_error(compiler, "'if' form expects 2 or 3 arguments");
+    } else {
+        hll_ast *cond = args->as.cons.car;
+        compile_expression(compiler, cond);
+        hll_ast *pos_arm = args->as.cons.cdr;
+        assert(pos_arm->kind == HLL_AST_CONS);
+        hll_ast *neg_arm = pos_arm->as.cons.cdr;
+        if (neg_arm->kind == HLL_AST_CONS) {
+            neg_arm = neg_arm->as.cons.car;
         }
-    } break;
-    case HLL_FORM_SETF: break;
-    case HLL_FORM_DEFVAR: break;
+
+        pos_arm = pos_arm->as.cons.car;
+        emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+        char *jump_false = emit_u16(compiler->bytecode, 0);
+        compile_expression(compiler, pos_arm);
+        emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+        emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+        char *jump_out = emit_u16(compiler->bytecode, 0);
+        write_u16_be(jump_false, jump_out + 2 - jump_false);
+        compile_expression(compiler, neg_arm);
+        write_u16_be(jump_out,
+                     get_current_op_ptr(compiler->bytecode) - jump_out);
+    }
+}
+
+static void
+compile_let(hll_compiler *compiler, hll_ast *args) {
+    size_t length = ast_list_length(args);
+    if (length < 1) {
+        compiler_error(compiler,
+                       "'let' special form requires variable declarations");
+    } else {
+        emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
+        for (hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
+             let = let->as.cons.cdr) {
+            hll_ast *pair = let->as.cons.car;
+            assert(pair->kind == HLL_AST_CONS);
+            hll_ast *name = pair->as.cons.car;
+            hll_ast *value = pair->as.cons.cdr;
+            if (value->kind == HLL_AST_CONS) {
+                assert(value->as.cons.cdr->kind == HLL_AST_NIL);
+                value = value->as.cons.car;
+            }
+
+            assert(name->kind == HLL_AST_SYMB);
+            compile_expression(compiler, name);
+            compile_eval_expression(compiler, value);
+            emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+        }
+
+        for (hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
+             prog = prog->as.cons.cdr) {
+            compile_eval_expression(compiler, prog->as.cons.car);
+            if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
+                emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+            }
+        }
+
+        emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
+    }
+}
+
+static void
+compile_lambda(hll_compiler *compiler, hll_ast *args) {
+    size_t length = ast_list_length(args);
+    if (length != 2) {
+        compiler_error(compiler, "'lambda' expects exactly 2 arguments");
+    } else {
+        hll_ast *params = args->as.cons.car;
+        for (hll_ast *test = params; test->kind == HLL_AST_CONS;
+             test = test->as.cons.cdr) {
+            if (test->as.cons.car->kind != HLL_AST_SYMB) {
+                compiler_error(
+                    compiler,
+                    "'lambda' parameter list must consist only of symbols");
+            }
+        }
+        hll_ast *body = args->as.cons.cdr;
+        assert(body->kind == HLL_AST_CONS);
+        assert(body->as.cons.cdr->kind == HLL_AST_NIL);
+        body = body->as.cons.car;
+
+        compile_expression(compiler, params);
+        compile_expression(compiler, body);
+        emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
+    }
+}
+
+typedef enum {
+    HLL_LOC_NONE,
+    HLL_LOC_FORM_SYMB,
+    HLL_LOC_FORM_CAR,
+    HLL_LOC_FORM_CDR,
+} hll_location_form;
+
+static hll_location_form
+get_location_form(hll_ast *location) {
+    hll_location_form kind = HLL_LOC_NONE;
+    if (location->kind == HLL_AST_SYMB) {
+        kind = HLL_LOC_FORM_SYMB;
+    } else if (location->kind == HLL_AST_CONS) {
+        hll_ast *first = location->as.cons.car;
+        if (first->kind == HLL_AST_SYMB) {
+            if (strcmp(first->as.symb, "car") == 0) {
+                kind = HLL_LOC_FORM_CAR;
+            } else if (strcmp(first->as.symb, "cdr") == 0) {
+                kind = HLL_LOC_FORM_CDR;
+            }
+        }
+    }
+
+    return kind;
+}
+
+static void
+compile_set_location(hll_compiler *compiler, hll_ast *location) {
+    hll_location_form kind = get_location_form(location);
+    switch (kind) {
+    case HLL_LOC_NONE: compiler_error(compiler, "location is not valid"); break;
+    case HLL_LOC_FORM_SYMB:
+        emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
+        emit_u16(compiler->bytecode,
+                 add_symbol_and_return_its_index(compiler, location->as.symb));
+        emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+        emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+        break;
+    case HLL_LOC_FORM_CAR:
+        assert(ast_list_length(location) == 2);
+        compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
+        emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+        break;
+    case HLL_LOC_FORM_CDR:
+        assert(ast_list_length(location) == 2);
+        compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
+        emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+        break;
+    }
+}
+
+static void
+compile_setf(hll_compiler *compiler, hll_ast *args) {
+    if (ast_list_length(args) < 1) {
+        compiler_error(compiler, "'setf' expects at least 1 argument");
+    } else {
+        hll_ast *location = args->as.cons.car;
+        hll_ast *value = args->as.cons.cdr;
+        if (value->kind == HLL_AST_CONS) {
+            assert(value->as.cons.cdr->kind == HLL_AST_NIL);
+            value = value->as.cons.car;
+        }
+
+        compile_eval_expression(compiler, value);
+        compile_set_location(compiler, location);
+    }
+}
+
+static void
+compile_defvar(hll_compiler *compiler, hll_ast *args) {
+    if (ast_list_length(args) < 1) {
+        compiler_error(compiler, "'defvar' expects at least 1 argument");
+    } else {
+        hll_ast *name = args->as.cons.car;
+        hll_ast *value = args->as.cons.cdr;
+        if (value->kind == HLL_AST_CONS) {
+            assert(value->as.cons.cdr->kind == HLL_AST_NIL);
+            value = value->as.cons.car;
+        }
+
+        assert(name->kind == HLL_AST_SYMB);
+        compile_expression(compiler, name);
+        compile_eval_expression(compiler, value);
+        emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    }
+}
+
+static void
+compile_form(hll_compiler *compiler, hll_ast *args, hll_form_kind kind) {
+    switch (kind) {
+    case HLL_FORM_REGULAR: compile_function_call(compiler, args); break;
+    case HLL_FORM_QUOTE: compile_quote(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_IF: compile_if(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_LET: compile_let(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_LAMBDA: compile_lambda(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_SETF: compile_setf(compiler, args->as.cons.cdr); break;
+    case HLL_FORM_DEFVAR: compile_defvar(compiler, args->as.cons.cdr); break;
     }
 }
 
@@ -791,19 +854,19 @@ compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
         assert(ast->kind == HLL_AST_CONS);
         // Get fn
         hll_ast *fn = ast->as.cons.car;
-        hll_form_kind form_kind;
-        if (fn->kind == HLL_AST_SYMB &&
-            (form_kind = get_form_kind(fn->as.symb)) != HLL_FORM_REGULAR) {
-            compile_special_form(compiler, ast->as.cons.cdr, form_kind);
-        } else {
-            compile_function_call(compiler, ast);
+        hll_form_kind kind = HLL_FORM_REGULAR;
+        if (fn->kind == HLL_AST_SYMB) {
+            kind = get_form_kind(fn->as.symb);
         }
+
+        compile_form(compiler, ast, kind);
     } break;
     case HLL_AST_SYMB:
         emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
         emit_u16(compiler->bytecode,
                  add_symbol_and_return_its_index(compiler, ast->as.symb));
         emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+        emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
         break;
     default: assert(!"Unreachable"); break;
     }

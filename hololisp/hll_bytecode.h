@@ -42,7 +42,10 @@ typedef enum {
     HLL_BYTECODE_PUSHENV,
     // Removes last variable scope context
     HLL_BYTECODE_POPENV,
-
+    HLL_BYTECODE_CAR,
+    HLL_BYTECODE_CDR,
+    HLL_BYTECODE_SETCAR,
+    HLL_BYTECODE_SETCDR,
 } hll_bytecode_op;
 
 typedef struct hll_bytecode {

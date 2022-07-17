@@ -20,6 +20,10 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
                 (long long unsigned)(instruction - bytecode->ops - 1));
         ++counter;
         switch (op) {
+        case HLL_BYTECODE_SETCAR: fprintf(file, "CAR\n"); break;
+        case HLL_BYTECODE_SETCDR: fprintf(file, "CAR\n"); break;
+        case HLL_BYTECODE_CAR: fprintf(file, "CAR\n"); break;
+        case HLL_BYTECODE_CDR: fprintf(file, "CAR\n"); break;
         case HLL_BYTECODE_PUSHENV: fprintf(file, "PUSHENV\n"); break;
         case HLL_BYTECODE_POPENV: fprintf(file, "POPENV\n"); break ;
         case HLL_BYTECODE_LET: fprintf(file, "LET\n"); break;
