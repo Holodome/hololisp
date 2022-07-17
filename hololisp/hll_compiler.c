@@ -679,40 +679,75 @@ compile_special_form(hll_compiler *compiler, hll_ast *args,
         }
     } break;
     case HLL_FORM_LET: {
+        size_t length = ast_list_length(args);
+        if (length < 1) {
+            compiler_error(compiler,
+                           "'let' special form requires variable declarations");
+        } else {
+            emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
+            for (hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
+                 let = let->as.cons.cdr) {
+                hll_ast *pair = let->as.cons.car;
+                assert(pair->kind == HLL_AST_CONS);
+                hll_ast *name = pair->as.cons.car;
+                hll_ast *value = pair->as.cons.cdr;
+                if (value->kind == HLL_AST_CONS) {
+                    assert(value->as.cons.cdr->kind == HLL_AST_NIL);
+                    value = value->as.cons.car;
+                }
 
+                assert(name->kind == HLL_AST_SYMB);
+                compile_expression(compiler, name);
+                compile_eval_expression(compiler, value);
+                emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+            }
+
+            for (hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
+                 prog = prog->as.cons.cdr) {
+                compile_eval_expression(compiler, prog->as.cons.car);
+                if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
+                    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+                }
+            }
+
+            emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
+        }
     } break;
-//    case HLL_FORM_DEFUN: {
-//        size_t length = ast_list_length(args);
-//        if (length != 3) {
-//            compiler_error(compiler, "'defun' expects exactly 3 arguments");
-//        } else {
-//            hll_ast *name = args->as.cons.car;
-//            if (name->kind != HLL_AST_SYMB) {
-//                compiler_error(compiler, "'defun' name must by a symbol");
-//            }
-//            compile_expression(compiler, name);
-//
-//            args = args->as.cons.cdr;
-//            hll_ast *params = args->as.cons.car;
-//            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
-//                 test = test->as.cons.cdr) {
-//                if (test->as.cons.car->kind != HLL_AST_SYMB) {
-//                    compiler_error(
-//                        compiler,
-//                        "'defun' parameter list must consist only of symbols");
-//                }
-//            }
-//            hll_ast *body = args->as.cons.cdr;
-//            assert(body->kind == HLL_AST_CONS);
-//            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
-//            body = body->as.cons.car;
-//
-//            compile_expression(compiler, params);
-//            compile_expression(compiler, body);
-//            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
-//            emit_op(compiler->bytecode, HLL_BYTECODE_DEFVAR);
-//        }
-//    } break;
+        //    case HLL_FORM_DEFUN: {
+        //        size_t length = ast_list_length(args);
+        //        if (length != 3) {
+        //            compiler_error(compiler, "'defun' expects exactly 3
+        //            arguments");
+        //        } else {
+        //            hll_ast *name = args->as.cons.car;
+        //            if (name->kind != HLL_AST_SYMB) {
+        //                compiler_error(compiler, "'defun' name must by a
+        //                symbol");
+        //            }
+        //            compile_expression(compiler, name);
+        //
+        //            args = args->as.cons.cdr;
+        //            hll_ast *params = args->as.cons.car;
+        //            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
+        //                 test = test->as.cons.cdr) {
+        //                if (test->as.cons.car->kind != HLL_AST_SYMB) {
+        //                    compiler_error(
+        //                        compiler,
+        //                        "'defun' parameter list must consist only of
+        //                        symbols");
+        //                }
+        //            }
+        //            hll_ast *body = args->as.cons.cdr;
+        //            assert(body->kind == HLL_AST_CONS);
+        //            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
+        //            body = body->as.cons.car;
+        //
+        //            compile_expression(compiler, params);
+        //            compile_expression(compiler, body);
+        //            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
+        //            emit_op(compiler->bytecode, HLL_BYTECODE_DEFVAR);
+        //        }
+        //    } break;
     case HLL_FORM_LAMBDA: {
         size_t length = ast_list_length(args);
         if (length != 2) {

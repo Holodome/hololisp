@@ -62,7 +62,7 @@ hll_interpret(hll_vm *vm, char const *source) {
 }
 
 hll_interpret_result
-hll_interpret_bytecode(hll_vm *vm, void *bytecode) {
+hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode) {
     (void)vm;
     (void)bytecode;
     return HLL_RESULT_OK;

@@ -20,6 +20,9 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
                 (long long unsigned)(instruction - bytecode->ops - 1));
         ++counter;
         switch (op) {
+        case HLL_BYTECODE_PUSHENV: fprintf(file, "PUSHENV\n"); break;
+        case HLL_BYTECODE_POPENV: fprintf(file, "POPENV\n"); break ;
+        case HLL_BYTECODE_LET: fprintf(file, "LET\n"); break;
         case HLL_BYTECODE_MAKE_LAMBDA: fprintf(file, "MAKELAMBDA\n"); break;
         case HLL_BYTECODE_JN: {
             uint8_t high = *instruction++;
