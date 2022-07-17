@@ -504,16 +504,28 @@ compiler_error(hll_compiler *compiler, char const *fmt, ...) {
     }
 }
 
+// Denotes special forms in language.
+// Special forms are different from other lisp constructs because they require
+// special handling from compiler side.
+// Special form number is ought to be kept as small as possible to minimise
+// the work needed to be done by compiler.
 typedef enum {
     HLL_FORM_REGULAR,
+    // Quote returns unevaluated argument
     HLL_FORM_QUOTE,
+    // If checks condition and executes one of its arms
     HLL_FORM_IF,
-    HLL_FORM_DEFUN,
+    // Lambda constructs a new function
     HLL_FORM_LAMBDA,
-    HLL_FORM_PROGN,
+    // Setf sets value pointed to by location defined by first argument
+    // as second argument. First argument is of special kind of form,
+    // which denotes location and requires special handling from compiler.
     HLL_FORM_SETF,
-    HLL_FORM_SETQ,
+    // Defines variable in current context.
     HLL_FORM_DEFVAR,
+    // let is different from defvar because it creates new lexical context
+    // and puts variables there.
+    HLL_FORM_LET,
 } hll_form_kind;
 
 static hll_form_kind
@@ -523,18 +535,14 @@ get_form_kind(char const *symb) {
         kind = HLL_FORM_QUOTE;
     } else if (strcmp(symb, "if") == 0) {
         kind = HLL_FORM_IF;
-    } else if (strcmp(symb, "defun") == 0) {
-        kind = HLL_FORM_DEFUN;
     } else if (strcmp(symb, "lambda") == 0) {
         kind = HLL_FORM_LAMBDA;
-    } else if (strcmp(symb, "progn") == 0) {
-        kind = HLL_FORM_PROGN;
     } else if (strcmp(symb, "setf") == 0) {
         kind = HLL_FORM_SETF;
-    } else if (strcmp(symb, "setq") == 0) {
-        kind = HLL_FORM_SETQ;
     } else if (strcmp(symb, "defvar") == 0) {
         kind = HLL_FORM_DEFVAR;
+    } else if (strcmp(symb, "let") == 0) {
+        kind = HLL_FORM_LET;
     }
 
     return kind;
@@ -661,8 +669,8 @@ compile_special_form(hll_compiler *compiler, hll_ast *args,
             emit_op(compiler->bytecode, HLL_BYTECODE_JN);
             char *jump_false = emit_u16(compiler->bytecode, 0);
             compile_expression(compiler, pos_arm);
-            emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
-            emit_op(compiler->bytecode, HLL_BYTECODE_JT);
+            emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+            emit_op(compiler->bytecode, HLL_BYTECODE_JN);
             char *jump_out = emit_u16(compiler->bytecode, 0);
             write_u16_be(jump_false, jump_out + 2 - jump_false);
             compile_expression(compiler, neg_arm);
@@ -670,38 +678,41 @@ compile_special_form(hll_compiler *compiler, hll_ast *args,
                          get_current_op_ptr(compiler->bytecode) - jump_out);
         }
     } break;
-    case HLL_FORM_DEFUN: {
-        size_t length = ast_list_length(args);
-        if (length != 3) {
-            compiler_error(compiler, "'defun' expects exactly 3 arguments");
-        } else {
-            hll_ast *name = args->as.cons.car;
-            if (name->kind != HLL_AST_SYMB) {
-                compiler_error(compiler, "'defun' name must by a symbol");
-            }
-            compile_expression(compiler, name);
+    case HLL_FORM_LET: {
 
-            args = args->as.cons.cdr;
-            hll_ast *params = args->as.cons.car;
-            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
-                 test = test->as.cons.cdr) {
-                if (test->as.cons.car->kind != HLL_AST_SYMB) {
-                    compiler_error(
-                        compiler,
-                        "'defun' parameter list must consist only of symbols");
-                }
-            }
-            hll_ast *body = args->as.cons.cdr;
-            assert(body->kind == HLL_AST_CONS);
-            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
-            body = body->as.cons.car;
-
-            compile_expression(compiler, params);
-            compile_expression(compiler, body);
-            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
-            emit_op(compiler->bytecode, HLL_BYTECODE_DEFVAR);
-        }
     } break;
+//    case HLL_FORM_DEFUN: {
+//        size_t length = ast_list_length(args);
+//        if (length != 3) {
+//            compiler_error(compiler, "'defun' expects exactly 3 arguments");
+//        } else {
+//            hll_ast *name = args->as.cons.car;
+//            if (name->kind != HLL_AST_SYMB) {
+//                compiler_error(compiler, "'defun' name must by a symbol");
+//            }
+//            compile_expression(compiler, name);
+//
+//            args = args->as.cons.cdr;
+//            hll_ast *params = args->as.cons.car;
+//            for (hll_ast *test = params; test->kind == HLL_AST_CONS;
+//                 test = test->as.cons.cdr) {
+//                if (test->as.cons.car->kind != HLL_AST_SYMB) {
+//                    compiler_error(
+//                        compiler,
+//                        "'defun' parameter list must consist only of symbols");
+//                }
+//            }
+//            hll_ast *body = args->as.cons.cdr;
+//            assert(body->kind == HLL_AST_CONS);
+//            assert(body->as.cons.cdr->kind == HLL_AST_NIL);
+//            body = body->as.cons.car;
+//
+//            compile_expression(compiler, params);
+//            compile_expression(compiler, body);
+//            emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
+//            emit_op(compiler->bytecode, HLL_BYTECODE_DEFVAR);
+//        }
+//    } break;
     case HLL_FORM_LAMBDA: {
         size_t length = ast_list_length(args);
         if (length != 2) {
@@ -726,9 +737,7 @@ compile_special_form(hll_compiler *compiler, hll_ast *args,
             emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
         }
     } break;
-    case HLL_FORM_PROGN: break;
     case HLL_FORM_SETF: break;
-    case HLL_FORM_SETQ: break;
     case HLL_FORM_DEFVAR: break;
     }
 }

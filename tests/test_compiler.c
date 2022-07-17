@@ -11,7 +11,7 @@ test_compiler_compiles_integer(void) {
 
     hll_bytecode *result = hll_compile(vm, source);
     TEST_ASSERT(result != NULL);
-    2§ TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
+    TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
 
 static void
@@ -127,8 +127,8 @@ test_compiler_compiles_if(void) {
     uint8_t bytecode[] = { // t
                            HLL_BYTECODE_TRUE, HLL_BYTECODE_JN, 0x00, 0x09,
                            // 1
-                           HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_TRUE,
-                           HLL_BYTECODE_JT, 0x00, 0x05,
+                           HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
+                           HLL_BYTECODE_JN, 0x00, 0x05,
                            // 0
                            HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_END
     };

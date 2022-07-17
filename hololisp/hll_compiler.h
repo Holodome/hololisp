@@ -36,7 +36,7 @@ typedef struct {
     hll_token_kind kind;
     size_t offset;
     uint32_t length;
-    int64_t value;
+    hll_num value;
 } hll_token;
 
 /// Lexer is designed in way it is possible to use outside of compiler to allow
@@ -70,7 +70,7 @@ typedef enum {
 typedef struct hll_ast {
     hll_ast_kind kind;
     union {
-        int64_t num;
+        hll_num num;
         char const *symb;
         struct {
             struct hll_ast *car;

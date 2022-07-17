@@ -30,16 +30,19 @@ typedef enum {
     // or C binding. In first case creates new env and calls that function.
     HLL_BYTECODE_CALL,
     // Jump if true (u16 offset).
-    HLL_BYTECODE_JT,
-    // Jump if nil (u16 offset).
     HLL_BYTECODE_JN,
     // Create function. Uses two values on stack. First is arguments list,
     // second is function body. Appends new function on stack.
     HLL_BYTECODE_MAKE_LAMBDA,
-    // Defines new variable with given name in current env.
-    // If variable with same name is defined in current env, error and bail.
-    // If variable with same name is defined in outer scope nothing happens.
-    HLL_BYTECODE_DEFVAR,
+    // Defines new variable with given name in current env (lexical env).
+    // If variable with same name is defined in current env, error.
+    // If variable with same name is defined in outer scope it is redefined in current.
+    HLL_BYTECODE_LET,
+    // Creates new variable scope context
+    HLL_BYTECODE_PUSHENV,
+    // Removes last variable scope context
+    HLL_BYTECODE_POPENV,
+
 } hll_bytecode_op;
 
 typedef struct hll_bytecode {
