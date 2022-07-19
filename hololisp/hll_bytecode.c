@@ -43,7 +43,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             uint8_t high = *instruction++;
             uint8_t low = *instruction++;
             uint16_t idx = ((uint16_t)high) << 8 | low;
-            if (idx > +hll_sb_len(bytecode->constant_pool)) {
+            if (idx >= hll_sb_len(bytecode->constant_pool)) {
                 fprintf(file, "CONST <err>\n");
             } else {
                 fprintf(file, "CONST %" PRId64 " (%" PRId16 ")\n",
@@ -54,7 +54,7 @@ hll_dump_bytecode(void *file, hll_bytecode *bytecode) {
             uint8_t high = *instruction++;
             uint8_t low = *instruction++;
             uint16_t idx = ((uint16_t)high) << 8 | low;
-            if (idx > +hll_sb_len(bytecode->symbol_pool)) {
+            if (idx >= hll_sb_len(bytecode->symbol_pool)) {
                 fprintf(file, "SYMB <err>\n");
             } else {
                 fprintf(file, "SYMB %s (%" PRId16 ")\n",

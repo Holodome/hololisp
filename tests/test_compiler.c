@@ -543,8 +543,10 @@ test_compiler_basic_special_forms(void) {
     TEST_ASSERT(memcmp(result->ops, bytecode, sizeof(bytecode)) == 0);
 }
 
-#define TCASE(_name) \
-    { #_name, _name }
+#define TCASE(_name)  \
+    {                 \
+#_name, _name \
+    }
 
 TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_compiler_compiles_addition),
@@ -556,4 +558,5 @@ TEST_LIST = { TCASE(test_compiler_compiles_integer),
               TCASE(test_compiler_compiles_let_with_body),
               TCASE(test_compiler_compiles_setf_symbol),
               TCASE(test_compiler_compiles_setf_cdr),
-              TCASE(test_compiler_basic_special_forms) };
+              TCASE(test_compiler_basic_special_forms),
+              { NULL, NULL } };
