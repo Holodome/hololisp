@@ -4,6 +4,63 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/*
+NIL
+    s[n++] = nil
+TRUE
+    s[n++] = true
+CONST(u16 x)
+    s[n++] = consts[x]
+SYMB(u16 x)
+    s[n++] = symbs[x]
+APPEND
+    a := cons(s[n - 1], nil);
+    if list_head == NULL:
+        s[n - 3] = s[n - 2] = a
+    else:
+        s[n - 2].cdr = cons
+        s[n - 2] = a
+    pop()
+POP
+    --n
+FIND
+    symb := s[--n]
+    s[n++] = search(env, symb)
+CALL
+    args := s[--n]
+    callable := s[--n]
+    callable(args)
+JN(u16 x)
+    if s[n - 1] == nil:
+        ip += x
+MAKELAMBDA
+    body := s[--n]
+    params := s[--n]
+    s[n++] = lambda(cur_env, body, params)
+LET
+    value := s[--n]
+    name := s[--n]
+    cur_env[name] = value
+PUSHENV
+    cur_env = env()
+POPENV
+    cur_env = cur_env.up
+CAR
+    list := s[--n]
+    s[n++] = list.car
+CDR
+    list := s[--n]
+    s[n++] = list.cdr
+SETCAR
+    list := s[--n]
+    value := s[--n]
+    list.car = value
+SETCDR
+    list := s[--n]
+    value := s[--n]
+    list.cdr = value
+ */
+
 typedef enum {
     /// Bytecode must be terminated with 0.
     HLL_BYTECODE_END = 0x0,
