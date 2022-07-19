@@ -560,37 +560,35 @@ get_form_kind(char const *symb) {
     return kind;
 }
 
-static char *
-get_current_op_ptr(hll_bytecode *bytecode) {
-    assert(bytecode->ops != NULL);
-    return (char *)bytecode->ops + hll_sb_len(bytecode->ops);
+static size_t
+get_current_op_idx(hll_bytecode *bytecode) {
+    return hll_sb_len(bytecode->ops);
 }
 
-uint8_t *
+size_t
 emit_u8(hll_bytecode *bytecode, uint8_t byte) {
+    size_t idx = get_current_op_idx(bytecode);
     hll_sb_push(bytecode->ops, byte);
-    return bytecode->ops + hll_sb_len(bytecode->ops) - 1;
+    return idx;
 }
 
-uint8_t *
+size_t
 emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
     assert(op <= 0xFF);
     return emit_u8(bytecode, op);
 }
 
 static void
-write_u16_be(char *data_c, uint16_t value) {
-    uint8_t *data = (uint8_t *)data_c;
+write_u16_be(uint8_t *data, uint16_t value) {
     *data++ = (value >> 8) & 0xFF;
     *data = value & 0xFF;
 }
 
-char *
+static size_t
 emit_u16(hll_bytecode *bytecode, uint16_t value) {
-    char *ptr = get_current_op_ptr(bytecode);
-    emit_u8(bytecode, (value >> 8) & 0xFF);
+    size_t idx = emit_u8(bytecode, (value >> 8) & 0xFF);
     emit_u8(bytecode, value & 0xFF);
-    return ptr;
+    return idx;
 }
 
 static uint16_t
@@ -680,15 +678,16 @@ compile_if(hll_compiler *compiler, hll_ast *args) {
 
         pos_arm = pos_arm->as.cons.car;
         emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-        char *jump_false = emit_u16(compiler->bytecode, 0);
+        size_t jump_false = emit_u16(compiler->bytecode, 0);
         compile_eval_expression(compiler, pos_arm);
         emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
         emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-        char *jump_out = emit_u16(compiler->bytecode, 0);
-        write_u16_be(jump_false, get_current_op_ptr(compiler->bytecode) - jump_false);
+        size_t jump_out = emit_u16(compiler->bytecode, 0);
+        write_u16_be(compiler->bytecode->ops + jump_false,
+                     get_current_op_idx(compiler->bytecode) - jump_false);
         compile_eval_expression(compiler, neg_arm);
-        write_u16_be(jump_out,
-                     get_current_op_ptr(compiler->bytecode) - jump_out);
+        write_u16_be(compiler->bytecode->ops + jump_out,
+                     get_current_op_idx(compiler->bytecode) - jump_out);
     }
 }
 
