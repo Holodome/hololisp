@@ -11,6 +11,7 @@
 #include "hll_bytecode.h"
 #include "hll_hololisp.h"
 #include "hll_mem.h"
+#include "hll_obj.h"
 #include "hll_vm.h"
 
 hll_bytecode *
@@ -592,16 +593,18 @@ emit_u16(hll_bytecode *bytecode, uint16_t value) {
 }
 
 static uint16_t
-add_int_constant_and_return_its_index(hll_compiler *compiler, int64_t value) {
+add_int_constant_and_return_its_index(hll_compiler *compiler, hll_num value) {
     for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
-        if (compiler->bytecode->constant_pool[i] == value) {
+        hll_obj *test = compiler->bytecode->constant_pool[i];
+        if (test->kind == HLL_OBJ_NUM && test->as.num == value) {
             uint16_t narrowed = i;
             assert(i == narrowed);
             return narrowed;
         }
     }
 
-    hll_sb_push(compiler->bytecode->constant_pool, value);
+    hll_sb_push(compiler->bytecode->constant_pool,
+                hll_new_num(compiler->vm, value));
     size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
     uint16_t narrowed = result;
     assert(result == narrowed);

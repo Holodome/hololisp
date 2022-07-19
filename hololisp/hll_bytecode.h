@@ -11,8 +11,6 @@ TRUE
     s[n++] = true
 CONST(u16 x)
     s[n++] = consts[x]
-SYMB(u16 x)
-    s[n++] = symbs[x]
 APPEND
     a := cons(s[n - 1], nil);
     if list_head == NULL:
@@ -70,8 +68,6 @@ typedef enum {
     HLL_BYTECODE_TRUE,
     // Pushes constant on stack (u16 index)
     HLL_BYTECODE_CONST,
-    // Pushed symbol on stack (u16 index)
-    HLL_BYTECODE_SYMB,
     // Uses 3 last items on stack. First two are considered list head and tail,
     // 3 is element that needs to be appended to list. Pops last element
     // leaving only head and tail.
@@ -108,8 +104,7 @@ typedef enum {
 
 typedef struct hll_bytecode {
     uint8_t *ops;
-    int64_t *constant_pool;
-    char const **symbol_pool;
+    struct hll_obj **constant_pool;
 } hll_bytecode;
 
 void hll_dump_bytecode(void *file, hll_bytecode *bytecode);

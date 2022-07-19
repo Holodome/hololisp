@@ -53,4 +53,6 @@ hll_obj *hll_new_num(struct hll_vm *vm, hll_num num);
 hll_obj *hll_new_symbol(struct hll_vm *vm, char const *symbol, size_t length);
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr);
 
+hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj);
+
 #endif

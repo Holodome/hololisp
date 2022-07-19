@@ -9,11 +9,7 @@
 
 struct hll_vm;
 
-#ifndef HLL_NUMBER_TYPE
 typedef double hll_num;
-#else
-typedef double HLL_NUMBER_TYPE
-#endif
 
 typedef void hll_error_fn(struct hll_vm *vm, uint32_t line, uint32_t column,
                           char const *message);
