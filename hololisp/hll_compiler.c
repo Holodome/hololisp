@@ -610,7 +610,9 @@ add_int_constant_and_return_its_index(hll_compiler *compiler, int64_t value) {
 }
 
 static uint16_t
-add_symbol_and_return_its_index(hll_compiler *compiler, char const *symb) {
+add_symbol_and_return_its_index(hll_compiler *compiler, char const *symb_) {
+    char const *symb = calloc(strlen(symb) + 1, 1);
+    strcpy((char *)symb, symb_);
     for (size_t i = 0; i < hll_sb_len(compiler->bytecode->symbol_pool); ++i) {
         if (strcmp(compiler->bytecode->symbol_pool[i], symb) == 0) {
             uint16_t narrowed = i;
