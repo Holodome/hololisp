@@ -587,9 +587,10 @@ write_u16_be(char *data_c, uint16_t value) {
 
 char *
 emit_u16(hll_bytecode *bytecode, uint16_t value) {
+    char *ptr = get_current_op_ptr(bytecode);
     emit_u8(bytecode, (value >> 8) & 0xFF);
     emit_u8(bytecode, value & 0xFF);
-    return (char *)bytecode->ops + hll_sb_len(bytecode->ops) - 2;
+    return ptr;
 }
 
 static uint16_t
