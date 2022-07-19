@@ -684,7 +684,7 @@ compile_if(hll_compiler *compiler, hll_ast *args) {
         emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
         emit_op(compiler->bytecode, HLL_BYTECODE_JN);
         char *jump_out = emit_u16(compiler->bytecode, 0);
-        write_u16_be(jump_false, jump_out + 2 - jump_false);
+        write_u16_be(jump_false, get_current_op_ptr(compiler->bytecode) - jump_false);
         compile_eval_expression(compiler, neg_arm);
         write_u16_be(jump_out,
                      get_current_op_ptr(compiler->bytecode) - jump_out);
