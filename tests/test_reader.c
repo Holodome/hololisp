@@ -42,7 +42,7 @@ test_reader_parses_symbol(void) {
     TEST_ASSERT(ast->as.cons.cdr->kind == HLL_AST_NIL);
     ast = ast->as.cons.car;
     TEST_ASSERT(ast->kind == HLL_AST_SYMB);
-    TEST_ASSERT(strcmp(ast->as.symb, "hello-world") == 0);
+    TEST_ASSERT(strcmp(ast->as.symb.str, "hello-world") == 0);
 }
 
 static void

@@ -71,7 +71,10 @@ typedef struct hll_ast {
     hll_ast_kind kind;
     union {
         hll_num num;
-        char const *symb;
+        struct {
+            char const *str;
+            size_t length;
+        } symb;
         struct {
             struct hll_ast *car;
             struct hll_ast *cdr;

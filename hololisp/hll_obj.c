@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "hll_vm.h"
 
@@ -36,6 +37,7 @@ hll_new_symbol(struct hll_vm *vm, char const *symbol, size_t length) {
     hll_obj_symb *body = calloc(1, sizeof(hll_obj_symb) + length + 1);
     memcpy(body->symb, symbol, length);
     body->symb[length] = '\0';
+    body->length = length;
 
     hll_obj *obj = calloc(1, sizeof(hll_obj));
     obj->kind = HLL_OBJ_SYMB;
@@ -56,4 +58,16 @@ hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
     obj->as.body = body;
 
     return obj;
+}
+
+hll_obj_cons *
+hll_unwrap_cons(struct hll_obj *obj) {
+    assert(obj->kind == HLL_OBJ_CONS);
+    return (hll_obj_cons *)obj->as.body;
+}
+
+const char *
+hll_unwrap_zsymb(struct hll_obj *obj) {
+    assert(obj->kind == HLL_OBJ_SYMB);
+    return ((hll_obj_symb *)obj->as.body)->symb;
 }

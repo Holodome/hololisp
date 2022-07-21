@@ -294,7 +294,8 @@ hll_reader_init(hll_reader *reader, hll_lexer *lexer, hll_memory_arena *arena,
     reader->true_->kind = HLL_AST_TRUE;
     reader->quote_symb = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
     reader->quote_symb->kind = HLL_AST_SYMB;
-    reader->quote_symb->as.symb = "quote";
+    reader->quote_symb->as.symb.str = "quote";
+    reader->quote_symb->as.symb.length = strlen("quote");
 }
 
 static void
@@ -418,9 +419,10 @@ read_expr(hll_reader *reader) {
 
         ast = hll_memory_arena_alloc(reader->arena, sizeof(hll_ast));
         ast->kind = HLL_AST_SYMB;
-        ast->as.symb = hll_memory_arena_alloc(reader->arena,
-                                              reader->lexer->next.length + 1);
-        strncpy((void *)ast->as.symb,
+        ast->as.symb.str = hll_memory_arena_alloc(
+            reader->arena, reader->lexer->next.length + 1);
+        ast->as.symb.length = reader->lexer->next.length;
+        strncpy((void *)ast->as.symb.str,
                 reader->lexer->input + reader->lexer->next.offset,
                 reader->lexer->next.length);
         break;
@@ -612,22 +614,34 @@ add_int_constant_and_return_its_index(hll_compiler *compiler, hll_num value) {
 }
 
 static uint16_t
-add_symbol_and_return_its_index(hll_compiler *compiler, char const *symb_) {
-    char const *symb = calloc(strlen(symb_) + 1, 1);
-    strcpy((char *)symb, symb_);
-    for (size_t i = 0; i < hll_sb_len(compiler->bytecode->symbol_pool); ++i) {
-        if (strcmp(compiler->bytecode->symbol_pool[i], symb) == 0) {
+add_symbol_and_return_its_index(hll_compiler *compiler, char const *symb_,
+                                size_t length) {
+    for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
+        hll_obj *test = compiler->bytecode->constant_pool[i];
+        if (test->kind == HLL_OBJ_SYMB &&
+            strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
             uint16_t narrowed = i;
             assert(i == narrowed);
             return narrowed;
         }
     }
 
-    hll_sb_push(compiler->bytecode->symbol_pool, symb);
-    size_t result = hll_sb_len(compiler->bytecode->symbol_pool) - 1;
+    hll_obj *symb = hll_new_symbol(compiler->vm, symb_, length);
+
+    hll_sb_push(compiler->bytecode->constant_pool, symb);
+    size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
     uint16_t narrowed = result;
     assert(result == narrowed);
     return narrowed;
+}
+
+static void
+compile_symbol(hll_compiler *compiler, hll_ast *ast) {
+    assert(ast->kind == HLL_AST_SYMB);
+    emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+    emit_u16(compiler->bytecode,
+             add_symbol_and_return_its_index(compiler, ast->as.symb.str,
+                                             ast->as.symb.length));
 }
 
 static void compile_expression(hll_compiler *compiler, hll_ast *ast);
@@ -772,9 +786,9 @@ get_location_form(hll_ast *location) {
     } else if (location->kind == HLL_AST_CONS) {
         hll_ast *first = location->as.cons.car;
         if (first->kind == HLL_AST_SYMB) {
-            if (strcmp(first->as.symb, "car") == 0) {
+            if (strcmp(first->as.symb.str, "car") == 0) {
                 kind = HLL_LOC_FORM_CAR;
-            } else if (strcmp(first->as.symb, "cdr") == 0) {
+            } else if (strcmp(first->as.symb.str, "cdr") == 0) {
                 kind = HLL_LOC_FORM_CDR;
             }
         }
@@ -789,9 +803,7 @@ compile_set_location(hll_compiler *compiler, hll_ast *location) {
     switch (kind) {
     case HLL_LOC_NONE: compiler_error(compiler, "location is not valid"); break;
     case HLL_LOC_FORM_SYMB:
-        emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
-        emit_u16(compiler->bytecode,
-                 add_symbol_and_return_its_index(compiler, location->as.symb));
+        compile_symbol(compiler, location);
         emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
         emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
         break;
@@ -909,15 +921,13 @@ compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
         hll_ast *fn = ast->as.cons.car;
         hll_form_kind kind = HLL_FORM_REGULAR;
         if (fn->kind == HLL_AST_SYMB) {
-            kind = get_form_kind(fn->as.symb);
+            kind = get_form_kind(fn->as.symb.str);
         }
 
         compile_form(compiler, ast, kind);
     } break;
     case HLL_AST_SYMB:
-        emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
-        emit_u16(compiler->bytecode,
-                 add_symbol_and_return_its_index(compiler, ast->as.symb));
+        compile_symbol(compiler, ast);
         emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
         emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
         break;
@@ -951,9 +961,7 @@ compile_expression(hll_compiler *compiler, hll_ast *ast) {
         emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     } break;
     case HLL_AST_SYMB:
-        emit_op(compiler->bytecode, HLL_BYTECODE_SYMB);
-        emit_u16(compiler->bytecode,
-                 add_symbol_and_return_its_index(compiler, ast->as.symb));
+        compile_symbol(compiler, ast);
         break;
     default: assert(!"Unreachable"); break;
     }
@@ -983,4 +991,5 @@ hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
             emit_op(compiler->bytecode, HLL_BYTECODE_POP);
         }
     }
+    emit_op(compiler->bytecode, HLL_BYTECODE_END);
 }
