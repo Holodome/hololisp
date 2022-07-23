@@ -489,3 +489,4 @@ cov.json
 .ccls-cache
 .vimrc
 .nvimrc
+.ccls

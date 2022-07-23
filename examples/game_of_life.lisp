@@ -84,7 +84,3 @@
     (cons (create-row width) (create-board width (- height 1)))))
 
 (run (create-board *width* *height*))
-; (print-board (simulate (create-board *width* *height*)))
-; (defvar board (create-board 10 10))
-; (print (nth 0 (nth 0 board)))
-; (print (= 1 (nth 0 (nth 0 board))))
