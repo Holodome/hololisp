@@ -1,18 +1,1 @@
-BasedOnStyle: google
-
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
-IndentWidth: 4
-
-AlwaysBreakAfterDefinitionReturnType: All
-IndentCaseLabels: false
-AllowShortBlocksOnASingleLine: Never
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-Cpp11BracedListStyle: false
-DerivePointerAlignment: false
-PointerAlignment: Right
-
-ColumnLimit: 80
+BasedOnStyle: llvm
