@@ -11,32 +11,32 @@
 
 /// Kinds of tokens recognized by lexer.
 typedef enum {
-    /// End of file
-    HLL_TOK_EOF,
-    /// Integer
-    HLL_TOK_INT,
-    /// Symbol
-    HLL_TOK_SYMB,
-    /// .
-    HLL_TOK_DOT,
-    /// (
-    HLL_TOK_LPAREN,
-    /// )
-    HLL_TOK_RPAREN,
-    /// '
-    HLL_TOK_QUOTE,
-    /// Comment
-    HLL_TOK_COMMENT,
-    /// Unexpected sequence of tokens.
-    HLL_TOK_UNEXPECTED
+  /// End of file
+  HLL_TOK_EOF,
+  /// Integer
+  HLL_TOK_INT,
+  /// Symbol
+  HLL_TOK_SYMB,
+  /// .
+  HLL_TOK_DOT,
+  /// (
+  HLL_TOK_LPAREN,
+  /// )
+  HLL_TOK_RPAREN,
+  /// '
+  HLL_TOK_QUOTE,
+  /// Comment
+  HLL_TOK_COMMENT,
+  /// Unexpected sequence of tokens.
+  HLL_TOK_UNEXPECTED
 } hll_token_kind;
 
 /// Coupled token definition.
 typedef struct {
-    hll_token_kind kind;
-    size_t offset;
-    uint32_t length;
-    hll_num value;
+  hll_token_kind kind;
+  size_t offset;
+  uint32_t length;
+  hll_num value;
 } hll_token;
 
 /// Lexer is designed in way it is possible to use outside of compiler to allow
@@ -44,61 +44,61 @@ typedef struct {
 /// Thus is does not act as a individual step of translation but as
 /// helper for reader.
 typedef struct {
-    /// Used for error reporting. If NULL, no errors are reported
-    struct hll_vm *vm;
-    /// Mark that errors have been encountered during lexing.
-    bool has_errors;
-    /// Current parsing location
-    char const *cursor;
-    /// Input start. Used to calculate each token's offset
-    char const *input;
-    /// Next peeked token. Stores results of lexing
-    hll_token next;
+  /// Used for error reporting. If NULL, no errors are reported
+  struct hll_vm *vm;
+  /// Mark that errors have been encountered during lexing.
+  bool has_errors;
+  /// Current parsing location
+  char const *cursor;
+  /// Input start. Used to calculate each token's offset
+  char const *input;
+  /// Next peeked token. Stores results of lexing
+  hll_token next;
 } hll_lexer;
 
 void hll_lexer_init(hll_lexer *lexer, char const *input, struct hll_vm *vm);
 void hll_lexer_next(hll_lexer *lexer);
 
 typedef enum {
-    HLL_AST_NIL = 0x1,
-    HLL_AST_TRUE,
-    HLL_AST_INT,
-    HLL_AST_CONS,
-    HLL_AST_SYMB,
+  HLL_AST_NIL = 0x1,
+  HLL_AST_TRUE,
+  HLL_AST_INT,
+  HLL_AST_CONS,
+  HLL_AST_SYMB,
 } hll_ast_kind;
 
 typedef struct hll_ast {
-    hll_ast_kind kind;
-    union {
-        hll_num num;
-        struct {
-            char const *str;
-            size_t length;
-        } symb;
-        struct {
-            struct hll_ast *car;
-            struct hll_ast *cdr;
-        } cons;
-    } as;
+  hll_ast_kind kind;
+  union {
+    hll_num num;
+    struct {
+      char const *str;
+      size_t length;
+    } symb;
+    struct {
+      struct hll_ast *car;
+      struct hll_ast *cdr;
+    } cons;
+  } as;
 } hll_ast;
 
 typedef struct {
-    /// Needed for error reporting.
-    struct hll_vm *vm;
-    /// Mark that errors have been encountered during parsing.
-    bool has_errors;
-    /// Lexer used for reading.
-    /// Reader process all tokens produced by lexer until EOF, so lifetime of
-    /// this lexer is associated with reader.
-    hll_lexer *lexer;
-    /// This is the arena that is used for allocating AST nodes during parsing.
-    /// After work with AST is finished, they can all be freed at once.
-    struct hll_memory_arena *arena;
+  /// Needed for error reporting.
+  struct hll_vm *vm;
+  /// Mark that errors have been encountered during parsing.
+  bool has_errors;
+  /// Lexer used for reading.
+  /// Reader process all tokens produced by lexer until EOF, so lifetime of
+  /// this lexer is associated with reader.
+  hll_lexer *lexer;
+  /// This is the arena that is used for allocating AST nodes during parsing.
+  /// After work with AST is finished, they can all be freed at once.
+  struct hll_memory_arena *arena;
 
-    hll_ast *nil;
-    hll_ast *true_;
-    hll_ast *quote_symb;
-    bool should_return_old_token;
+  hll_ast *nil;
+  hll_ast *true_;
+  hll_ast *quote_symb;
+  bool should_return_old_token;
 } hll_reader;
 
 void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
@@ -106,9 +106,9 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
 hll_ast *hll_read_ast(hll_reader *reader);
 
 typedef struct {
-    struct hll_vm *vm;
-    bool has_errors;
-    struct hll_bytecode *bytecode;
+  struct hll_vm *vm;
+  bool has_errors;
+  struct hll_bytecode *bytecode;
 } hll_compiler;
 
 void hll_compile_ast(hll_compiler *compiler, hll_ast *ast);

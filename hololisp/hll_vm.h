@@ -14,13 +14,12 @@
 struct hll_bytecode;
 
 typedef struct hll_vm {
-    struct hll_config config;
+  struct hll_config config;
 
-    struct hll_obj *true_;
-    struct hll_obj *nil;
+  struct hll_obj *true_;
+  struct hll_obj *nil;
 } hll_vm;
 
-hll_interpret_result hll_interpret_bytecode(hll_vm *vm,
-                                            struct hll_bytecode *bytecode);
+bool hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode);
 
 #endif
