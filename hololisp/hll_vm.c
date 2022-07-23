@@ -55,13 +55,56 @@ hll_interpret_result hll_interpret(hll_vm *vm, char const *source) {
     return HLL_RESULT_COMPILE_ERROR;
   }
 
-  return hll_interpret_bytecode(vm, bytecode) ? HLL_RESULT_RUNTIME_ERROR
-                                              : HLL_RESULT_OK;
+  return hll_interpret_bytecode(vm, bytecode, true) ? HLL_RESULT_RUNTIME_ERROR
+                                                    : HLL_RESULT_OK;
 }
 
-bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode) {
+static void print_internal(hll_vm *vm, hll_obj *obj) {
+  FILE *file = stdout;
+
+  switch (obj->kind) {
+  case HLL_OBJ_CONS:
+    fprintf(file, "(");
+    while (obj->kind != HLL_OBJ_NIL) {
+      assert(obj->kind == HLL_OBJ_CONS);
+      print_internal(vm, hll_unwrap_car(obj));
+
+      hll_obj *cdr = hll_unwrap_cdr(obj);
+      if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
+        fprintf(file, " . ");
+        print_internal(vm, cdr);
+        break;
+      } else if (cdr->kind != HLL_OBJ_NIL) {
+        fprintf(file, " ");
+      }
+
+      obj = cdr;
+    }
+    fprintf(file, ")");
+    break;
+  case HLL_OBJ_SYMB:
+    fprintf(file, "%s", hll_unwrap_zsymb(obj));
+    break;
+  case HLL_OBJ_NIL:
+    fprintf(file, "()");
+    break;
+  case HLL_OBJ_NUM:
+    fprintf(file, "%lld", (long long)obj->as.num);
+    break;
+  case HLL_OBJ_TRUE:
+    fprintf(file, "t");
+    break;
+  default:
+    assert(!"Not implemented");
+    break;
+  }
+}
+
+bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
+                            bool print_result) {
   (void)vm;
   uint8_t *ip = bytecode->ops;
+  // hll_obj *env = hll_new_env(vm, hll_new_nil(vm), hll_new_nil(vm));
   hll_obj **stack = NULL;
 
   uint8_t op;
@@ -126,6 +169,13 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode) {
       assert(!"Unknown instruction");
       break;
     }
+  }
+
+  if (print_result) {
+    printf("len: %zu\n", hll_sb_len(stack));
+    assert(hll_sb_len(stack) == 1);
+    hll_obj *obj = stack[0];
+    print_internal(vm, obj);
   }
 
   hll_sb_free(stack);

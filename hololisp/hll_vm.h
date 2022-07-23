@@ -20,6 +20,7 @@ typedef struct hll_vm {
   struct hll_obj *nil;
 } hll_vm;
 
-bool hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode);
+bool hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode,
+                            bool print_result);
 
 #endif

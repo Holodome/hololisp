@@ -28,6 +28,10 @@ typedef struct hll_obj {
 } hll_obj;
 
 typedef struct {
+  uint8_t *ops;
+} hll_obj_func;
+
+typedef struct {
   struct hll_obj *vars;
   struct hll_obj *up;
 } hll_obj_env;
@@ -46,14 +50,19 @@ typedef struct {
   char symb[];
 } hll_obj_symb;
 
+void free_object(struct hll_vm *vm, struct hll_obj *obj);
+
 hll_obj *hll_new_nil(struct hll_vm *vm);
 hll_obj *hll_new_true(struct hll_vm *vm);
 
 hll_obj *hll_new_num(struct hll_vm *vm, hll_num num);
 hll_obj *hll_new_symbol(struct hll_vm *vm, char const *symbol, size_t length);
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr);
+hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars);
 
 hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj);
+hll_obj *hll_unwrap_cdr(struct hll_obj *obj);
+hll_obj *hll_unwrap_car(struct hll_obj *obj);
 const char *hll_unwrap_zsymb(struct hll_obj *obj);
 
 #endif

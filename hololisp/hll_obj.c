@@ -6,6 +6,33 @@
 
 #include "hll_vm.h"
 
+void free_object(struct hll_vm *vm, struct hll_obj *obj) {
+  (void)vm;
+  switch (obj->kind) {
+  case HLL_OBJ_CONS:
+    free(obj->as.body);
+    break;
+  case HLL_OBJ_SYMB:
+    free(obj->as.body);
+    break;
+  case HLL_OBJ_BIND:
+    free(obj->as.body);
+    break;
+  case HLL_OBJ_NIL:
+    break;
+  case HLL_OBJ_NUM:
+    break;
+  case HLL_OBJ_ENV:
+    break;
+  case HLL_OBJ_TRUE:
+    break;
+  case HLL_OBJ_FUNC:
+    break;
+  }
+
+  free(obj);
+}
+
 hll_obj *hll_new_nil(struct hll_vm *vm) {
   (void)vm;
   hll_obj *obj = calloc(1, sizeof(hll_obj));
@@ -63,4 +90,14 @@ hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj) {
 const char *hll_unwrap_zsymb(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_SYMB);
   return ((hll_obj_symb *)obj->as.body)->symb;
+}
+
+hll_obj *hll_unwrap_cdr(struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_CONS);
+  return ((hll_obj_cons *)obj->as.body)->cdr;
+}
+
+hll_obj *hll_unwrap_car(struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_CONS);
+  return ((hll_obj_cons *)obj->as.body)->car;
 }

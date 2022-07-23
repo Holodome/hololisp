@@ -102,6 +102,10 @@ typedef enum {
   HLL_BYTECODE_SETCDR,
 } hll_bytecode_op;
 
+typedef struct {
+  uint8_t *ops;
+} hll_function;
+
 typedef struct hll_bytecode {
   uint8_t *ops;
   struct hll_obj **constant_pool;

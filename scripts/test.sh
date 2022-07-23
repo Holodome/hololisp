@@ -41,9 +41,9 @@ for unit_test in $unit_test_files ; do
     process_test "$unit_test" '[ OK ]' "[ FAILED ]"
 done
 
-#for script in $test_script_files ; do
-#    process_test "$script" "ok" "[ERROR]"
-#done
+for script in $test_script_files ; do
+    process_test "$script" "ok" "[ERROR]"
+done
 
 total_test_count=$((success_count + error_count))
 echo -e "\e[1;32mTESTS PASSED\e[1;0m $success_count/$total_test_count"
