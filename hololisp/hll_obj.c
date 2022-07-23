@@ -82,6 +82,20 @@ hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
   return obj;
 }
 
+hll_obj *hll_new_bind(struct hll_vm *vm,
+                      struct hll_obj *(*bind)(struct hll_vm *vm,
+                                              struct hll_obj *args)) {
+  (void)vm;
+  hll_obj_bind *body = calloc(1, sizeof(hll_obj_bind));
+  body->bind = bind;
+
+  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  obj->kind = HLL_OBJ_BIND;
+  obj->as.body = body;
+
+  return obj;
+}
+
 hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
   return (hll_obj_cons *)obj->as.body;
@@ -100,4 +114,14 @@ hll_obj *hll_unwrap_cdr(struct hll_obj *obj) {
 hll_obj *hll_unwrap_car(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
   return ((hll_obj_cons *)obj->as.body)->car;
+}
+
+hll_obj_bind *hll_unwrap_bind(struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_BIND);
+  return (hll_obj_bind *)obj->as.body;
+}
+
+hll_obj_env *hll_unwrap_env(struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_ENV);
+  return (hll_obj_env *)obj->as.body;
 }
