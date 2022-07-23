@@ -33,6 +33,8 @@ static void initialize_default_config(hll_config *config) {
   config->user_data = NULL;
 }
 
+static void add_builtins(hll_vm *vm);
+
 hll_vm *hll_make_vm(hll_config const *config) {
   hll_vm *vm = calloc(1, sizeof(hll_vm));
 
@@ -44,6 +46,9 @@ hll_vm *hll_make_vm(hll_config const *config) {
 
   vm->nil = hll_new_nil(vm);
   vm->true_ = hll_new_true(vm);
+  vm->global_env = vm->env = hll_new_env(vm, vm->nil, vm->nil);
+
+  add_builtins(vm);
 
   return vm;
 }
@@ -69,16 +74,17 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
                                                hll_unwrap_env(vm->env)->vars);
 }
 
-static hll_obj *hll_find_var(hll_vm *ctx, hll_obj *car) {
+static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
   hll_obj *result = NULL;
 
-  for (hll_obj *env = ctx->env; env->kind != HLL_OBJ_NIL && result == NULL;
+  for (hll_obj *env = vm->env; env->kind != HLL_OBJ_NIL && result == NULL;
        env = hll_unwrap_env(env)->up) {
     for (hll_obj *cons = hll_unwrap_env(env)->vars;
          cons->kind != HLL_OBJ_NIL && result == NULL;
          cons = hll_unwrap_cdr(cons)) {
-      hll_obj *test = hll_unwrap_cons(cons)->car;
-      if (hll_unwrap_car(test) == car) {
+      hll_obj *test = hll_unwrap_car(cons);
+      if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)),
+                 hll_unwrap_zsymb(car)) == 0) {
         result = test;
       }
     }
@@ -126,6 +132,70 @@ static void print_internal(hll_vm *vm, hll_obj *obj) {
     assert(!"Not implemented");
     break;
   }
+}
+
+static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
+  print_internal(vm, hll_unwrap_car(args));
+  printf("\n");
+  return vm->nil;
+}
+
+static hll_obj *builtin_add(hll_vm *vm, hll_obj *args) {
+  hll_num result = 0;
+  for (hll_obj *obj = args; obj->kind == HLL_OBJ_CONS;
+       obj = hll_unwrap_cdr(obj)) {
+    hll_obj *value = hll_unwrap_car(obj);
+    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
+    result += value->as.num;
+  }
+  return hll_new_num(vm, result);
+}
+
+static hll_obj *builtin_sub(hll_vm *vm, hll_obj *args) {
+  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  hll_obj *first = hll_unwrap_car(args);
+  // CHECK_TYPE(first, HLL_OBJ_INT, "arguments");
+  hll_num result = first->as.num;
+  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
+       obj = hll_unwrap_cdr(obj)) {
+    hll_obj *value = hll_unwrap_car(obj);
+    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
+    result -= value->as.num;
+  }
+  return hll_new_num(vm, result);
+}
+
+static hll_obj *builtin_div(hll_vm *vm, hll_obj *args) {
+  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  hll_obj *first = hll_unwrap_car(args);
+  // CHECK_TYPE(first, HLL_OBJ_INT, "arguments");
+  hll_num result = first->as.num;
+  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
+       obj = hll_unwrap_cdr(obj)) {
+    hll_obj *value = hll_unwrap_car(obj);
+    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
+    result /= value->as.num;
+  }
+  return hll_new_num(vm, result);
+}
+
+static hll_obj *builtin_mul(hll_vm *vm, hll_obj *args) {
+  hll_num result = 1;
+  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
+       obj = hll_unwrap_cdr(obj)) {
+    hll_obj *value = hll_unwrap_car(obj);
+    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
+    result *= value->as.num;
+  }
+  return hll_new_num(vm, result);
+}
+
+static void add_builtins(hll_vm *vm) {
+  hll_add_binding(vm, "print", builtin_print);
+  hll_add_binding(vm, "+", builtin_add);
+  hll_add_binding(vm, "-", builtin_sub);
+  hll_add_binding(vm, "*", builtin_mul);
+  hll_add_binding(vm, "/", builtin_div);
 }
 
 bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,

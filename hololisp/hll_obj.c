@@ -96,6 +96,19 @@ hll_obj *hll_new_bind(struct hll_vm *vm,
   return obj;
 }
 
+hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars) {
+  (void)vm;
+  hll_obj_env *body = calloc(1, sizeof(hll_obj_env));
+  body->up = up;
+  body->vars = vars;
+
+  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  obj->kind = HLL_OBJ_ENV;
+  obj->as.body = body;
+
+  return obj;
+}
+
 hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
   return (hll_obj_cons *)obj->as.body;
