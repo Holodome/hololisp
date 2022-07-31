@@ -11,8 +11,13 @@ struct hll_vm;
 
 typedef double hll_num;
 
-typedef void hll_error_fn(struct hll_vm *vm, uint32_t line, uint32_t column,
-                          char const *message);
+// Describes function that is used to perform error reporting (it's user
+// part). This means that internally, if any part of language encounters
+// error it will be handled accordingly. This function is responsible for
+// providing output to user.
+// We use function pointer here to allow simple silencing of errors
+// (setting function to NULL), as well as to provide configurability options.
+typedef void hll_error_fn(struct hll_vm *vm, const char *text);
 
 typedef void hll_write_fn(struct hll_vm *vm, char const *text);
 
@@ -60,6 +65,7 @@ struct hll_vm *hll_make_vm(hll_config const *config);
 void hll_delete_vm(struct hll_vm *vm);
 
 /// Runs given source as hololisp code. Name is meta information.
-hll_interpret_result hll_interpret(struct hll_vm *vm, char const *source);
+hll_interpret_result hll_interpret(struct hll_vm *vm, char const *name,
+                                   char const *source);
 
 #endif

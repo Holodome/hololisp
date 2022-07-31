@@ -239,8 +239,7 @@ static void lexer_error(hll_lexer *lexer, char const *fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    // TODO: Line and column numbers
-    lexer->vm->config.error_fn(lexer->vm, 0, 0, buffer);
+    hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, buffer);
   }
 }
 
@@ -358,16 +357,15 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
 
 static void reader_error(hll_reader *reader, char const *fmt, ...) {
   reader->has_errors = true;
-  if (reader->vm != NULL) {
-    char buffer[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
 
-    // TODO: Line and column numbers
-    reader->vm->config.error_fn(reader->vm, 0, 0, buffer);
-  }
+  char buffer[4096];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  va_end(args);
+
+  hll_report_error(reader->vm, reader->lexer->next.offset,
+                   reader->lexer->next.length, buffer);
 }
 
 static void peek_token(hll_reader *reader) {
@@ -545,18 +543,20 @@ static size_t ast_list_length(hll_ast *ast) {
   return length;
 }
 
-static void compiler_error(hll_compiler *compiler, char const *fmt, ...) {
-  compiler->has_errors = true;
-  if (compiler->vm != NULL) {
-    char buffer[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-
-    // TODO: Line and column numbers
-    compiler->vm->config.error_fn(compiler->vm, 0, 0, buffer);
+static void compiler_error(hll_compiler *compiler, hll_ast *ast, char const *fmt, ...) {
+  if (compiler->vm == NULL) {
+    return;
   }
+
+  compiler->has_errors = true;
+  char buffer[4096];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  va_end(args);
+
+  // TODO: Length
+  hll_report_error(compiler->vm, ast->offset, 0, buffer);
 }
 
 // Denotes special forms in language.
@@ -711,10 +711,10 @@ static void compile_function_call(hll_compiler *compiler, hll_ast *list) {
 
 static void compile_quote(hll_compiler *compiler, hll_ast *args) {
   if (args->kind != HLL_AST_CONS) {
-    compiler_error(compiler, "'quote' form must have an argument");
+    compiler_error(compiler, args, "'quote' form must have an argument");
   } else {
     if (args->as.cons.cdr->kind != HLL_AST_NIL) {
-      compiler_error(compiler, "'quote' form must have exactly one argument");
+      compiler_error(compiler, args, "'quote' form must have exactly one argument");
     }
     compile_expression(compiler, args->as.cons.car);
   }
@@ -723,7 +723,7 @@ static void compile_quote(hll_compiler *compiler, hll_ast *args) {
 static void compile_if(hll_compiler *compiler, hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length != 2 && length != 3) {
-    compiler_error(compiler, "'if' form expects 2 or 3 arguments");
+    compiler_error(compiler, args, "'if' form expects 2 or 3 arguments");
   } else {
     hll_ast *cond = args->as.cons.car;
     compile_eval_expression(compiler, cond);
@@ -752,7 +752,7 @@ static void compile_if(hll_compiler *compiler, hll_ast *args) {
 static void compile_let(hll_compiler *compiler, hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length < 1) {
-    compiler_error(compiler,
+    compiler_error(compiler, args, 
                    "'let' special form requires variable declarations");
   } else {
     emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
@@ -788,13 +788,13 @@ static void compile_let(hll_compiler *compiler, hll_ast *args) {
 static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length != 2) {
-    compiler_error(compiler, "'lambda' expects exactly 2 arguments");
+    compiler_error(compiler, args, "'lambda' expects exactly 2 arguments");
   } else {
     hll_ast *params = args->as.cons.car;
     for (hll_ast *test = params; test->kind == HLL_AST_CONS;
          test = test->as.cons.cdr) {
       if (test->as.cons.car->kind != HLL_AST_SYMB) {
-        compiler_error(compiler,
+        compiler_error(compiler, args,
                        "'lambda' parameter list must consist only of symbols");
       }
     }
@@ -838,7 +838,7 @@ static void compile_set_location(hll_compiler *compiler, hll_ast *location) {
   hll_location_form kind = get_location_form(location);
   switch (kind) {
   case HLL_LOC_NONE:
-    compiler_error(compiler, "location is not valid");
+    compiler_error(compiler, location, "location is not valid");
     break;
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
@@ -860,7 +860,7 @@ static void compile_set_location(hll_compiler *compiler, hll_ast *location) {
 
 static void compile_setf(hll_compiler *compiler, hll_ast *args) {
   if (ast_list_length(args) < 1) {
-    compiler_error(compiler, "'setf' expects at least 1 argument");
+    compiler_error(compiler, args, "'setf' expects at least 1 argument");
   } else {
     hll_ast *location = args->as.cons.car;
     hll_ast *value = args->as.cons.cdr;
@@ -876,7 +876,7 @@ static void compile_setf(hll_compiler *compiler, hll_ast *args) {
 
 static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
   if (ast_list_length(args) < 1) {
-    compiler_error(compiler, "'defvar' expects at least 1 argument");
+    compiler_error(compiler, args, "'defvar' expects at least 1 argument");
   } else {
     hll_ast *name = args->as.cons.car;
     hll_ast *value = args->as.cons.cdr;
@@ -894,7 +894,7 @@ static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
 
 static void compile_car(hll_compiler *compiler, hll_ast *args) {
   if (ast_list_length(args) != 1) {
-    compiler_error(compiler, "'car' expects exactly 1 argument");
+    compiler_error(compiler, args, "'car' expects exactly 1 argument");
   } else {
     compile_eval_expression(compiler, args->as.cons.car);
     emit_op(compiler->bytecode, HLL_BYTECODE_CAR);
@@ -903,7 +903,7 @@ static void compile_car(hll_compiler *compiler, hll_ast *args) {
 
 static void compile_cdr(hll_compiler *compiler, hll_ast *args) {
   if (ast_list_length(args) != 1) {
-    compiler_error(compiler, "'cdr' expects exactly 1 argument");
+    compiler_error(compiler,args, "'cdr' expects exactly 1 argument");
   } else {
     compile_eval_expression(compiler, args->as.cons.car);
     emit_op(compiler->bytecode, HLL_BYTECODE_CDR);

@@ -129,7 +129,7 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    hll_interpret_result result = hll_interpret(vm, line);
+    hll_interpret_result result = hll_interpret(vm, "repl", line);
     manage_result(result);
   }
 
@@ -151,7 +151,7 @@ static bool execute_script(char const *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, file_contents);
+  hll_interpret_result result = hll_interpret(vm, filename, file_contents);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -160,7 +160,7 @@ static bool execute_script(char const *filename) {
 
 static bool execute_string(char const *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, str);
+  hll_interpret_result result = hll_interpret(vm, "cli", str);
   hll_delete_vm(vm);
 
   return manage_result(result);

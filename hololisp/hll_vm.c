@@ -10,11 +10,9 @@
 #include "hll_hololisp.h"
 #include "hll_obj.h"
 
-static void default_error_fn(hll_vm *vm, uint32_t line, uint32_t column,
-                             char const *message) {
+static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;
-  fprintf(stderr, "[ERROR]: %" PRIu32 ":%" PRIu32 ": %s", line + 1, column + 1,
-          message);
+  fprintf(stderr, "%s\n", text);
 }
 
 static void default_write_fn(hll_vm *vm, char const *text) {
@@ -34,6 +32,50 @@ static void initialize_default_config(hll_config *config) {
 }
 
 static void add_builtins(hll_vm *vm);
+
+typedef struct {
+  uint32_t line;
+  uint32_t column;
+} hll_source_loc;
+
+static hll_source_loc get_source_loc(const char *source, size_t offset) {
+  const char *cursor = source;
+  hll_source_loc loc = {0};
+
+  while (cursor < source + offset) {
+    char symb = *cursor++;
+    if (symb == '\n') {
+      ++loc.line;
+      loc.column = 0;
+    } else {
+      ++loc.column;
+    }
+  }
+
+  return loc;
+}
+
+void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
+                      const char *msg) {
+  (void)len; // TODO: use in reporting parts of source code.
+  ++vm->error_count;
+  if (vm->config.error_fn == NULL) {
+    return;
+  }
+
+  char buffer[4096];
+  const char *filename = vm->current_filename;
+  hll_source_loc loc = get_source_loc(vm->source, offset);
+  if (filename != NULL) {
+    snprintf(buffer, sizeof(buffer), "\033[1m%s:%u:%u: \033[1m%s\033[0m\n",
+             filename, loc.line, loc.column, msg);
+  } else {
+    snprintf(buffer, sizeof(buffer), "\033[1m%u:%u: \033[1m%s\033[0m\n",
+             loc.line, loc.column, msg);
+  }
+
+  vm->config.error_fn(vm, buffer);
+}
 
 hll_vm *hll_make_vm(hll_config const *config) {
   hll_vm *vm = calloc(1, sizeof(hll_vm));
@@ -55,7 +97,11 @@ hll_vm *hll_make_vm(hll_config const *config) {
 
 void hll_delete_vm(hll_vm *vm) { free(vm); }
 
-hll_interpret_result hll_interpret(hll_vm *vm, const char *source) {
+hll_interpret_result hll_interpret(hll_vm *vm, char const *name,
+                                   const char *source) {
+  vm->current_filename = name;
+  vm->source = source;
+
   hll_bytecode *bytecode = hll_compile(vm, source);
   if (bytecode == NULL) {
     return HLL_RESULT_COMPILE_ERROR;
