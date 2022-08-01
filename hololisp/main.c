@@ -77,6 +77,12 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
   while (cursor < argc) {
     char const *opt = argv[cursor++];
     assert(opt != NULL);
+    if (*opt != '-') {
+      opts->mode = HLL_MODE_ESCRIPT;
+      opts->str = opt;
+      continue;
+    }
+
     if (strcmp(opt, "-e") == 0) {
       if (cursor >= argc) {
         fprintf(stderr, "-e expects 1 parameter\n");

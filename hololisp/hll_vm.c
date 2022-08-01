@@ -67,10 +67,10 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
   const char *filename = vm->current_filename;
   hll_source_loc loc = get_source_loc(vm->source, offset);
   if (filename != NULL) {
-    snprintf(buffer, sizeof(buffer), "\033[1m%s:%u:%u: \033[1m%s\033[0m\n",
+    snprintf(buffer, sizeof(buffer), "%s:%u:%u: %s\n",
              filename, loc.line, loc.column, msg);
   } else {
-    snprintf(buffer, sizeof(buffer), "\033[1m%u:%u: \033[1m%s\033[0m\n",
+    snprintf(buffer, sizeof(buffer), "%u:%u: %s\n",
              loc.line, loc.column, msg);
   }
 
