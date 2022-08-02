@@ -50,6 +50,7 @@ typedef struct {
   char symb[];
 } hll_obj_symb;
 
+const char *hll_get_object_kind_str(hll_object_kind kind);
 void free_object(struct hll_vm *vm, struct hll_obj *obj);
 
 hll_obj *hll_new_nil(struct hll_vm *vm);

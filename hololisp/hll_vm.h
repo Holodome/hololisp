@@ -30,9 +30,7 @@ typedef struct hll_vm {
   // Global env frame. Can be used to add c bindings whilst using unified
   // storage.
   struct hll_obj *env;
-  // Env in which binding functions are executed. Practically it means that any
-  // variable lookup done from such function is allowed only to succeed on
-  // already-defined global variables.
+  // Toplevel env.
   struct hll_obj *global_env;
 
   uint32_t error_count;

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
 #include "hll_obj.h"
+#include "hll_util.h"
 
 static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;
@@ -67,11 +69,10 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
   const char *filename = vm->current_filename;
   hll_source_loc loc = get_source_loc(vm->source, offset);
   if (filename != NULL) {
-    snprintf(buffer, sizeof(buffer), "%s:%u:%u: %s\n",
-             filename, loc.line, loc.column, msg);
+    snprintf(buffer, sizeof(buffer), "%s:%u:%u: %s\n", filename, loc.line,
+             loc.column, msg);
   } else {
-    snprintf(buffer, sizeof(buffer), "%u:%u: %s\n",
-             loc.line, loc.column, msg);
+    snprintf(buffer, sizeof(buffer), "%u:%u: %s\n", loc.line, loc.column, msg);
   }
 
   vm->config.error_fn(vm, buffer);
@@ -139,20 +140,18 @@ static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
   return result;
 }
 
-static void print_internal(hll_vm *vm, hll_obj *obj) {
-  FILE *file = stdout;
-
+static void print_internal(hll_vm *vm, hll_obj *obj, FILE *file) {
   switch (obj->kind) {
   case HLL_OBJ_CONS:
     fprintf(file, "(");
     while (obj->kind != HLL_OBJ_NIL) {
       assert(obj->kind == HLL_OBJ_CONS);
-      print_internal(vm, hll_unwrap_car(obj));
+      print_internal(vm, hll_unwrap_car(obj), file);
 
       hll_obj *cdr = hll_unwrap_cdr(obj);
       if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
         fprintf(file, " . ");
-        print_internal(vm, cdr);
+        print_internal(vm, cdr, file);
         break;
       } else if (cdr->kind != HLL_OBJ_NIL) {
         fprintf(file, " ");
@@ -181,7 +180,7 @@ static void print_internal(hll_vm *vm, hll_obj *obj) {
 }
 
 static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
-  print_internal(vm, hll_unwrap_car(args));
+  print_internal(vm, hll_unwrap_car(args), stdout);
   printf("\n");
   return vm->nil;
 }
@@ -244,6 +243,53 @@ static void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "/", builtin_div);
 }
 
+// Denotes situation that should be impossible in correctly compiled code.
+static void internal_compiler_error(hll_vm *vm, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  char buffer[4096];
+  size_t a = snprintf(buffer, sizeof(buffer), "INTERNAL ERROR: ");
+  vsnprintf(buffer + a, sizeof(buffer) - a, fmt, args);
+  va_end(args);
+  // TODO: Line information
+  hll_report_error(vm, 0, 0, buffer);
+}
+
+static void runtime_error(hll_vm *vm, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  char buffer[4096];
+  size_t a = snprintf(buffer, sizeof(buffer), "Runtime error: ");
+  vsnprintf(buffer + a, sizeof(buffer) - a, fmt, args);
+  va_end(args);
+  // TODO: Line information
+  hll_report_error(vm, 0, 0, buffer);
+}
+
+static void dump_stack_trace(hll_vm *vm, hll_bytecode *bytecode, uint8_t *ip,
+                             hll_obj **stack) {
+  const char *file_dump_name = "/tmp/hololisp.dump";
+  FILE *f = fopen(file_dump_name, "w");
+  assert(f != NULL);
+
+  fprintf(f, "program dump:\n");
+  fprintf(f, "stack:\n");
+  size_t stack_size = hll_sb_len(stack);
+  for (size_t i = 0; i < stack_size; ++i) {
+    fprintf(f, " %zu: ", i);
+    print_internal(vm, stack[i], f);
+    fprintf(f, "\n");
+  }
+  fprintf(f, "failed instruction byte: %lx\n",
+          (long)(size_t)(ip - bytecode->ops));
+  fprintf(f, "whole program disassembly:\n");
+  hll_dump_bytecode(f, bytecode);
+
+  fclose(f);
+
+  printf("wrote trace to %s\n", file_dump_name);
+}
+
 bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
                             bool print_result) {
   (void)vm;
@@ -265,7 +311,12 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     case HLL_BYTECODE_CONST: {
       uint16_t idx = (ip[0] << 8) | ip[1];
       ip += 2;
-      assert(idx < hll_sb_len(bytecode->constant_pool));
+      if (HLL_UNLIKELY(idx < hll_sb_len(bytecode->constant_pool))) {
+        internal_compiler_error(
+            vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
+            idx, hll_sb_len(bytecode->constant_pool));
+        goto bail;
+      }
       hll_obj *value = bytecode->constant_pool[idx];
       hll_sb_push(stack, value);
     } break;
@@ -279,7 +330,14 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       if ((*headp)->kind == HLL_OBJ_NIL) {
         *headp = *tailp = cons;
       } else {
-        assert((*tailp)->kind == HLL_OBJ_CONS);
+        if (HLL_UNLIKELY((*tailp)->kind != HLL_OBJ_CONS)) {
+          runtime_error(vm, "tail operand of APPEND is not a cons (found %s)",
+                        hll_get_object_kind_str((*tailp)->kind));
+#if HLL_DEBUG
+          dump_stack_trace(bytecode, ip, stack);
+#endif
+          goto bail;
+        }
         hll_unwrap_cons(*tailp)->cdr = cons;
         *tailp = cons;
       }
@@ -371,9 +429,10 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     printf("len: %zu\n", hll_sb_len(stack));
     assert(hll_sb_len(stack) == 1);
     hll_obj *obj = stack[0];
-    print_internal(vm, obj);
+    print_internal(vm, obj, stdout);
   }
 
+bail:
   hll_sb_free(stack);
 
   return HLL_RESULT_OK;
