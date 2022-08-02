@@ -1035,10 +1035,6 @@ static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
   }
 }
 
-static void compile_toplevel_cons(hll_compiler *compiler, hll_ast *ast) {
-  compile_eval_expression(compiler, ast);
-}
-
 void hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
   // Iterate toplevel
   for (hll_ast *obj = ast; obj->kind != HLL_AST_NIL; obj = obj->as.cons.cdr) {
@@ -1052,7 +1048,7 @@ void hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
       compile_expression(compiler, toplevel);
       break;
     case HLL_AST_CONS:
-      compile_toplevel_cons(compiler, toplevel);
+      compile_eval_expression(compiler, toplevel);
       break;
     default:
       assert(!"Unreachable");
