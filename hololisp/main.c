@@ -77,6 +77,12 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
   while (cursor < argc) {
     char const *opt = argv[cursor++];
     assert(opt != NULL);
+    if (*opt != '-') {
+      opts->mode = HLL_MODE_ESCRIPT;
+      opts->str = opt;
+      continue;
+    }
+
     if (strcmp(opt, "-e") == 0) {
       if (cursor >= argc) {
         fprintf(stderr, "-e expects 1 parameter\n");
@@ -129,7 +135,7 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    hll_interpret_result result = hll_interpret(vm, line);
+    hll_interpret_result result = hll_interpret(vm, "repl", line);
     manage_result(result);
   }
 
@@ -151,7 +157,7 @@ static bool execute_script(char const *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, file_contents);
+  hll_interpret_result result = hll_interpret(vm, filename, file_contents);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -160,7 +166,7 @@ static bool execute_script(char const *filename) {
 
 static bool execute_string(char const *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, str);
+  hll_interpret_result result = hll_interpret(vm, "cli", str);
   hll_delete_vm(vm);
 
   return manage_result(result);
