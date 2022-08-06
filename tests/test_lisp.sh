@@ -115,4 +115,7 @@ run_test "list" "(1)" "(list 1)"
 run_test "list" "()" "(list)"
 run_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 
+run_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
+run_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
+
 exit $failed
