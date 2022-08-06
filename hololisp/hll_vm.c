@@ -381,8 +381,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       hll_sb_push(stack, cdr);
     } break;
     case HLL_BYTECODE_SETCAR: {
-      hll_obj *cons = hll_sb_pop(stack);
       hll_obj *car = hll_sb_pop(stack);
+      hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
         runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
                       hll_get_object_kind_str(cons->kind));
@@ -391,8 +391,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       hll_unwrap_cons(cons)->car = car;
     } break;
     case HLL_BYTECODE_SETCDR: {
-      hll_obj *cons = hll_sb_pop(stack);
       hll_obj *cdr = hll_sb_pop(stack);
+      hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
         runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
                       hll_get_object_kind_str(cons->kind));
@@ -407,10 +407,13 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
   }
 
   if (print_result) {
-    printf("len: %zu\n", hll_sb_len(stack));
-    assert(hll_sb_len(stack) == 1);
+    if (hll_sb_len(stack) != 1) {
+      internal_compiler_error(vm, "stack is empty (expected value to print)");
+      hll_dump_bytecode(stderr, bytecode);
+    }
     hll_obj *obj = stack[0];
     hll_print(vm, obj, stdout);
+    printf("\n"); 
   }
 
 bail:

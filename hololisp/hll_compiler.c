@@ -865,14 +865,17 @@ static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
     } else {                                                                   \
       compile_eval_expression(compiler, args->as.cons.car);                    \
       const char *ops = #_lower;                                               \
-      const char *op = ops + sizeof(#_lower) - 1;                              \
-      while (op >= ops) {                                                      \
+      const char *op = ops + sizeof(#_lower) - 2;                              \
+      for (;;) {                                                               \
         if (*op == 'a') {                                                      \
           emit_op(compiler->bytecode, HLL_BYTECODE_CAR);                       \
         } else if (*op == 'd') {                                               \
           emit_op(compiler->bytecode, HLL_BYTECODE_CDR);                       \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
+        }                                                                      \
+        if (op == ops) {                                                       \
+          break;                                                               \
         }                                                                      \
         --op;                                                                  \
       }                                                                        \
@@ -906,7 +909,8 @@ static hll_location_form get_location_form(hll_ast *location) {
   return kind;
 }
 
-static void compile_set_location(hll_compiler *compiler, hll_ast *location) {
+static void compile_set_location(hll_compiler *compiler, hll_ast *location,
+                                 hll_ast *value) {
   hll_location_form kind = get_location_form(location);
   switch (kind) {
   case HLL_LOC_NONE:
@@ -915,16 +919,19 @@ static void compile_set_location(hll_compiler *compiler, hll_ast *location) {
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
     emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
   case HLL_LOC_FORM_CAR:
     assert(ast_list_length(location) == 2);
     compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
+    compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
     break;
   case HLL_LOC_FORM_CDR:
     assert(ast_list_length(location) == 2);
     compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
+    compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
   }
@@ -941,8 +948,7 @@ static void compile_setf(hll_compiler *compiler, hll_ast *args) {
       value = value->as.cons.car;
     }
 
-    compile_eval_expression(compiler, value);
-    compile_set_location(compiler, location);
+    compile_set_location(compiler, location, value);
   }
 }
 

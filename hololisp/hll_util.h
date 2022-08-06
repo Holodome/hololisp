@@ -21,13 +21,13 @@
 #else
 #error Not implemented
 #endif
-#else  // HLL_DEBUG
+#else // HLL_DEBUG
 #if defined(__GNUC__) || defined(__clang__)
 #define HLL_UNREACHABLE __builtin_unreachable()
 #else
 #error Not implemented
 #endif
-#endif  // HLL_DEBUG
+#endif // HLL_DEBUG
 
 #if defined(__GNUC__) || defined(__clang__)
 #define HLL_ATTR(...) __attribute__((__VA_ARGS__))

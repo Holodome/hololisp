@@ -323,8 +323,8 @@ static void test_compiler_compiles_setf_symbol(void) {
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_LET, HLL_BYTECODE_POP,
                         // setf
-                        HLL_BYTECODE_TRUE, HLL_BYTECODE_CONST, 0x00, 0x00,
-                        HLL_BYTECODE_FIND, HLL_BYTECODE_SETCDR,
+                        HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND,
+                        HLL_BYTECODE_TRUE, HLL_BYTECODE_SETCDR,
                         HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
@@ -340,10 +340,9 @@ static void test_compiler_compiles_setf_cdr(void) {
       HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
       HLL_BYTECODE_LET, HLL_BYTECODE_POP,
       // setf
+      HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
       HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST, 0x00, 0x02,
       HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
-
-      HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
 
       HLL_BYTECODE_SETCDR, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
@@ -535,10 +534,10 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_complex_arithmetic_operation),
              TCASE(test_compiler_compiles_if),
              TCASE(test_compiler_compiles_quote),
-//             TCASE(test_lambda_application_working),
+             //             TCASE(test_lambda_application_working),
              TCASE(test_compiler_compiles_let),
              TCASE(test_compiler_compiles_let_with_body),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
-//             TCASE(test_compiler_basic_special_forms),
+             //             TCASE(test_compiler_basic_special_forms),
              {NULL, NULL}};

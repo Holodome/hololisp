@@ -50,7 +50,7 @@ static hll_obj *builtin_div(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_mul(hll_vm *vm, hll_obj *args) {
   hll_num result = 1;
-  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
+  for (hll_obj *obj = args; obj->kind == HLL_OBJ_CONS;
        obj = hll_unwrap_cdr(obj)) {
     hll_obj *value = hll_unwrap_car(obj);
     // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
@@ -90,7 +90,7 @@ static hll_obj *builtin_num_eq(hll_vm *vm, hll_obj *args) {
   for (hll_obj *obj1 = args; obj1->kind == HLL_OBJ_CONS;
        obj1 = hll_unwrap_cdr(obj1)) {
     hll_obj *num1 = hll_unwrap_car(obj1);
-//    CHECK_TYPE(num1, HLL_OBJ_INT, "arguments");
+    //    CHECK_TYPE(num1, HLL_OBJ_INT, "arguments");
 
     for (hll_obj *obj2 = hll_unwrap_cdr(obj1); obj2->kind == HLL_OBJ_CONS;
          obj2 = hll_unwrap_cdr(obj2)) {
@@ -99,7 +99,7 @@ static hll_obj *builtin_num_eq(hll_vm *vm, hll_obj *args) {
       }
 
       hll_obj *num2 = hll_unwrap_car(obj2);
-//      CHECK_TYPE(num2, HLL_OBJ_INT, "arguments");
+      //      CHECK_TYPE(num2, HLL_OBJ_INT, "arguments");
 
       if (num1->as.num != num2->as.num) {
         return vm->nil;
@@ -114,12 +114,12 @@ static hll_obj *builtin_num_gt(hll_vm *vm, hll_obj *args) {
   //  CHECK_HAS_ATLEAST_N_ARGS(1);
 
   hll_obj *prev = hll_unwrap_car(args);
-//  CHECK_TYPE(prev, HLL_OBJ_INT, "arguments");
+  //  CHECK_TYPE(prev, HLL_OBJ_INT, "arguments");
 
   for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
        obj = hll_unwrap_cdr(obj)) {
     hll_obj *num = hll_unwrap_car(obj);
-//    CHECK_TYPE(num, HLL_OBJ_INT, "arguments");
+    //    CHECK_TYPE(num, HLL_OBJ_INT, "arguments");
 
     if (prev->as.num <= num->as.num) {
       return vm->nil;
@@ -135,12 +135,12 @@ static hll_obj *builtin_num_ge(hll_vm *vm, hll_obj *args) {
   //  CHECK_HAS_ATLEAST_N_ARGS(1);
 
   hll_obj *prev = hll_unwrap_car(args);
-//  CHECK_TYPE(prev, HLL_OBJ_INT, "arguments");
+  //  CHECK_TYPE(prev, HLL_OBJ_INT, "arguments");
 
   for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind != HLL_OBJ_NIL;
        obj = hll_unwrap_cdr(obj)) {
     hll_obj *num = hll_unwrap_car(obj);
-//    CHECK_TYPE(num, HLL_OBJ_INT, "arguments");
+    //    CHECK_TYPE(num, HLL_OBJ_INT, "arguments");
 
     if (prev->as.num < num->as.num) {
       return vm->nil;
