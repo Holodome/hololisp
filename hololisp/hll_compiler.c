@@ -628,7 +628,7 @@ typedef enum {
   // and puts variables there.
   HLL_FORM_LET,
   HLL_FORM_LIST,
-
+  HLL_FORM_CONS,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -650,6 +650,8 @@ static hll_form_kind get_form_kind(char const *symb) {
     kind = HLL_FORM_LET;
   } else if (strcmp(symb, "list") == 0) {
     kind = HLL_FORM_LIST;
+  } else if (strcmp(symb, "cons") == 0) {
+    kind = HLL_FORM_CONS;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -982,6 +984,22 @@ static void compile_list(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
+static void compile_cons(hll_compiler *compiler, hll_ast *args) {
+  if (ast_list_length(args) != 2) {
+    compiler_error(compiler, args, "'cons' expects exactly 2 arguments");
+  } else {
+    hll_ast *car = args->as.cons.car;
+    hll_ast *cdr = args->as.cons.cdr->as.cons.car;
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    compile_eval_expression(compiler, car);
+    emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    compile_eval_expression(compiler, cdr);
+    emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  }
+}
+
 static void compile_form(hll_compiler *compiler, hll_ast *args,
                          hll_form_kind kind) {
   switch (kind) {
@@ -1008,6 +1026,9 @@ static void compile_form(hll_compiler *compiler, hll_ast *args,
     break;
   case HLL_FORM_LIST:
     compile_list(compiler, args->as.cons.cdr);
+    break;
+  case HLL_FORM_CONS:
+    compile_cons(compiler, args->as.cons.cdr);
     break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_FORM_C##_upper##R:                                                  \

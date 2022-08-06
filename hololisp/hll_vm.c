@@ -413,7 +413,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     }
     hll_obj *obj = stack[0];
     hll_print(vm, obj, stdout);
-    printf("\n"); 
+    printf("\n");
   }
 
 bail:
