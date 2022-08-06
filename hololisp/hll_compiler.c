@@ -13,6 +13,7 @@
 #include "hll_mem.h"
 #include "hll_obj.h"
 #include "hll_vm.h"
+#include "hll_util.h"
 
 hll_bytecode *hll_compile(hll_vm *vm, char const *source) {
   hll_memory_arena compilation_arena = {0};
@@ -231,6 +232,7 @@ static inline HLL_lexer_state get_next_state(HLL_lexer_state state,
   return state;
 }
 
+HLL_ATTR(format(printf, 2, 3))
 static void lexer_error(hll_lexer *lexer, char const *fmt, ...) {
   lexer->has_errors = true;
   if (lexer->vm == NULL) {
@@ -358,6 +360,7 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
   reader->quote_symb->as.symb.length = strlen("quote");
 }
 
+HLL_ATTR(format(printf, 2, 3))
 static void reader_error(hll_reader *reader, char const *fmt, ...) {
   reader->has_errors = true;
   if (reader->vm == NULL) {
@@ -549,6 +552,7 @@ static size_t ast_list_length(hll_ast *ast) {
   return length;
 }
 
+HLL_ATTR(format(printf, 3, 4))
 static void compiler_error(hll_compiler *compiler, hll_ast *ast,
                            char const *fmt, ...) {
   compiler->has_errors = true;

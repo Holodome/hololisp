@@ -183,6 +183,7 @@ void hll_print(hll_vm *vm, hll_obj *obj, void *file) {
 }
 
 // Denotes situation that should be impossible in correctly compiled code.
+HLL_ATTR(format(printf, 2, 3))
 static void internal_compiler_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -194,6 +195,7 @@ static void internal_compiler_error(hll_vm *vm, const char *fmt, ...) {
   hll_report_error(vm, 0, 0, buffer);
 }
 
+HLL_ATTR(format(printf, 2, 3))
 static void runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -330,7 +332,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
                                   "jump %p, became %p, bound %p)",
                                   (void *)(ip - offset),
                                   (void *)(uintptr_t)offset, (void *)ip,
-                                  &hll_sb_last(bytecode->ops));
+                                  (void *)&hll_sb_last(bytecode->ops));
           goto bail;
         }
       }
@@ -399,7 +401,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       hll_unwrap_cons(cons)->cdr = cdr;
     } break;
     default:
-      assert(!"Unknown instruction");
+      internal_compiler_error(vm, "Unknown instruction: %" PRIx8, op);
       break;
     }
   }
