@@ -1,4 +1,4 @@
-#hololisp
+# hololisp
 
 [![codecov](https://codecov.io/gh/Holodome/hololisp/branch/master/graph/badge.svg?token=U41DRI0GU9)](https://codecov.io/gh/Holodome/hololisp)
 [![Build and Test](https://github.com/Holodome/hololisp/actions/workflows/test.yml/badge.svg)](https://github.com/Holodome/hololisp/actions/workflows/test.yml)
@@ -10,16 +10,14 @@ Simple minimal lisp dialect runtime.
 The goal is to provide simple embeddable version of lisp that can be used as a playground for exploring various interpreter design and programming languages' ideas.
 C was chosen because of its ease of use and integration into other systems.
 
-One of the most important points in designing this project is simplicity. It is easy to get overwhelmed by features that are usually implemented in other lisp dialects. These may include JIT, static compilation, different kinds of memory management techniques, code optimization and others. It has been decided that *hololisp* should support only minimal possible features that allow for its usage.
-
-To clarify, this means that we do only interpretation of the source code but with optimization of tail calls and does not support any kind of compilation.
+This goal of this project is to be optimized for speed on modern computers.
 
 ## Features 
 
 hololisp implements some common standard functions and features found in most popular lisp dialects, like [Common Lisp](https://common-lisp.net/) and [Scheme](https://www.scheme.com/tspl4/).
 
 This lisp implementation supports basic data types:
-* Integers
+* Numbers (internally represented as doubles)
 * Conses
 * Symbols
 
@@ -30,6 +28,8 @@ Language features include:
 * *if* conditionals
 * Primitive functions (+, =, list and others)
 * User-defined functions
+* Bytecode compilation and interpretation 
+* Runtime evaluation
 
 ## Compile
 
@@ -57,7 +57,7 @@ make test DEBUG=1 COV=1
 
 ## Usage
 
-Program can be run in two modes: Interactive REPL traditional to lisp interpreters and executing scripts.
+Program can be run in three modes: Interactive REPL traditional to lisp interpreters, executing scripts, and executing command strings.
 To execute script pass its name to the program executable:
 
 ```bash
@@ -74,6 +74,13 @@ hololisp> x
 100
 hololisp> (+ x (* x 100))
 10100
+```
+
+To execute command string pass it after *-e* flag:
+
+```shell
+$ hololisp -e "(+ 1 2)"
+3
 ```
 
 Examples can be found in the '*examples*' folder.
