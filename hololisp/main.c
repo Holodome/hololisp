@@ -198,10 +198,12 @@ static bool execute(hll_options *opts) {
   return error;
 }
 
-#ifdef __unix__
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 
 #include <unistd.h>
 #define HLL_IS_STDIN_A_TTY isatty(STDIN_FILENO)
+
+#error here
 
 #elif defined(_WIN32)
 
