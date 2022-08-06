@@ -1061,11 +1061,11 @@ static void compile_defun(hll_compiler *compiler, hll_ast *args) {
     return;
   }
 
-//  hll_ast *name = args->as.cons.car;
-//  args = args->as.cons.cdr;
-//  hll_ast *params = args->as.cons.car;
-//  args = args->as.cons.cdr;
-//  hll_ast *body = args->as.cons.cdr;
+  //  hll_ast *name = args->as.cons.car;
+  //  args = args->as.cons.cdr;
+  //  hll_ast *params = args->as.cons.car;
+  //  args = args->as.cons.cdr;
+  //  hll_ast *body = args->as.cons.cdr;
 }
 
 static void compile_form(hll_compiler *compiler, hll_ast *args,
