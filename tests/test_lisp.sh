@@ -115,13 +115,7 @@ run_test "list" "(1)" "(list 1)"
 run_test "list" "()" "(list)"
 run_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 
-run_test "lambda" "t" "((lambda () t))"
-run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
-
-run_test "defun" "12" "(defun double (x) (+ x x)) (double 6)"
-run_test "defun" "15" "(defun f (x y z) (+ x y z)) (f 3 5 7)"
-
-run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
-  ((lambda (var) (call (lambda () var))) 3)"
+run_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
+run_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
 
 exit $failed

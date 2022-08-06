@@ -3,4 +3,4 @@
 set -x
 
 # shellcheck disable=SC2046
-clang-format -i --style=file:.clang-format $(find . -type f -name "*.c" -o -name "*.h")
+clang-format -i --style=file:.clang-format $(find hololisp -type f -name "*.c" -o -name "*.h")

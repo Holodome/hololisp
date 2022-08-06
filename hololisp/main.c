@@ -1,188 +1,234 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "hll_error_reporter.h"
-#include "hll_lexer.h"
-#include "hll_lisp.h"
-#include "hll_reader.h"
-#include "hll_utils.h"
+#include "hll_hololisp.h"
+
+typedef enum {
+  HLL_MODE_EREPL,
+  HLL_MODE_EREPL_NO_TTY,
+  HLL_MODE_ESCRIPT,
+  HLL_MODE_ESTRING,
+  HLL_MODE_HELP,
+  HLL_MODE_VERSION
+} hll_mode;
 
 typedef struct {
-    char const *filename;
-} run_opts;
+  hll_mode mode;
+  const char *str;
+} hll_options;
 
-static void
-help(void) {
-    printf(
-        "OVERVIEW: toy lisp interpreter\n"
-        "\n"
-        "USAGE: hololisp file\n");
+static char *read_entire_file(const char *filename) {
+  FILE *f = fopen(filename, "r");
+  if (f == NULL) {
+    return NULL;
+  }
+
+  if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);
+    return NULL;
+  }
+
+  int file_size = ftell(f);
+  if (file_size < 0) {
+    fclose(f);
+    return NULL;
+  }
+
+  rewind(f);
+
+  char *buffer = malloc(file_size + 1);
+  if (buffer == NULL) {
+    fclose(f);
+    return NULL;
+  }
+
+  if (fread(buffer, file_size, 1, f) != 1) {
+    free(buffer);
+    fclose(f);
+    return NULL;
+  }
+
+  buffer[file_size] = '\0';
+
+  if (fclose(f) != 0) {
+    free(buffer);
+    return NULL;
+  }
+
+  return buffer;
 }
 
-static void
-version(void) {
-    printf("hololisp version 0.0.1\n");
+static void print_usage(FILE *f) {
+  fprintf(f, "usage: hololisp [options] [script]\n"
+             "Available options are:\n"
+             "  -e stat   Execute string 'stat'\n"
+             "  -v        Show version information\n"
+             "  -h        Show this message\n");
 }
 
-static bool
-cli_params(uint32_t argc, char const **argv, run_opts *opts) {
-    bool result = true;
+static void print_version(void) { printf("hololisp 1.0.0\n"); }
 
-    uint32_t cursor = 1;
-    while (cursor < argc) {
-        char const *option = argv[cursor++];
-        if (*option != '-') {
-            opts->filename = option;
-            continue;
-        }
-
-        if (!strcmp(option, "--version") || !strcmp(option, "-v")) {
-            version();
-            break;
-        } else if (!strcmp(option, "--help") || !strcmp(option, "-h")) {
-            help();
-            break;
-        } else {
-            fprintf(stderr, "Unknown option '%s'\n", option);
-            result = false;
-            break;
-        }
+static bool parse_cli_args(hll_options *opts, uint32_t argc,
+                           const char **argv) {
+  uint32_t cursor = 0;
+  while (cursor < argc) {
+    const char *opt = argv[cursor++];
+    assert(opt != NULL);
+    if (*opt != '-') {
+      opts->mode = HLL_MODE_ESCRIPT;
+      opts->str = opt;
+      continue;
     }
 
-    return result;
+    if (strcmp(opt, "-e") == 0) {
+      if (cursor >= argc) {
+        fprintf(stderr, "-e expects 1 parameter\n");
+        return true;
+      } else {
+        opts->mode = HLL_MODE_ESTRING;
+        opts->str = argv[cursor++];
+      }
+    } else if (strcmp(opt, "-v") == 0) {
+      opts->mode = HLL_MODE_VERSION;
+    } else if (strcmp(opt, "-h") == 0) {
+      opts->mode = HLL_MODE_HELP;
+    } else {
+      fprintf(stderr, "Unknown option '%s'\n", opt);
+      print_usage(stderr);
+      return true;
+    }
+  }
+
+  return false;
 }
 
-static int
-execute_file(char const *filename) {
-    FILE *file;
-    if (hll_open_file(&file, filename, "r") != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto error;
+static bool manage_result(hll_interpret_result result) {
+  bool error = false;
+  switch (result) {
+  case HLL_RESULT_COMPILE_ERROR:
+    fprintf(stderr, "Compile error\n");
+    error = true;
+    break;
+  case HLL_RESULT_RUNTIME_ERROR:
+    fprintf(stderr, "Runtime error\n");
+    error = true;
+    break;
+  case HLL_RESULT_OK:
+    break;
+  }
+
+  return error;
+}
+
+static bool execute_repl(bool tty) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+
+  for (;;) {
+    if (tty) {
+      printf("hololisp> ");
+    }
+    char line[4096];
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+      break;
     }
 
-    size_t fsize;
-    if (hll_get_file_size(file, &fsize) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to open file '%s'\n", filename);
-        goto close_file_error;
-    }
+    hll_interpret_result result = hll_interpret(vm, "repl", line);
+    manage_result(result);
+  }
 
-    char *file_contents = calloc(fsize, 1);
-    if (fread(file_contents, fsize, 1, file) != 1) {
-        fprintf(stderr, "Failed to read file '%s'\n", filename);
-        goto close_file_error;
-    }
+  hll_delete_vm(vm);
 
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-        goto error;
-    }
+  return false;
+}
 
-    hll_error_reporter reporter = { 0 };
-    hll_init_error_reporter(&reporter);
-    hll_ctx ctx = hll_create_ctx(&reporter);
+static bool execute_script(const char *filename) {
+  if (filename == NULL) {
+    fprintf(stderr, "No filename provided");
+    return true;
+  }
 
-    enum { BUFFER_SIZE = 4096 };
-    char buffer[BUFFER_SIZE];
-    hll_lexer lexer = hll_lexer_create(file_contents, buffer, BUFFER_SIZE);
-    hll_reader reader = hll_reader_create(&lexer, &ctx);
-    reader.filename = filename;
+  char *file_contents = read_entire_file(filename);
+  if (file_contents == NULL) {
+    fprintf(stderr, "failed to read file '%s'\n", filename);
+    return true;
+  }
 
-#if 0
-    for (;;) {
-        hll_lex_result res = hll_lexer_peek(&lexer);
-        if (res || lexer.token_kind == HLL_TOK_EOF) {
-            break;
-        }
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_interpret_result result = hll_interpret(vm, filename, file_contents);
+  hll_delete_vm(vm);
+  free(file_contents);
 
-        printf("%u: %u %u\n", lexer.token_kind, lexer.token_line,
-               lexer.token_column);
-        hll_lexer_eat(&lexer);
-    }
+  return manage_result(result);
+}
+
+static bool execute_string(const char *str) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_interpret_result result = hll_interpret(vm, "cli", str);
+  hll_delete_vm(vm);
+
+  return manage_result(result);
+}
+
+static bool execute(hll_options *opts) {
+  bool error = false;
+  switch (opts->mode) {
+  case HLL_MODE_EREPL:
+    error = execute_repl(true);
+    break;
+  case HLL_MODE_EREPL_NO_TTY:
+    error = execute_repl(false);
+    break;
+  case HLL_MODE_ESCRIPT:
+    error = execute_script(opts->str);
+    break;
+  case HLL_MODE_ESTRING:
+    error = execute_string(opts->str);
+    break;
+  case HLL_MODE_HELP:
+    print_usage(stdout);
+    break;
+  case HLL_MODE_VERSION:
+    print_version();
+    break;
+  }
+
+  return error;
+}
+
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+
+#include <unistd.h>
+#define HLL_IS_STDIN_A_TTY isatty(STDIN_FILENO)
+
+#elif defined(_WIN32)
+
+#include <io.h>
+#include <windows.h>
+
+#define HLL_IS_STDIN_A_TTY _isatty(_fileno(stdin))
+
 #else
-    for (;;) {
-        hll_obj *obj;
-        hll_source_location current_location = { 0 };
-        hll_reader_get_source_loc(&reader, &current_location);
-        hll_read_result parse_result = hll_read(&reader, &obj);
 
-        if (parse_result == HLL_READ_EOF) {
-            break;
-        } else if (parse_result != HLL_READ_OK) {
-            break;
-        } else {
-            hll_eval(&ctx, obj);
-            if (ctx.reporter->has_error) {
-                hll_report_error_verbose(ctx.reporter, &current_location,
-                                         "Eval failed");
-                break;
-            }
-        }
-    }
+#define HLL_IS_STDIN_A_TTY 1
+
 #endif
 
-    return EXIT_SUCCESS;
-close_file_error:
-    if (hll_close_file(file) != HLL_FS_IO_OK) {
-        fprintf(stderr, "Failed to close file '%s'\n", filename);
-    }
-error:
+int main(int argc, const char **argv) {
+  hll_options opts = {0};
+  if (parse_cli_args(&opts, argc - 1, argv + 1)) {
     return EXIT_FAILURE;
-}
+  }
 
-static int
-execute_repl(void) {
-    hll_error_reporter reporter = { 0 };
-    hll_init_error_reporter(&reporter);
-    hll_ctx ctx = hll_create_ctx(&reporter);
+  if (opts.mode == HLL_MODE_EREPL && !HLL_IS_STDIN_A_TTY) {
+    opts.mode = HLL_MODE_EREPL_NO_TTY;
+  }
 
-    enum { BUFFER_SIZE = 4096 };
-    char buffer[BUFFER_SIZE];
-    char line_buffer[BUFFER_SIZE];
+  if (execute(&opts)) {
+    return EXIT_FAILURE;
+  }
 
-    int is_interactive = is_stdin_interactive();
-
-    for (;;) {
-        if (is_interactive) {
-            printf("hololisp> ");
-        }
-        // TODO: Overflow
-        if (fgets(line_buffer, BUFFER_SIZE, stdin) == NULL) {
-            break;
-        }
-
-        hll_lexer lexer = hll_lexer_create(line_buffer, buffer, BUFFER_SIZE);
-        hll_reader reader = hll_reader_create(&lexer, &ctx);
-
-        for (;;) {
-            hll_obj *obj;
-            hll_read_result parse_result = hll_read(&reader, &obj);
-
-            if (parse_result == HLL_READ_EOF) {
-                break;
-            } else if (parse_result != HLL_READ_OK) {
-                break;
-            } else {
-                hll_print(&ctx, stdout, hll_eval(&ctx, obj));
-                printf("\n");
-            }
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
-
-int
-main(int argc, char const **argv) {
-    run_opts opts = { 0 };
-    if (!cli_params(argc, argv, &opts)) {
-        return EXIT_FAILURE;
-    }
-
-    if (!opts.filename) {
-        return execute_repl();
-    } else {
-        return execute_file(opts.filename);
-    }
+  return EXIT_SUCCESS;
 }

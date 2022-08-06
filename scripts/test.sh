@@ -41,7 +41,7 @@ for unit_test in $unit_test_files ; do
     process_test "$unit_test" '[ OK ]' "[ FAILED ]"
 done
 
-for script in $test_script_files ; do 
+for script in $test_script_files ; do
     process_test "$script" "ok" "[ERROR]"
 done
 

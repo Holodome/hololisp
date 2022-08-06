@@ -1,7 +1,6 @@
 SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
-LIB = $(OUT_DIR)/hololisp.a
 CFLAGS = -O2
 
 ifneq (,$(COV))
@@ -9,36 +8,31 @@ ifneq (,$(COV))
 endif 
 # To separate CLI-settable parameters from constant. These are constant
 LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
-LOCAL_LDFLAGS = -pthread -lm
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
 ifneq (,$(DEBUG))
-	CFLAGS=-g
+	CFLAGS=-g -DHLL_DEBUG
 endif 
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
-OBJS_BUT_MAIN = $(filter-out $(OUT_DIR)/main.o, $(OBJS))
 
 #
 # Program rules
 #
 
-all: $(OUT_DIR) $(TARGET) tools
+all: $(OUT_DIR) $(TARGET)
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
 
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
-$(TARGET): $(OBJS) 
-	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LOCAL_LDFLAGS) $(LDFLAGS)
+$(TARGET): $(OBJS)
+	$(CC) $(COVERAGE_FLAGS) -o $@ $(LDFLAGS) $^
 
-$(LIB): $(OBJS_BUT_MAIN)
-	ar rcs $@ $^
-
-$(OUT_DIR)/%.o: $(SRC_DIR)/%.c 
+$(OUT_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
 
 clean:
@@ -74,14 +68,4 @@ test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
 
-
-FORMATTER = $(OUT_DIR)/hololisp-format
-FORMATTER_DIR = tools/formatter
-FORMATTER_SRCS = $(wildcard $(FORMATTER_DIR)/*.c)
-
-$(FORMATTER): $(FORMATTER_SRCS) $(LIB)
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -o $@ $^
-
-tools: $(FORMATTER)
-
-.PHONY: all test clean tools
+.PHONY: all test clean
