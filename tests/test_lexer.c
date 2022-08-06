@@ -146,7 +146,7 @@ static void test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
 }
 
 static void test_lexer_parses_comments(void) {
-  char const *data = "hello ; this is comment\n"
+  const char *data = "hello ; this is comment\n"
                      "world ; this is comment too";
   hll_lexer lexer;
   hll_lexer_init(&lexer, data, NULL);

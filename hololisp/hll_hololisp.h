@@ -19,7 +19,7 @@ typedef double hll_num;
 // (setting function to NULL), as well as to provide configurability options.
 typedef void hll_error_fn(struct hll_vm *vm, const char *text);
 
-typedef void hll_write_fn(struct hll_vm *vm, char const *text);
+typedef void hll_write_fn(struct hll_vm *vm, const char *text);
 
 typedef struct hll_config {
   /// The callback used when user prints message (printf for example).
@@ -65,7 +65,7 @@ struct hll_vm *hll_make_vm(hll_config const *config);
 void hll_delete_vm(struct hll_vm *vm);
 
 /// Runs given source as hololisp code. Name is meta information.
-hll_interpret_result hll_interpret(struct hll_vm *vm, char const *name,
-                                   char const *source);
+hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
+                                   const char *source);
 
 #endif

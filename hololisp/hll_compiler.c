@@ -15,7 +15,7 @@
 #include "hll_util.h"
 #include "hll_vm.h"
 
-hll_bytecode *hll_compile(hll_vm *vm, char const *source) {
+hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
   hll_memory_arena compilation_arena = {0};
   hll_lexer lexer;
   hll_lexer_init(&lexer, source, vm);
@@ -233,7 +233,7 @@ static inline HLL_lexer_state get_next_state(HLL_lexer_state state,
 }
 
 HLL_ATTR(format(printf, 2, 3))
-static void lexer_error(hll_lexer *lexer, char const *fmt, ...) {
+static void lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   lexer->has_errors = true;
   if (lexer->vm == NULL) {
     return;
@@ -248,7 +248,7 @@ static void lexer_error(hll_lexer *lexer, char const *fmt, ...) {
   hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, buffer);
 }
 
-void hll_lexer_init(hll_lexer *lexer, char const *input, hll_vm *vm) {
+void hll_lexer_init(hll_lexer *lexer, const char *input, hll_vm *vm) {
   memset(lexer, 0, sizeof(hll_lexer));
   lexer->vm = vm;
   lexer->cursor = lexer->input = input;
@@ -257,8 +257,8 @@ void hll_lexer_init(hll_lexer *lexer, char const *input, hll_vm *vm) {
 void hll_lexer_next(hll_lexer *lexer) {
   /// Pull it from structure so there is better chance in ends up in
   /// register.
-  char const *cursor = lexer->cursor;
-  char const *token_start = cursor;
+  const char *cursor = lexer->cursor;
+  const char *token_start = cursor;
   HLL_lexer_state state = HLL_LEX_START;
   do {
     // Basic state machine-based lexing.
@@ -361,7 +361,7 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
 }
 
 HLL_ATTR(format(printf, 2, 3))
-static void reader_error(hll_reader *reader, char const *fmt, ...) {
+static void reader_error(hll_reader *reader, const char *fmt, ...) {
   reader->has_errors = true;
   if (reader->vm == NULL) {
     return;
@@ -554,7 +554,7 @@ static size_t ast_list_length(hll_ast *ast) {
 
 HLL_ATTR(format(printf, 3, 4))
 static void compiler_error(hll_compiler *compiler, hll_ast *ast,
-                           char const *fmt, ...) {
+                           const char *fmt, ...) {
   compiler->has_errors = true;
   if (compiler->vm == NULL) {
     return;
@@ -617,7 +617,7 @@ typedef enum {
   // If checks condition and executes one of its arms
   HLL_FORM_IF,
   // Lambda constructs a new function
-  HLL_FORM_LAMBDA,
+  //  HLL_FORM_LAMBDA,
   // Setf sets value pointed to by location defined by first argument
   // as second argument. First argument is of special kind of form,
   // which denotes location and requires special handling from compiler.
@@ -631,19 +631,20 @@ typedef enum {
   HLL_FORM_CONS,
   HLL_FORM_SETCAR,
   HLL_FORM_SETCDR,
+  HLL_FORM_DEFUN,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 } hll_form_kind;
 
-static hll_form_kind get_form_kind(char const *symb) {
+static hll_form_kind get_form_kind(const char *symb) {
   hll_form_kind kind = HLL_FORM_REGULAR;
   if (strcmp(symb, "quote") == 0) {
     kind = HLL_FORM_QUOTE;
   } else if (strcmp(symb, "if") == 0) {
     kind = HLL_FORM_IF;
-  } else if (strcmp(symb, "lambda") == 0) {
-    kind = HLL_FORM_LAMBDA;
+    //  } else if (strcmp(symb, "lambda") == 0) {
+    //    kind = HLL_FORM_LAMBDA;
   } else if (strcmp(symb, "setf") == 0) {
     kind = HLL_FORM_SETF;
   } else if (strcmp(symb, "defvar") == 0) {
@@ -658,6 +659,8 @@ static hll_form_kind get_form_kind(char const *symb) {
     kind = HLL_FORM_SETCAR;
   } else if (strcmp(symb, "setcdr") == 0) {
     kind = HLL_FORM_SETCDR;
+  } else if (strcmp(symb, "defun") == 0) {
+    kind = HLL_FORM_DEFUN;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -715,7 +718,7 @@ static uint16_t add_int_constant_and_return_its_index(hll_compiler *compiler,
 }
 
 static uint16_t add_symbol_and_return_its_index(hll_compiler *compiler,
-                                                char const *symb_,
+                                                const char *symb_,
                                                 size_t length) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     hll_obj *test = compiler->bytecode->constant_pool[i];
@@ -782,6 +785,7 @@ static void compile_if(hll_compiler *compiler, hll_ast *args) {
     compiler_error(compiler, args, "'if' form expects 2 or 3 arguments");
     return;
   }
+
   hll_ast *cond = args->as.cons.car;
   compile_eval_expression(compiler, cond);
   hll_ast *pos_arm = args->as.cons.cdr;
@@ -812,6 +816,7 @@ static void compile_let(hll_compiler *compiler, hll_ast *args) {
                    "'let' special form requires variable declarations");
     return;
   }
+
   emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
   for (hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
        let = let->as.cons.cdr) {
@@ -841,6 +846,7 @@ static void compile_let(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
 }
 
+#if 0
 static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length != 2) {
@@ -864,6 +870,7 @@ static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
   compile_expression(compiler, body);
   emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
 }
+#endif
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
   static void compile_c##_lower##r(hll_compiler *compiler, hll_ast *args) {    \
@@ -953,6 +960,7 @@ static void compile_setf(hll_compiler *compiler, hll_ast *args) {
     compiler_error(compiler, args, "'setf' expects at least 1 argument");
     return;
   }
+
   hll_ast *location = args->as.cons.car;
   hll_ast *value = args->as.cons.cdr;
   if (value->kind == HLL_AST_CONS) {
@@ -1047,45 +1055,66 @@ static void compile_cons(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
+static void compile_defun(hll_compiler *compiler, hll_ast *args) {
+  if (ast_list_length(args) >= 3) {
+    compiler_error(compiler, args, "'defun' expects at least 3 arguments");
+    return;
+  }
+
+//  hll_ast *name = args->as.cons.car;
+//  args = args->as.cons.cdr;
+//  hll_ast *params = args->as.cons.car;
+//  args = args->as.cons.cdr;
+//  hll_ast *body = args->as.cons.cdr;
+}
+
 static void compile_form(hll_compiler *compiler, hll_ast *args,
                          hll_form_kind kind) {
+  if (kind != HLL_FORM_REGULAR) {
+    assert(args->kind == HLL_AST_CONS);
+    args = args->as.cons.cdr;
+  }
+
   switch (kind) {
   case HLL_FORM_REGULAR:
     compile_function_call(compiler, args);
     break;
   case HLL_FORM_QUOTE:
-    compile_quote(compiler, args->as.cons.cdr);
+    compile_quote(compiler, args);
     break;
   case HLL_FORM_IF:
-    compile_if(compiler, args->as.cons.cdr);
+    compile_if(compiler, args);
     break;
   case HLL_FORM_LET:
-    compile_let(compiler, args->as.cons.cdr);
+    compile_let(compiler, args);
     break;
-  case HLL_FORM_LAMBDA:
-    compile_lambda(compiler, args->as.cons.cdr);
-    break;
+    //  case HLL_FORM_LAMBDA:
+    //    compile_lambda(compiler, args);
+    //    break;
   case HLL_FORM_SETF:
-    compile_setf(compiler, args->as.cons.cdr);
+    compile_setf(compiler, args);
     break;
   case HLL_FORM_DEFVAR:
-    compile_defvar(compiler, args->as.cons.cdr);
+    compile_defvar(compiler, args);
     break;
   case HLL_FORM_LIST:
-    compile_list(compiler, args->as.cons.cdr);
+    compile_list(compiler, args);
     break;
   case HLL_FORM_CONS:
-    compile_cons(compiler, args->as.cons.cdr);
+    compile_cons(compiler, args);
     break;
   case HLL_FORM_SETCAR:
-    compile_setcar(compiler, args->as.cons.cdr);
+    compile_setcar(compiler, args);
     break;
   case HLL_FORM_SETCDR:
-    compile_setcdr(compiler, args->as.cons.cdr);
+    compile_setcdr(compiler, args);
+    break;
+  case HLL_FORM_DEFUN:
+    compile_defun(compiler, args);
     break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_FORM_C##_upper##R:                                                  \
-    compile_c##_lower##r(compiler, args->as.cons.cdr);                         \
+    compile_c##_lower##r(compiler, args);                                      \
     break;
     HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR

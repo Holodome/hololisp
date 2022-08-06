@@ -22,7 +22,7 @@ static void test_bytecode_equals(uint8_t *expected, size_t expected_len,
 }
 
 static void test_compiler_compiles_integer(void) {
-  char const *source = "1";
+  const char *source = "1";
   uint8_t bytecode[] = {HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
@@ -31,7 +31,7 @@ static void test_compiler_compiles_integer(void) {
 }
 
 static void test_compiler_compiles_addition(void) {
-  char const *source = "(+ 1 2)";
+  const char *source = "(+ 1 2)";
   uint8_t bytecode[] = {
       // +
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
@@ -50,7 +50,7 @@ static void test_compiler_compiles_addition(void) {
 }
 
 static void test_compiler_compiles_complex_arithmetic_operation(void) {
-  char const *source = "(+ (* 3 5) 2 (/ 2 1))";
+  const char *source = "(+ (* 3 5) 2 (/ 2 1))";
   uint8_t bytecode[] = {
       // +
       HLL_BYTECODE_CONST,
@@ -134,7 +134,7 @@ static void test_compiler_compiles_if(void) {
 5:#B    CONST 0
 6:#E    END
    */
-  char const *source = "(if t 1 0)";
+  const char *source = "(if t 1 0)";
   uint8_t bytecode[] = {// t
                         HLL_BYTECODE_TRUE, HLL_BYTECODE_JN, 0x00, 0x07,
                         // 1
@@ -149,7 +149,7 @@ static void test_compiler_compiles_if(void) {
 }
 
 static void test_compiler_compiles_quote(void) {
-  char const *source = "'(1 2)";
+  const char *source = "'(1 2)";
   uint8_t bytecode[] = {HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
                         // 1
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_APPEND,
@@ -164,7 +164,7 @@ static void test_compiler_compiles_quote(void) {
 
 #if 0
 static void test_lambda_application_working(void) {
-  char const *source = "((lambda (x) (* x 2)) 10)";
+  const char *source = "((lambda (x) (* x 2)) 10)";
   uint8_t bytecode[] = {// (x)
                         HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST,
                         0x00, 0x00, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
@@ -189,7 +189,7 @@ static void test_lambda_application_working(void) {
 #endif
 
 static void test_compiler_compiles_let(void) {
-  char const *source = "(let ((c 2) (a (+ c 1))))";
+  const char *source = "(let ((c 2) (a (+ c 1))))";
   uint8_t bytecode[] = {
       HLL_BYTECODE_PUSHENV,
       // c
@@ -239,7 +239,7 @@ static void test_compiler_compiles_let(void) {
 }
 
 static void test_compiler_compiles_let_with_body(void) {
-  char const *source = "(let ((c 2) (a (+ c 1))) (* c a) a)";
+  const char *source = "(let ((c 2) (a (+ c 1))) (* c a) a)";
   uint8_t bytecode[] = {
       HLL_BYTECODE_PUSHENV,
       // c
@@ -318,7 +318,7 @@ static void test_compiler_compiles_let_with_body(void) {
 }
 
 static void test_compiler_compiles_setf_symbol(void) {
-  char const *source = "(defvar x) (setf x t)";
+  const char *source = "(defvar x) (setf x t)";
   uint8_t bytecode[] = {// defvar x
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_LET, HLL_BYTECODE_POP,
@@ -333,7 +333,7 @@ static void test_compiler_compiles_setf_symbol(void) {
 }
 
 static void test_compiler_compiles_setf_cdr(void) {
-  char const *source = "(defvar x '(1)) (setf (cdr x) '(2))";
+  const char *source = "(defvar x '(1)) (setf (cdr x) '(2))";
   uint8_t bytecode[] = {
       // defvar x
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
@@ -353,7 +353,7 @@ static void test_compiler_compiles_setf_cdr(void) {
 
 #if 0
 static void test_compiler_basic_special_forms(void) {
-  char const *source = "(let ((f (lambda (x) (* x 2))) (y (f 2)))\n"
+  const char *source = "(let ((f (lambda (x) (* x 2))) (y (f 2)))\n"
                        "  (setf f (lambda (x) (f (f x))))\n"
                        "  (defvar l (list (if (= y 4) 1 0) (f 1)))\n"
                        "  (setf (car l) (* 100 (car l))))";

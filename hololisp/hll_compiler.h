@@ -49,15 +49,15 @@ typedef struct {
   // Mark that errors have been encountered during lexing.
   bool has_errors;
   // Current parsing location
-  char const *cursor;
+  const char *cursor;
   // Input start. Used to calculate each token's offset
-  char const *input;
+  const char *input;
   // Next peeked token. Stores results of lexing
   hll_token next;
 } hll_lexer;
 
 // Initializes lexer to given buffer.
-void hll_lexer_init(hll_lexer *lexer, char const *input, struct hll_vm *vm);
+void hll_lexer_init(hll_lexer *lexer, const char *input, struct hll_vm *vm);
 void hll_lexer_next(hll_lexer *lexer);
 
 typedef enum {
@@ -75,7 +75,7 @@ typedef struct hll_ast {
   union {
     hll_num num;
     struct {
-      char const *str;
+      const char *str;
       size_t length;
     } symb;
     struct {
@@ -123,6 +123,6 @@ void hll_compile_ast(hll_compiler *compiler, hll_ast *ast);
 // tree instead of compiling it to AST it the first place, but lisp is
 // different from other simple languages that it has macro system. Macros
 // operate on AST, thus we have to go through the AST step.
-struct hll_bytecode *hll_compile(struct hll_vm *vm, char const *source);
+struct hll_bytecode *hll_compile(struct hll_vm *vm, const char *source);
 
 #endif

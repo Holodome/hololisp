@@ -19,7 +19,7 @@ static void default_error_fn(hll_vm *vm, const char *text) {
   fprintf(stderr, "%s\n", text);
 }
 
-static void default_write_fn(hll_vm *vm, char const *text) {
+static void default_write_fn(hll_vm *vm, const char *text) {
   (void)vm;
   printf("%s", text);
 }
@@ -98,7 +98,7 @@ hll_vm *hll_make_vm(hll_config const *config) {
 
 void hll_delete_vm(hll_vm *vm) { free(vm); }
 
-hll_interpret_result hll_interpret(hll_vm *vm, char const *name,
+hll_interpret_result hll_interpret(hll_vm *vm, const char *name,
                                    const char *source) {
   vm->current_filename = name;
   vm->source = source;

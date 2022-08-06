@@ -28,7 +28,9 @@ typedef struct hll_obj {
 } hll_obj;
 
 typedef struct {
-  uint8_t *ops;
+  const char *name;
+  struct hll_bytecode *bytecode;
+  struct hll_obj *param_names;
 } hll_obj_func;
 
 typedef struct {
@@ -57,7 +59,7 @@ hll_obj *hll_new_nil(struct hll_vm *vm);
 hll_obj *hll_new_true(struct hll_vm *vm);
 
 hll_obj *hll_new_num(struct hll_vm *vm, hll_num num);
-hll_obj *hll_new_symbol(struct hll_vm *vm, char const *symbol, size_t length);
+hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length);
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr);
 hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars);
 hll_obj *hll_new_bind(struct hll_vm *vm,

@@ -17,10 +17,10 @@ typedef enum {
 
 typedef struct {
   hll_mode mode;
-  char const *str;
+  const char *str;
 } hll_options;
 
-static char *read_entire_file(char const *filename) {
+static char *read_entire_file(const char *filename) {
   FILE *f = fopen(filename, "r");
   if (f == NULL) {
     return NULL;
@@ -72,10 +72,10 @@ static void print_usage(FILE *f) {
 static void print_version(void) { printf("hololisp 1.0.0\n"); }
 
 static bool parse_cli_args(hll_options *opts, uint32_t argc,
-                           char const **argv) {
+                           const char **argv) {
   uint32_t cursor = 0;
   while (cursor < argc) {
-    char const *opt = argv[cursor++];
+    const char *opt = argv[cursor++];
     assert(opt != NULL);
     if (*opt != '-') {
       opts->mode = HLL_MODE_ESCRIPT;
@@ -144,7 +144,7 @@ static bool execute_repl(bool tty) {
   return false;
 }
 
-static bool execute_script(char const *filename) {
+static bool execute_script(const char *filename) {
   if (filename == NULL) {
     fprintf(stderr, "No filename provided");
     return true;
@@ -164,7 +164,7 @@ static bool execute_script(char const *filename) {
   return manage_result(result);
 }
 
-static bool execute_string(char const *str) {
+static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
   hll_interpret_result result = hll_interpret(vm, "cli", str);
   hll_delete_vm(vm);
@@ -216,7 +216,7 @@ static bool execute(hll_options *opts) {
 
 #endif
 
-int main(int argc, char const **argv) {
+int main(int argc, const char **argv) {
   hll_options opts = {0};
   if (parse_cli_args(&opts, argc - 1, argv + 1)) {
     return EXIT_FAILURE;

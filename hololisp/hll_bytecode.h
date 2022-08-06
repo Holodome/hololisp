@@ -107,10 +107,16 @@ typedef struct {
 } hll_function;
 
 typedef struct hll_bytecode {
+  // Bytecode dynamic array
   uint8_t *ops;
+  // Constant pool dynamic array
   struct hll_obj **constant_pool;
+  // Functions dynamic array. If bytecode structure refers to function,
+  // this is always empty.
+  struct hll_bytecode **function_pool;
 } hll_bytecode;
 
+void hll_free_bytecode(hll_bytecode *bytecode);
 void hll_dump_bytecode(void *file, hll_bytecode *bytecode);
 
 #endif

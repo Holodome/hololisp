@@ -8,7 +8,7 @@
 #include "hll_vm.h"
 
 const char *hll_get_object_kind_str(hll_object_kind kind) {
-  char const *str = NULL;
+  const char *str = NULL;
   switch (kind) {
   case HLL_OBJ_CONS:
     str = "cons";
@@ -93,7 +93,7 @@ hll_obj *hll_new_num(struct hll_vm *vm, hll_num num) {
   return obj;
 }
 
-hll_obj *hll_new_symbol(struct hll_vm *vm, char const *symbol, size_t length) {
+hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
   (void)vm;
   hll_obj_symb *body = calloc(1, sizeof(hll_obj_symb) + length + 1);
   memcpy(body->symb, symbol, length);
