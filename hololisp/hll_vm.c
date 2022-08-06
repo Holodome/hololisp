@@ -117,11 +117,12 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
   hll_obj *bind = hll_new_bind(vm, bind_func);
   hll_obj *symb = hll_new_symbol(vm, symb_str, strlen(symb_str));
 
-  hll_unwrap_env(vm->env)->vars = hll_new_cons(vm, hll_new_cons(vm, bind, symb),
+  hll_unwrap_env(vm->env)->vars = hll_new_cons(vm, hll_new_cons(vm, symb, bind),
                                                hll_unwrap_env(vm->env)->vars);
 }
 
 static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
+  assert(car->kind == HLL_OBJ_SYMB && "argument is not a symbol");
   hll_obj *result = NULL;
 
   for (hll_obj *env = vm->env; env->kind != HLL_OBJ_NIL && result == NULL;
@@ -130,6 +131,8 @@ static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
          cons->kind != HLL_OBJ_NIL && result == NULL;
          cons = hll_unwrap_cdr(cons)) {
       hll_obj *test = hll_unwrap_car(cons);
+      assert(hll_unwrap_car(test)->kind == HLL_OBJ_SYMB &&
+             "Variable is not a cons of symbol and its value");
       if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)),
                  hll_unwrap_zsymb(car)) == 0) {
         result = test;
@@ -266,29 +269,29 @@ static void runtime_error(hll_vm *vm, const char *fmt, ...) {
   hll_report_error(vm, 0, 0, buffer);
 }
 
-static void dump_stack_trace(hll_vm *vm, hll_bytecode *bytecode, uint8_t *ip,
-                             hll_obj **stack) {
-  const char *file_dump_name = "/tmp/hololisp.dump";
-  FILE *f = fopen(file_dump_name, "w");
-  assert(f != NULL);
-
-  fprintf(f, "program dump:\n");
-  fprintf(f, "stack:\n");
-  size_t stack_size = hll_sb_len(stack);
-  for (size_t i = 0; i < stack_size; ++i) {
-    fprintf(f, " %zu: ", i);
-    print_internal(vm, stack[i], f);
-    fprintf(f, "\n");
-  }
-  fprintf(f, "failed instruction byte: %lx\n",
-          (long)(size_t)(ip - bytecode->ops));
-  fprintf(f, "whole program disassembly:\n");
-  hll_dump_bytecode(f, bytecode);
-
-  fclose(f);
-
-  printf("wrote trace to %s\n", file_dump_name);
-}
+// static void dump_stack_trace(hll_vm *vm, hll_bytecode *bytecode, uint8_t *ip,
+//                              hll_obj **stack) {
+//   const char *file_dump_name = "/tmp/hololisp.dump";
+//   FILE *f = fopen(file_dump_name, "w");
+//   assert(f != NULL);
+//
+//   fprintf(f, "program dump:\n");
+//   fprintf(f, "stack:\n");
+//   size_t stack_size = hll_sb_len(stack);
+//   for (size_t i = 0; i < stack_size; ++i) {
+//     fprintf(f, " %zu: ", i);
+//     print_internal(vm, stack[i], f);
+//     fprintf(f, "\n");
+//   }
+//   fprintf(f, "failed instruction byte: %lx\n",
+//           (long)(size_t)(ip - bytecode->ops));
+//   fprintf(f, "whole program disassembly:\n");
+//   hll_dump_bytecode(f, bytecode);
+//
+//   fclose(f);
+//
+//   printf("wrote trace to %s\n", file_dump_name);
+// }
 
 bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
                             bool print_result) {
@@ -311,7 +314,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     case HLL_BYTECODE_CONST: {
       uint16_t idx = (ip[0] << 8) | ip[1];
       ip += 2;
-      if (HLL_UNLIKELY(idx < hll_sb_len(bytecode->constant_pool))) {
+      if (HLL_UNLIKELY(idx >= hll_sb_len(bytecode->constant_pool))) {
         internal_compiler_error(
             vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
             idx, hll_sb_len(bytecode->constant_pool));
@@ -333,9 +336,6 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
         if (HLL_UNLIKELY((*tailp)->kind != HLL_OBJ_CONS)) {
           runtime_error(vm, "tail operand of APPEND is not a cons (found %s)",
                         hll_get_object_kind_str((*tailp)->kind));
-#if HLL_DEBUG
-          dump_stack_trace(bytecode, ip, stack);
-#endif
           goto bail;
         }
         hll_unwrap_cons(*tailp)->cdr = cons;
@@ -344,10 +344,19 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     } break;
     case HLL_BYTECODE_FIND: {
       hll_obj *symb = hll_sb_pop(stack);
-      assert(symb->kind == HLL_OBJ_SYMB); // TODO throw
+      if (HLL_UNLIKELY(symb->kind != HLL_OBJ_SYMB)) {
+        runtime_error(vm, "operand of FIND is not a symb (found %s)",
+                      hll_get_object_kind_str(symb->kind));
+        goto bail;
+      }
 
       hll_obj *found = hll_find_var(vm, symb);
-      assert(found != NULL); // TODO throw
+      if (HLL_UNLIKELY(found == NULL)) {
+        runtime_error(vm, "failed to find variable '%s' in current scope",
+                      hll_unwrap_zsymb(symb));
+        goto bail;
+      }
+
       hll_sb_push(stack, found);
     } break;
     case HLL_BYTECODE_CALL: {
@@ -379,11 +388,19 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       hll_obj *cond = hll_sb_pop(stack);
       if (cond->kind == HLL_OBJ_NIL) {
         ip += offset;
-        assert(ip <= &hll_sb_last(bytecode->ops));
+        if (HLL_UNLIKELY(ip > &hll_sb_last(bytecode->ops))) {
+          internal_compiler_error(vm,
+                                  "jump is out of bytecode bounds (was %p, "
+                                  "jump %p, became %p, bound %p)",
+                                  (void *)(ip - offset),
+                                  (void *)(uintptr_t)offset, (void *)ip,
+                                  &hll_sb_last(bytecode->ops));
+          goto bail;
+        }
       }
     } break;
     case HLL_BYTECODE_MAKE_LAMBDA:
-      assert(!"Not implemented");
+      assert(!"Not implemented LAMBDA");
       break;
     case HLL_BYTECODE_LET: {
       hll_obj *value = hll_sb_pop(stack);
@@ -397,26 +414,52 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       break;
     case HLL_BYTECODE_CAR: {
       hll_obj *cons = hll_sb_pop(stack);
-      assert(cons->kind == HLL_OBJ_CONS); // TODO throw
-      hll_obj *car = hll_unwrap_car(cons);
+      hll_obj *car;
+      if (cons->kind == HLL_OBJ_NIL) {
+        car = vm->nil;
+      } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+        runtime_error(vm, "CAR operand is not a cons (found %s)",
+                      hll_get_object_kind_str(cons->kind));
+        goto bail;
+      } else {
+        car = hll_unwrap_car(cons);
+        ;
+      }
+
       hll_sb_push(stack, car);
     } break;
     case HLL_BYTECODE_CDR: {
       hll_obj *cons = hll_sb_pop(stack);
-      assert(cons->kind == HLL_OBJ_CONS); // TODO throw
-      hll_obj *car = hll_unwrap_cdr(cons);
-      hll_sb_push(stack, car);
+      hll_obj *cdr;
+      if (cons->kind == HLL_OBJ_NIL) {
+        cdr = vm->nil;
+      } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+        runtime_error(vm, "CDR operand is not a cons (found %s)",
+                      hll_get_object_kind_str(cons->kind));
+        goto bail;
+      } else {
+        cdr = hll_unwrap_cdr(cons);
+      }
+      hll_sb_push(stack, cdr);
     } break;
     case HLL_BYTECODE_SETCAR: {
       hll_obj *cons = hll_sb_pop(stack);
       hll_obj *car = hll_sb_pop(stack);
-      assert(cons->kind == HLL_OBJ_CONS); // TODO throw
+      if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+        runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
+                      hll_get_object_kind_str(cons->kind));
+        goto bail;
+      }
       hll_unwrap_cons(cons)->car = car;
     } break;
     case HLL_BYTECODE_SETCDR: {
       hll_obj *cons = hll_sb_pop(stack);
       hll_obj *cdr = hll_sb_pop(stack);
-      assert(cons->kind == HLL_OBJ_CONS); // TODO throw
+      if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+        runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
+                      hll_get_object_kind_str(cons->kind));
+        goto bail;
+      }
       hll_unwrap_cons(cons)->cdr = cdr;
     } break;
     default:

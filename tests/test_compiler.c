@@ -139,7 +139,7 @@ static void test_compiler_compiles_if(void) {
                         HLL_BYTECODE_TRUE, HLL_BYTECODE_JN, 0x00, 0x09,
                         // 1
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_JN, 0x00, 0x05,
+                        HLL_BYTECODE_JN, 0x00, 0x03,
                         // 0
                         HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
@@ -162,6 +162,7 @@ static void test_compiler_compiles_quote(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
 
+#if 0
 static void test_lambda_application_working(void) {
   char const *source = "((lambda (x) (* x 2)) 10)";
   uint8_t bytecode[] = {// (x)
@@ -184,6 +185,8 @@ static void test_lambda_application_working(void) {
   hll_bytecode *result = hll_compile(vm, source);
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
+
+#endif
 
 static void test_compiler_compiles_let(void) {
   char const *source = "(let ((c 2) (a (+ c 1))))";
@@ -349,6 +352,7 @@ static void test_compiler_compiles_setf_cdr(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
 
+#if 0
 static void test_compiler_basic_special_forms(void) {
   char const *source = "(let ((f (lambda (x) (* x 2))) (y (f 2)))\n"
                        "  (setf f (lambda (x) (f (f x))))\n"
@@ -521,6 +525,8 @@ static void test_compiler_basic_special_forms(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
 
+#endif
+
 #define TCASE(_name)                                                           \
   { #_name, _name }
 
@@ -529,10 +535,10 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_complex_arithmetic_operation),
              TCASE(test_compiler_compiles_if),
              TCASE(test_compiler_compiles_quote),
-             TCASE(test_lambda_application_working),
+//             TCASE(test_lambda_application_working),
              TCASE(test_compiler_compiles_let),
              TCASE(test_compiler_compiles_let_with_body),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
-             TCASE(test_compiler_basic_special_forms),
+//             TCASE(test_compiler_basic_special_forms),
              {NULL, NULL}};

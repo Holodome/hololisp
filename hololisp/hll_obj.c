@@ -4,7 +4,45 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hll_util.h"
 #include "hll_vm.h"
+
+const char *hll_get_object_kind_str(hll_object_kind kind) {
+  char const *str = NULL;
+  switch (kind) {
+  case HLL_OBJ_CONS:
+    str = "cons";
+    break;
+  case HLL_OBJ_SYMB:
+    str = "symb";
+    break;
+  case HLL_OBJ_NIL:
+    str = "nil";
+    break;
+  case HLL_OBJ_NUM:
+    str = "num";
+    break;
+  case HLL_OBJ_BIND:
+    str = "bind";
+    break;
+  case HLL_OBJ_ENV:
+    str = "env";
+    break;
+  case HLL_OBJ_TRUE:
+    str = "true";
+    break;
+  case HLL_OBJ_FUNC:
+    str = "func";
+    break;
+  default:
+#if HLL_DEBUG
+    HLL_UNREACHABLE;
+#endif
+    break;
+  }
+
+  return str;
+}
 
 void free_object(struct hll_vm *vm, struct hll_obj *obj) {
   (void)vm;

@@ -31,6 +31,7 @@ hll_bytecode *hll_compile(hll_vm *vm, char const *source) {
 
   hll_memory_arena_clear(&compilation_arena);
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
+    free(bytecode);
     return NULL;
   }
 
@@ -749,10 +750,10 @@ static void compile_if(hll_compiler *compiler, hll_ast *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_JN);
     size_t jump_out = emit_u16(compiler->bytecode, 0);
     write_u16_be(compiler->bytecode->ops + jump_false,
-                 get_current_op_idx(compiler->bytecode) - jump_false);
+                 get_current_op_idx(compiler->bytecode) - jump_false - 2);
     compile_eval_expression(compiler, neg_arm);
     write_u16_be(compiler->bytecode->ops + jump_out,
-                 get_current_op_idx(compiler->bytecode) - jump_out);
+                 get_current_op_idx(compiler->bytecode) - jump_out - 2);
   }
 }
 
@@ -979,7 +980,6 @@ static void compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
              add_int_constant_and_return_its_index(compiler, ast->as.num));
     break;
   case HLL_AST_CONS: {
-    // Get fn
     hll_ast *fn = ast->as.cons.car;
     hll_form_kind kind = HLL_FORM_REGULAR;
     if (fn->kind == HLL_AST_SYMB) {
@@ -1018,12 +1018,23 @@ static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
   case HLL_AST_CONS: {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    for (hll_ast *arg = ast; arg->kind != HLL_AST_NIL; arg = arg->as.cons.cdr) {
-      assert(arg->kind == HLL_AST_CONS);
-      hll_ast *obj = arg->as.cons.car;
-      compile_expression(compiler, obj);
+
+    hll_ast *obj = ast;
+    while (obj->kind != HLL_AST_NIL) {
+      assert(obj->kind == HLL_AST_CONS);
+      compile_expression(compiler, obj->as.cons.car);
       emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+
+      hll_ast *cdr = obj->as.cons.cdr;
+      if (cdr->kind != HLL_AST_NIL && cdr->kind != HLL_AST_CONS) {
+        compile_expression(compiler, cdr);
+        emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+        break;
+      }
+
+      obj = cdr;
     }
+    // pop the tail
     emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   } break;
   case HLL_AST_SYMB:
@@ -1036,27 +1047,30 @@ static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
 }
 
 void hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
-  // Iterate toplevel
-  for (hll_ast *obj = ast; obj->kind != HLL_AST_NIL; obj = obj->as.cons.cdr) {
-    assert(obj->kind == HLL_AST_CONS);
-    hll_ast *toplevel = obj->as.cons.car;
-    switch (toplevel->kind) {
-    case HLL_AST_NIL:
-    case HLL_AST_TRUE:
-    case HLL_AST_INT:
-    case HLL_AST_SYMB:
-      compile_expression(compiler, toplevel);
-      break;
-    case HLL_AST_CONS:
-      compile_eval_expression(compiler, toplevel);
-      break;
-    default:
-      assert(!"Unreachable");
-      break;
-    }
+  if (ast->kind == HLL_AST_NIL) {
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  } else {
+    for (hll_ast *obj = ast; obj->kind != HLL_AST_NIL; obj = obj->as.cons.cdr) {
+      assert(obj->kind == HLL_AST_CONS);
+      hll_ast *toplevel = obj->as.cons.car;
+      switch (toplevel->kind) {
+      case HLL_AST_NIL:
+      case HLL_AST_TRUE:
+      case HLL_AST_INT:
+      case HLL_AST_SYMB:
+        compile_expression(compiler, toplevel);
+        break;
+      case HLL_AST_CONS:
+        compile_eval_expression(compiler, toplevel);
+        break;
+      default:
+        assert(!"Unreachable");
+        break;
+      }
 
-    if (obj->as.cons.cdr->kind != HLL_AST_NIL) {
-      emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+      if (obj->as.cons.cdr->kind != HLL_AST_NIL) {
+        emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+      }
     }
   }
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
