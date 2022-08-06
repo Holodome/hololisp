@@ -222,7 +222,7 @@ int main(int argc, char const **argv) {
     return EXIT_FAILURE;
   }
 
-  if (opts.mode == HLL_MODE_EREPL && HLL_IS_STDIN_A_TTY) {
+  if (opts.mode == HLL_MODE_EREPL && !HLL_IS_STDIN_A_TTY) {
     opts.mode = HLL_MODE_EREPL_NO_TTY;
   }
 
