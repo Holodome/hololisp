@@ -241,7 +241,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
   while ((op = *ip++) != HLL_BYTECODE_END) {
     switch (op) {
     case HLL_BYTECODE_POP:
-      hll_sb_pop(stack);
+      (void)hll_sb_pop(stack);
       break;
     case HLL_BYTECODE_NIL:
       hll_sb_push(stack, vm->nil);
