@@ -12,8 +12,8 @@
 #include "hll_hololisp.h"
 #include "hll_mem.h"
 #include "hll_obj.h"
-#include "hll_vm.h"
 #include "hll_util.h"
+#include "hll_vm.h"
 
 hll_bytecode *hll_compile(hll_vm *vm, char const *source) {
   hll_memory_arena compilation_arena = {0};
@@ -570,6 +570,38 @@ static void compiler_error(hll_compiler *compiler, hll_ast *ast,
   hll_report_error(compiler->vm, ast->offset, 0, buffer);
 }
 
+#define HLL_ENUMERATE_CAR_CDR                                                  \
+  HLL_CAR_CDR(a, A)                                                            \
+  HLL_CAR_CDR(d, D)                                                            \
+  HLL_CAR_CDR(aa, AA)                                                          \
+  HLL_CAR_CDR(ad, AD)                                                          \
+  HLL_CAR_CDR(da, DA)                                                          \
+  HLL_CAR_CDR(dd, DD)                                                          \
+  HLL_CAR_CDR(aaa, AAA)                                                        \
+  HLL_CAR_CDR(aad, AAD)                                                        \
+  HLL_CAR_CDR(ada, ADA)                                                        \
+  HLL_CAR_CDR(add, ADD)                                                        \
+  HLL_CAR_CDR(daa, DAA)                                                        \
+  HLL_CAR_CDR(dad, DAD)                                                        \
+  HLL_CAR_CDR(dda, DDA)                                                        \
+  HLL_CAR_CDR(ddd, DDD)                                                        \
+  HLL_CAR_CDR(aaaa, AAAA)                                                      \
+  HLL_CAR_CDR(aaad, AAAD)                                                      \
+  HLL_CAR_CDR(aada, AADA)                                                      \
+  HLL_CAR_CDR(aadd, AADD)                                                      \
+  HLL_CAR_CDR(adaa, ADAA)                                                      \
+  HLL_CAR_CDR(adad, ADAD)                                                      \
+  HLL_CAR_CDR(adda, ADDA)                                                      \
+  HLL_CAR_CDR(addd, ADDD)                                                      \
+  HLL_CAR_CDR(daaa, DAAA)                                                      \
+  HLL_CAR_CDR(daad, DAAD)                                                      \
+  HLL_CAR_CDR(dada, DADA)                                                      \
+  HLL_CAR_CDR(dadd, DADD)                                                      \
+  HLL_CAR_CDR(ddaa, DDAA)                                                      \
+  HLL_CAR_CDR(ddad, DDAD)                                                      \
+  HLL_CAR_CDR(ddda, DDDA)                                                      \
+  HLL_CAR_CDR(dddd, DDDD)
+
 // Denotes special forms in language.
 // Special forms are different from other lisp constructs because they require
 // special handling from compiler side.
@@ -595,9 +627,11 @@ typedef enum {
   // let is different from defvar because it creates new lexical context
   // and puts variables there.
   HLL_FORM_LET,
-  HLL_FORM_CAR,
-  HLL_FORM_CDR,
   HLL_FORM_LIST,
+
+#define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
+  HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
 } hll_form_kind;
 
 static hll_form_kind get_form_kind(char const *symb) {
@@ -614,13 +648,15 @@ static hll_form_kind get_form_kind(char const *symb) {
     kind = HLL_FORM_DEFVAR;
   } else if (strcmp(symb, "let") == 0) {
     kind = HLL_FORM_LET;
-  } else if (strcmp(symb, "car") == 0) {
-    kind = HLL_FORM_CAR;
-  } else if (strcmp(symb, "cdr") == 0) {
-    kind = HLL_FORM_CDR;
   } else if (strcmp(symb, "list") == 0) {
     kind = HLL_FORM_LIST;
   }
+#define HLL_CAR_CDR(_lower, _upper)                                            \
+  else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
+    kind = HLL_FORM_C##_upper##R;                                              \
+  }
+  HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
 
   return kind;
 }
@@ -821,6 +857,30 @@ static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
   }
 }
 
+#define HLL_CAR_CDR(_lower, _)                                                 \
+  static void compile_c##_lower##r(hll_compiler *compiler, hll_ast *args) {    \
+    if (ast_list_length(args) != 1) {                                          \
+      compiler_error(compiler, args,                                           \
+                     "'c" #_lower "r' expects exactly 1 argument");            \
+    } else {                                                                   \
+      compile_eval_expression(compiler, args->as.cons.car);                    \
+      const char *ops = #_lower;                                               \
+      const char *op = ops + sizeof(#_lower) - 1;                              \
+      while (op >= ops) {                                                      \
+        if (*op == 'a') {                                                      \
+          emit_op(compiler->bytecode, HLL_BYTECODE_CAR);                       \
+        } else if (*op == 'd') {                                               \
+          emit_op(compiler->bytecode, HLL_BYTECODE_CDR);                       \
+        } else {                                                               \
+          HLL_UNREACHABLE;                                                     \
+        }                                                                      \
+        --op;                                                                  \
+      }                                                                        \
+    }                                                                          \
+  }
+HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
+
 typedef enum {
   HLL_LOC_NONE,
   HLL_LOC_FORM_SYMB,
@@ -904,24 +964,6 @@ static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
   }
 }
 
-static void compile_car(hll_compiler *compiler, hll_ast *args) {
-  if (ast_list_length(args) != 1) {
-    compiler_error(compiler, args, "'car' expects exactly 1 argument");
-  } else {
-    compile_eval_expression(compiler, args->as.cons.car);
-    emit_op(compiler->bytecode, HLL_BYTECODE_CAR);
-  }
-}
-
-static void compile_cdr(hll_compiler *compiler, hll_ast *args) {
-  if (ast_list_length(args) != 1) {
-    compiler_error(compiler, args, "'cdr' expects exactly 1 argument");
-  } else {
-    compile_eval_expression(compiler, args->as.cons.car);
-    emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
-  }
-}
-
 static void compile_list(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
@@ -958,15 +1000,15 @@ static void compile_form(hll_compiler *compiler, hll_ast *args,
   case HLL_FORM_DEFVAR:
     compile_defvar(compiler, args->as.cons.cdr);
     break;
-  case HLL_FORM_CAR:
-    compile_car(compiler, args->as.cons.cdr);
-    break;
-  case HLL_FORM_CDR:
-    compile_cdr(compiler, args->as.cons.cdr);
-    break;
   case HLL_FORM_LIST:
     compile_list(compiler, args->as.cons.cdr);
     break;
+#define HLL_CAR_CDR(_lower, _upper)                                            \
+  case HLL_FORM_C##_upper##R:                                                  \
+    compile_c##_lower##r(compiler, args->as.cons.cdr);                         \
+    break;
+    HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
   }
 }
 
