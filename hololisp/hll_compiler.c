@@ -542,7 +542,7 @@ hll_ast *hll_read_ast(hll_reader *reader) {
   return list_head;
 }
 
-static size_t ast_list_length(hll_ast *ast) {
+static size_t ast_list_length(const hll_ast *ast) {
   size_t length = 0;
 
   for (; ast->kind == HLL_AST_CONS; ast = ast->as.cons.cdr) {
@@ -553,7 +553,7 @@ static size_t ast_list_length(hll_ast *ast) {
 }
 
 HLL_ATTR(format(printf, 3, 4))
-static void compiler_error(hll_compiler *compiler, hll_ast *ast,
+static void compiler_error(hll_compiler *compiler, const hll_ast *ast,
                            const char *fmt, ...) {
   compiler->has_errors = true;
   if (compiler->vm == NULL) {
@@ -739,7 +739,7 @@ static uint16_t add_symbol_and_return_its_index(hll_compiler *compiler,
   return narrowed;
 }
 
-static void compile_symbol(hll_compiler *compiler, hll_ast *ast) {
+static void compile_symbol(hll_compiler *compiler, const hll_ast *ast) {
   assert(ast->kind == HLL_AST_SYMB);
   emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
   emit_u16(compiler->bytecode,
@@ -747,10 +747,10 @@ static void compile_symbol(hll_compiler *compiler, hll_ast *ast) {
                                            ast->as.symb.length));
 }
 
-static void compile_expression(hll_compiler *compiler, hll_ast *ast);
-static void compile_eval_expression(hll_compiler *compiler, hll_ast *ast);
+static void compile_expression(hll_compiler *compiler, const hll_ast *ast);
+static void compile_eval_expression(hll_compiler *compiler, const hll_ast *ast);
 
-static void compile_function_call(hll_compiler *compiler, hll_ast *list) {
+static void compile_function_call(hll_compiler *compiler, const hll_ast *list) {
   hll_ast *fn = list->as.cons.car;
   compile_eval_expression(compiler, fn);
   // Now make arguments
@@ -767,7 +767,7 @@ static void compile_function_call(hll_compiler *compiler, hll_ast *list) {
   emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
 }
 
-static void compile_quote(hll_compiler *compiler, hll_ast *args) {
+static void compile_quote(hll_compiler *compiler, const hll_ast *args) {
   if (args->kind != HLL_AST_CONS) {
     compiler_error(compiler, args, "'quote' form must have an argument");
     return;
@@ -779,7 +779,7 @@ static void compile_quote(hll_compiler *compiler, hll_ast *args) {
   compile_expression(compiler, args->as.cons.car);
 }
 
-static void compile_if(hll_compiler *compiler, hll_ast *args) {
+static void compile_if(hll_compiler *compiler, const hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length != 2 && length != 3) {
     compiler_error(compiler, args, "'if' form expects 2 or 3 arguments");
@@ -809,7 +809,7 @@ static void compile_if(hll_compiler *compiler, hll_ast *args) {
                get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
-static void compile_let(hll_compiler *compiler, hll_ast *args) {
+static void compile_let(hll_compiler *compiler, const hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length < 1) {
     compiler_error(compiler, args,
@@ -873,7 +873,8 @@ static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
 #endif
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
-  static void compile_c##_lower##r(hll_compiler *compiler, hll_ast *args) {    \
+  static void compile_c##_lower##r(hll_compiler *compiler,                     \
+                                   const hll_ast *args) {                      \
     if (ast_list_length(args) != 1) {                                          \
       compiler_error(compiler, args,                                           \
                      "'c" #_lower "r' expects exactly 1 argument");            \
@@ -906,7 +907,7 @@ typedef enum {
   HLL_LOC_FORM_CDR,
 } hll_location_form;
 
-static hll_location_form get_location_form(hll_ast *location) {
+static hll_location_form get_location_form(const hll_ast *location) {
   hll_location_form kind = HLL_LOC_NONE;
   if (location->kind == HLL_AST_SYMB) {
     kind = HLL_LOC_FORM_SYMB;
@@ -924,8 +925,9 @@ static hll_location_form get_location_form(hll_ast *location) {
   return kind;
 }
 
-static void compile_set_location(hll_compiler *compiler, hll_ast *location,
-                                 hll_ast *value) {
+static void compile_set_location(hll_compiler *compiler,
+                                 const hll_ast *location,
+                                 const hll_ast *value) {
   hll_location_form kind = get_location_form(location);
   switch (kind) {
   case HLL_LOC_NONE:
@@ -955,7 +957,7 @@ static void compile_set_location(hll_compiler *compiler, hll_ast *location,
   }
 }
 
-static void compile_setf(hll_compiler *compiler, hll_ast *args) {
+static void compile_setf(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) < 1) {
     compiler_error(compiler, args, "'setf' expects at least 1 argument");
     return;
@@ -971,7 +973,7 @@ static void compile_setf(hll_compiler *compiler, hll_ast *args) {
   compile_set_location(compiler, location, value);
 }
 
-static void compile_setcar(hll_compiler *compiler, hll_ast *args) {
+static void compile_setcar(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) != 2) {
     compiler_error(compiler, args, "'setcar' expects exactly 2 arguments");
     return;
@@ -989,7 +991,7 @@ static void compile_setcar(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
 }
 
-static void compile_setcdr(hll_compiler *compiler, hll_ast *args) {
+static void compile_setcdr(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) != 2) {
     compiler_error(compiler, args, "'setcar' expects exactly 2 arguments");
     return;
@@ -1007,7 +1009,7 @@ static void compile_setcdr(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
 }
 
-static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
+static void compile_defvar(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) < 1) {
     compiler_error(compiler, args, "'defvar' expects at least 1 argument");
     return;
@@ -1029,10 +1031,11 @@ static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
 }
 
-static void compile_list(hll_compiler *compiler, hll_ast *args) {
+static void compile_list(hll_compiler *compiler, const hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (hll_ast *arg = args; arg->kind != HLL_AST_NIL; arg = arg->as.cons.cdr) {
+  for (const hll_ast *arg = args; arg->kind != HLL_AST_NIL;
+       arg = arg->as.cons.cdr) {
     assert(arg->kind == HLL_AST_CONS);
     hll_ast *obj = arg->as.cons.car;
     compile_eval_expression(compiler, obj);
@@ -1041,7 +1044,7 @@ static void compile_list(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
-static void compile_cons(hll_compiler *compiler, hll_ast *args) {
+static void compile_cons(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) != 2) {
     compiler_error(compiler, args, "'cons' expects exactly 2 arguments");
     return;
@@ -1058,8 +1061,9 @@ static void compile_cons(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
-static bool compile_function(hll_compiler *compiler, hll_ast *params,
-                             hll_ast *body, const char *name, uint16_t *idx) {
+static bool compile_function(hll_compiler *compiler, const hll_ast *params,
+                             const hll_ast *body, const char *name,
+                             uint16_t *idx) {
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
   new_compiler.vm = compiler->vm;
@@ -1072,7 +1076,7 @@ static bool compile_function(hll_compiler *compiler, hll_ast *params,
 
   hll_obj *param_list = NULL;
   hll_obj *param_list_tail = NULL;
-  for (hll_ast *obj = params; obj->kind == HLL_AST_CONS;
+  for (const hll_ast *obj = params; obj->kind == HLL_AST_CONS;
        obj = obj->as.cons.cdr) {
     hll_ast *car = obj->as.cons.car;
     if (car->kind != HLL_AST_SYMB) {
@@ -1106,7 +1110,7 @@ static bool compile_function(hll_compiler *compiler, hll_ast *params,
   return false;
 }
 
-static void compile_defun(hll_compiler *compiler, hll_ast *args) {
+static void compile_defun(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) >= 3) {
     compiler_error(compiler, args, "'defun' expects at least 3 arguments");
     return;
@@ -1134,7 +1138,7 @@ static void compile_defun(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
 }
 
-static void compile_form(hll_compiler *compiler, hll_ast *args,
+static void compile_form(hll_compiler *compiler, const hll_ast *args,
                          hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
     assert(args->kind == HLL_AST_CONS);
@@ -1187,7 +1191,8 @@ static void compile_form(hll_compiler *compiler, hll_ast *args,
   }
 }
 
-static void compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
+static void compile_eval_expression(hll_compiler *compiler,
+                                    const hll_ast *ast) {
   switch (ast->kind) {
   case HLL_AST_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
@@ -1223,7 +1228,7 @@ static void compile_eval_expression(hll_compiler *compiler, hll_ast *ast) {
 // Compiles expression as getting its value.
 // Does not evaluate it.
 // After it one value is located on top of the stack.
-static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
+static void compile_expression(hll_compiler *compiler, const hll_ast *ast) {
   switch (ast->kind) {
   case HLL_AST_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
@@ -1240,7 +1245,7 @@ static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
 
-    hll_ast *obj = ast;
+    const hll_ast *obj = ast;
     while (obj->kind != HLL_AST_NIL) {
       assert(obj->kind == HLL_AST_CONS);
       compile_expression(compiler, obj->as.cons.car);
@@ -1267,11 +1272,12 @@ static void compile_expression(hll_compiler *compiler, hll_ast *ast) {
   }
 }
 
-void hll_compile_ast(hll_compiler *compiler, hll_ast *ast) {
+void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast) {
   if (ast->kind == HLL_AST_NIL) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   } else {
-    for (hll_ast *obj = ast; obj->kind != HLL_AST_NIL; obj = obj->as.cons.cdr) {
+    for (const hll_ast *obj = ast; obj->kind != HLL_AST_NIL;
+         obj = obj->as.cons.cdr) {
       assert(obj->kind == HLL_AST_CONS);
       hll_ast *toplevel = obj->as.cons.car;
       switch (toplevel->kind) {
