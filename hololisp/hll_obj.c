@@ -147,6 +147,21 @@ hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars) {
   return obj;
 }
 
+hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
+                      struct hll_bytecode *bytecode, const char *name) {
+  (void)vm;
+  hll_obj_func *body = calloc(1, sizeof(hll_obj_func));
+  body->param_names = params;
+  body->bytecode = bytecode;
+  body->name = name;
+
+  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  obj->kind = HLL_OBJ_FUNC;
+  obj->as.body = body;
+
+  return obj;
+}
+
 hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
   return (hll_obj_cons *)obj->as.body;

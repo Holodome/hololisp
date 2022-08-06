@@ -1014,13 +1014,16 @@ static void compile_defvar(hll_compiler *compiler, hll_ast *args) {
   }
 
   hll_ast *name = args->as.cons.car;
+  if (name->kind != HLL_AST_SYMB) {
+    compiler_error(compiler, name, "'defvar' name should be a symbol");
+    return;
+  }
   hll_ast *value = args->as.cons.cdr;
   if (value->kind == HLL_AST_CONS) {
     assert(value->as.cons.cdr->kind == HLL_AST_NIL);
     value = value->as.cons.car;
   }
 
-  assert(name->kind == HLL_AST_SYMB);
   compile_expression(compiler, name);
   compile_eval_expression(compiler, value);
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
@@ -1055,17 +1058,80 @@ static void compile_cons(hll_compiler *compiler, hll_ast *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
+static bool compile_function(hll_compiler *compiler, hll_ast *params,
+                             hll_ast *body, const char *name, uint16_t *idx) {
+  hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
+  hll_compiler new_compiler = {0};
+  new_compiler.vm = compiler->vm;
+  new_compiler.bytecode = bytecode;
+  hll_compile_ast(&new_compiler, body);
+  if (new_compiler.has_errors) {
+    compiler->has_errors = true;
+    return true;
+  }
+
+  hll_obj *param_list = NULL;
+  hll_obj *param_list_tail = NULL;
+  for (hll_ast *obj = params; obj->kind == HLL_AST_CONS;
+       obj = obj->as.cons.cdr) {
+    hll_ast *car = obj->as.cons.car;
+    if (car->kind != HLL_AST_SYMB) {
+      compiler_error(compiler, car, "function param name is not a symbol");
+      return true;
+    }
+
+    hll_obj *cons = hll_new_cons(
+        compiler->vm,
+        hll_new_symbol(compiler->vm, car->as.symb.str, car->as.symb.length),
+        compiler->vm->nil);
+    if (param_list == NULL) {
+      param_list = param_list_tail = cons;
+    } else {
+      hll_unwrap_cons(param_list_tail)->cdr = cons;
+      param_list_tail = cons;
+    }
+  }
+
+  if (param_list == NULL) {
+    param_list = compiler->vm->nil;
+  }
+
+  hll_obj *func = hll_new_func(compiler->vm, param_list, bytecode, name);
+  hll_sb_push(compiler->bytecode->constant_pool, func);
+  size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
+  uint16_t narrowed = result;
+  assert(result == narrowed);
+  *idx = narrowed;
+
+  return false;
+}
+
 static void compile_defun(hll_compiler *compiler, hll_ast *args) {
   if (ast_list_length(args) >= 3) {
     compiler_error(compiler, args, "'defun' expects at least 3 arguments");
     return;
   }
 
-  //  hll_ast *name = args->as.cons.car;
-  //  args = args->as.cons.cdr;
-  //  hll_ast *params = args->as.cons.car;
-  //  args = args->as.cons.cdr;
-  //  hll_ast *body = args->as.cons.cdr;
+  hll_ast *name = args->as.cons.car;
+  if (name->kind != HLL_AST_SYMB) {
+    compiler_error(compiler, name, "'defun' name should be a symbol");
+    return;
+  }
+
+  args = args->as.cons.cdr;
+  hll_ast *params = args->as.cons.car;
+  args = args->as.cons.cdr;
+  hll_ast *body = args->as.cons.cdr;
+
+  uint16_t function_idx;
+  if (compile_function(compiler, params, body, "func", &function_idx)) {
+    return;
+  }
+
+  compile_expression(compiler, name);
+  emit_op(compiler->bytecode, HLL_BYTECODE_LOADFN);
+  emit_u16(compiler->bytecode, function_idx);
+  emit_op(compiler->bytecode, HLL_BYTECODE_LET);
 }
 
 static void compile_form(hll_compiler *compiler, hll_ast *args,

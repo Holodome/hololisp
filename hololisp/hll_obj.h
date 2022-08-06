@@ -65,6 +65,8 @@ hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars);
 hll_obj *hll_new_bind(struct hll_vm *vm,
                       struct hll_obj *(*bind)(struct hll_vm *vm,
                                               struct hll_obj *args));
+hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
+                      struct hll_bytecode *bytecode, const char *name);
 
 hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj);
 hll_obj *hll_unwrap_cdr(struct hll_obj *obj);
