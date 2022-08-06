@@ -12,6 +12,8 @@
 #include "hll_obj.h"
 #include "hll_util.h"
 
+extern void add_builtins(hll_vm *vm);
+
 static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;
   fprintf(stderr, "%s\n", text);
@@ -32,8 +34,6 @@ static void initialize_default_config(hll_config *config) {
 
   config->user_data = NULL;
 }
-
-static void add_builtins(hll_vm *vm);
 
 typedef struct {
   uint32_t line;
@@ -143,18 +143,18 @@ static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
   return result;
 }
 
-static void print_internal(hll_vm *vm, hll_obj *obj, FILE *file) {
+void hll_print(hll_vm *vm, hll_obj *obj, void *file) {
   switch (obj->kind) {
   case HLL_OBJ_CONS:
     fprintf(file, "(");
     while (obj->kind != HLL_OBJ_NIL) {
       assert(obj->kind == HLL_OBJ_CONS);
-      print_internal(vm, hll_unwrap_car(obj), file);
+      hll_print(vm, hll_unwrap_car(obj), file);
 
       hll_obj *cdr = hll_unwrap_cdr(obj);
       if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
         fprintf(file, " . ");
-        print_internal(vm, cdr, file);
+        hll_print(vm, cdr, file);
         break;
       } else if (cdr->kind != HLL_OBJ_NIL) {
         fprintf(file, " ");
@@ -180,70 +180,6 @@ static void print_internal(hll_vm *vm, hll_obj *obj, FILE *file) {
     assert(!"Not implemented");
     break;
   }
-}
-
-static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
-  print_internal(vm, hll_unwrap_car(args), stdout);
-  printf("\n");
-  return vm->nil;
-}
-
-static hll_obj *builtin_add(hll_vm *vm, hll_obj *args) {
-  hll_num result = 0;
-  for (hll_obj *obj = args; obj->kind == HLL_OBJ_CONS;
-       obj = hll_unwrap_cdr(obj)) {
-    hll_obj *value = hll_unwrap_car(obj);
-    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
-    result += value->as.num;
-  }
-  return hll_new_num(vm, result);
-}
-
-static hll_obj *builtin_sub(hll_vm *vm, hll_obj *args) {
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
-  hll_obj *first = hll_unwrap_car(args);
-  // CHECK_TYPE(first, HLL_OBJ_INT, "arguments");
-  hll_num result = first->as.num;
-  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
-       obj = hll_unwrap_cdr(obj)) {
-    hll_obj *value = hll_unwrap_car(obj);
-    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
-    result -= value->as.num;
-  }
-  return hll_new_num(vm, result);
-}
-
-static hll_obj *builtin_div(hll_vm *vm, hll_obj *args) {
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
-  hll_obj *first = hll_unwrap_car(args);
-  // CHECK_TYPE(first, HLL_OBJ_INT, "arguments");
-  hll_num result = first->as.num;
-  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
-       obj = hll_unwrap_cdr(obj)) {
-    hll_obj *value = hll_unwrap_car(obj);
-    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
-    result /= value->as.num;
-  }
-  return hll_new_num(vm, result);
-}
-
-static hll_obj *builtin_mul(hll_vm *vm, hll_obj *args) {
-  hll_num result = 1;
-  for (hll_obj *obj = hll_unwrap_cdr(args); obj->kind == HLL_OBJ_CONS;
-       obj = hll_unwrap_cdr(obj)) {
-    hll_obj *value = hll_unwrap_car(obj);
-    // CHECK_TYPE(value, HLL_OBJ_INT, "arguments");
-    result *= value->as.num;
-  }
-  return hll_new_num(vm, result);
-}
-
-static void add_builtins(hll_vm *vm) {
-  hll_add_binding(vm, "print", builtin_print);
-  hll_add_binding(vm, "+", builtin_add);
-  hll_add_binding(vm, "-", builtin_sub);
-  hll_add_binding(vm, "*", builtin_mul);
-  hll_add_binding(vm, "/", builtin_div);
 }
 
 // Denotes situation that should be impossible in correctly compiled code.
@@ -472,7 +408,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
     printf("len: %zu\n", hll_sb_len(stack));
     assert(hll_sb_len(stack) == 1);
     hll_obj *obj = stack[0];
-    print_internal(vm, obj, stdout);
+    hll_print(vm, obj, stdout);
   }
 
 bail:

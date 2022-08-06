@@ -49,4 +49,7 @@ void hll_add_binding(hll_vm *vm, char const *symb,
 bool hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode,
                             bool print_result);
 
+void hll_print(hll_vm *vm, struct hll_obj *obj, void *file);
+
+
 #endif

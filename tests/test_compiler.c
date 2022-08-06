@@ -136,7 +136,7 @@ static void test_compiler_compiles_if(void) {
    */
   char const *source = "(if t 1 0)";
   uint8_t bytecode[] = {// t
-                        HLL_BYTECODE_TRUE, HLL_BYTECODE_JN, 0x00, 0x09,
+                        HLL_BYTECODE_TRUE, HLL_BYTECODE_JN, 0x00, 0x07,
                         // 1
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_JN, 0x00, 0x03,
