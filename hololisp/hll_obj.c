@@ -191,3 +191,8 @@ hll_obj_env *hll_unwrap_env(struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_ENV);
   return (hll_obj_env *)obj->as.body;
 }
+
+hll_obj_func *hll_unwrap_func(struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_FUNC);
+  return (hll_obj_func *)obj->as.body;
+}

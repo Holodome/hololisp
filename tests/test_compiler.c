@@ -1,6 +1,8 @@
 #include "../hololisp/hll_bytecode.h"
 #include "../hololisp/hll_compiler.h"
+#include "../hololisp/hll_obj.h"
 #include "../hololisp/hll_vm.h"
+
 #define TEST_MSG_MAXSIZE 16384
 #include "acutest.h"
 
@@ -18,7 +20,7 @@ static void test_bytecode_equals(uint8_t *expected, size_t expected_len,
 
   char b[16384] = {0};
   fread(b, len, 1, f);
-  TEST_MSG("expected: %s", b);
+  TEST_MSG("got: %s", b);
 }
 
 static void test_compiler_compiles_integer(void) {
@@ -160,6 +162,56 @@ static void test_compiler_compiles_quote(void) {
 
   hll_bytecode *result = hll_compile(vm, source);
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
+}
+
+static void test_compiler_compiles_defun(void) {
+  const char *source = "(defun f (x) (* x 2))";
+  uint8_t function_bytecode[] = {HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x00,
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR, // *
+
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x02, // 2
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_POP,
+
+                                 HLL_BYTECODE_CALL,
+                                 HLL_BYTECODE_END};
+
+  uint8_t program_bytecode[] = {HLL_BYTECODE_CONST,
+                                0x00,
+                                0x00, // f
+                                HLL_BYTECODE_CONST,
+                                0x00,
+                                0x01, // function object
+                                HLL_BYTECODE_LET,
+                                HLL_BYTECODE_END};
+
+  (void)function_bytecode;
+
+  hll_vm *vm = hll_make_vm(NULL);
+
+  hll_bytecode *result = hll_compile(vm, source);
+  test_bytecode_equals(program_bytecode, sizeof(program_bytecode), result);
+
+  assert(hll_sb_len(result->constant_pool) >= 1);
+  hll_obj *func = result->constant_pool[1];
+  TEST_ASSERT(func->kind == HLL_OBJ_FUNC);
+
+  hll_bytecode *function_bytecode_compiled = hll_unwrap_func(func)->bytecode;
+  test_bytecode_equals(function_bytecode, sizeof(function_bytecode),
+                       function_bytecode_compiled);
 }
 
 #if 0
@@ -527,13 +579,16 @@ static void test_compiler_basic_special_forms(void) {
 #endif
 
 #define TCASE(_name)                                                           \
-  { #_name, _name }
+  {                                                                            \
+#_name, _name                                                              \
+  }
 
 TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_addition),
              TCASE(test_compiler_compiles_complex_arithmetic_operation),
              TCASE(test_compiler_compiles_if),
              TCASE(test_compiler_compiles_quote),
+             TCASE(test_compiler_compiles_defun),
              //             TCASE(test_lambda_application_working),
              TCASE(test_compiler_compiles_let),
              TCASE(test_compiler_compiles_let_with_body),

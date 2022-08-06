@@ -342,9 +342,10 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       break;
     case HLL_BYTECODE_LET: {
       hll_obj *value = hll_sb_pop(stack);
-      hll_obj *name = hll_sb_pop(stack);
+      hll_obj *name = hll_sb_last(stack);
       hll_unwrap_env(vm->env)->vars = hll_new_cons(
           vm, hll_new_cons(vm, name, value), hll_unwrap_env(vm->env)->vars);
+
     } break;
     case HLL_BYTECODE_PUSHENV:
       break;

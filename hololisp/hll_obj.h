@@ -74,5 +74,6 @@ hll_obj *hll_unwrap_car(struct hll_obj *obj);
 hll_obj_env *hll_unwrap_env(struct hll_obj *obj);
 const char *hll_unwrap_zsymb(struct hll_obj *obj);
 hll_obj_bind *hll_unwrap_bind(struct hll_obj *obj);
+hll_obj_func *hll_unwrap_func(struct hll_obj *obj);
 
 #endif

@@ -818,12 +818,12 @@ static void compile_let(hll_compiler *compiler, const hll_ast *args) {
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
-  for (hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
+  for (const hll_ast *let = args->as.cons.car; let->kind != HLL_AST_NIL;
        let = let->as.cons.cdr) {
-    hll_ast *pair = let->as.cons.car;
+    const hll_ast *pair = let->as.cons.car;
     assert(pair->kind == HLL_AST_CONS);
-    hll_ast *name = pair->as.cons.car;
-    hll_ast *value = pair->as.cons.cdr;
+    const hll_ast *name = pair->as.cons.car;
+    const hll_ast *value = pair->as.cons.cdr;
     if (value->kind == HLL_AST_CONS) {
       assert(value->as.cons.cdr->kind == HLL_AST_NIL);
       value = value->as.cons.car;
@@ -835,7 +835,7 @@ static void compile_let(hll_compiler *compiler, const hll_ast *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
   }
 
-  for (hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
+  for (const hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
        prog = prog->as.cons.cdr) {
     compile_eval_expression(compiler, prog->as.cons.car);
     if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
@@ -1068,7 +1068,14 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
   hll_compiler new_compiler = {0};
   new_compiler.vm = compiler->vm;
   new_compiler.bytecode = bytecode;
-  hll_compile_ast(&new_compiler, body);
+  for (const hll_ast *prog = body; prog->kind == HLL_AST_CONS;
+       prog = prog->as.cons.cdr) {
+    compile_eval_expression(&new_compiler, prog->as.cons.car);
+    if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
+      emit_op(new_compiler.bytecode, HLL_BYTECODE_POP);
+    }
+  }
+  emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {
     compiler->has_errors = true;
     return true;
@@ -1111,7 +1118,7 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
 }
 
 static void compile_defun(hll_compiler *compiler, const hll_ast *args) {
-  if (ast_list_length(args) >= 3) {
+  if (ast_list_length(args) < 3) {
     compiler_error(compiler, args, "'defun' expects at least 3 arguments");
     return;
   }
@@ -1123,17 +1130,18 @@ static void compile_defun(hll_compiler *compiler, const hll_ast *args) {
   }
 
   args = args->as.cons.cdr;
-  hll_ast *params = args->as.cons.car;
+  const hll_ast *params = args->as.cons.car;
   args = args->as.cons.cdr;
-  hll_ast *body = args->as.cons.cdr;
+  const hll_ast *body = args;
+
+  compile_expression(compiler, name);
 
   uint16_t function_idx;
   if (compile_function(compiler, params, body, "func", &function_idx)) {
     return;
   }
 
-  compile_expression(compiler, name);
-  emit_op(compiler->bytecode, HLL_BYTECODE_LOADFN);
+  emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
   emit_u16(compiler->bytecode, function_idx);
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
 }
