@@ -203,8 +203,6 @@ static bool execute(hll_options *opts) {
 #include <unistd.h>
 #define HLL_IS_STDIN_A_TTY isatty(STDIN_FILENO)
 
-#error here
-
 #elif defined(_WIN32)
 
 #include <io.h>
