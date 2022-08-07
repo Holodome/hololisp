@@ -1,4 +1,3 @@
-
 run_test "lambda" "t" "((lambda () t))"
 run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
 

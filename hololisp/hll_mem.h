@@ -1,15 +1,15 @@
-///
-/// This file contains functions related to memory used in hololisp.
-///
+//
+// This file contains functions related to memory used in hololisp.
+//
 #ifndef HLL_MEM_H
 #define HLL_MEM_H
 
 #include <stddef.h>
 #include <stdint.h>
 
-/// Stretchy buffer
-/// This is implementation of type-safe generic vector in C based on
-/// std_stretchy_buffer.
+// Stretchy buffer
+// This is implementation of type-safe generic vector in C based on
+// std_stretchy_buffer.
 
 typedef struct {
   size_t size;

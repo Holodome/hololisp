@@ -255,8 +255,8 @@ void hll_lexer_init(hll_lexer *lexer, const char *input, hll_vm *vm) {
 }
 
 void hll_lexer_next(hll_lexer *lexer) {
-  /// Pull it from structure so there is better chance in ends up in
-  /// register.
+  // Pull it from structure so there is better chance in ends up in
+  // register.
   const char *cursor = lexer->cursor;
   const char *token_start = cursor;
   HLL_lexer_state state = HLL_LEX_START;
@@ -1091,10 +1091,11 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
       return true;
     }
 
-    hll_obj *cons = hll_new_cons(
-        compiler->vm,
-        hll_new_symbol(compiler->vm, car->as.symb.str, car->as.symb.length),
-        compiler->vm->nil);
+    hll_obj *cons =
+        hll_new_cons(compiler->vm,
+                     bytecode->constant_pool[add_symbol_and_return_its_index(
+                         &new_compiler, car->as.symb.str, car->as.symb.length)],
+                     compiler->vm->nil);
     if (param_list == NULL) {
       param_list = param_list_tail = cons;
     } else {
@@ -1141,7 +1142,7 @@ static void compile_defun(hll_compiler *compiler, const hll_ast *args) {
     return;
   }
 
-  emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+  emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
   emit_u16(compiler->bytecode, function_idx);
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
 }

@@ -192,7 +192,7 @@ static void test_compiler_compiles_defun(void) {
   uint8_t program_bytecode[] = {HLL_BYTECODE_CONST,
                                 0x00,
                                 0x00, // f
-                                HLL_BYTECODE_CONST,
+                                HLL_BYTECODE_MAKEFUN,
                                 0x00,
                                 0x01, // function object
                                 HLL_BYTECODE_LET,
@@ -205,7 +205,7 @@ static void test_compiler_compiles_defun(void) {
   hll_bytecode *result = hll_compile(vm, source);
   test_bytecode_equals(program_bytecode, sizeof(program_bytecode), result);
 
-  assert(hll_sb_len(result->constant_pool) >= 1);
+  TEST_ASSERT(hll_sb_len(result->constant_pool) >= 1);
   hll_obj *func = result->constant_pool[1];
   TEST_ASSERT(func->kind == HLL_OBJ_FUNC);
 

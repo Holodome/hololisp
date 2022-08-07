@@ -26,11 +26,8 @@ typedef struct hll_vm {
   struct hll_obj *true_;
   // nil object
   struct hll_obj *nil;
-
-  // Global env frame. Can be used to add c bindings whilst using unified
-  // storage.
-  struct hll_obj *env;
-  // Toplevel env.
+  // Global env. It is stored across calls to interpret, allowing defining
+  // toplevel functions.
   struct hll_obj *global_env;
 
   uint32_t error_count;

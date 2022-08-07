@@ -89,7 +89,7 @@ hll_vm *hll_make_vm(hll_config const *config) {
 
   vm->nil = hll_new_nil(vm);
   vm->true_ = hll_new_true(vm);
-  vm->global_env = vm->env = hll_new_env(vm, vm->nil, vm->nil);
+  vm->global_env = hll_new_env(vm, vm->nil, vm->nil);
 
   add_builtins(vm);
 
@@ -117,15 +117,16 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
   hll_obj *bind = hll_new_bind(vm, bind_func);
   hll_obj *symb = hll_new_symbol(vm, symb_str, strlen(symb_str));
 
-  hll_unwrap_env(vm->env)->vars = hll_new_cons(vm, hll_new_cons(vm, symb, bind),
-                                               hll_unwrap_env(vm->env)->vars);
+  hll_unwrap_env(vm->global_env)->vars = hll_new_cons(
+      vm, hll_new_cons(vm, symb, bind), hll_unwrap_env(vm->global_env)->vars);
 }
 
-static hll_obj *hll_find_var(hll_vm *vm, hll_obj *car) {
+static hll_obj *hll_find_var(hll_vm *vm, hll_obj *env, hll_obj *car) {
+  (void)vm;
   assert(car->kind == HLL_OBJ_SYMB && "argument is not a symbol");
   hll_obj *result = NULL;
 
-  for (hll_obj *env = vm->env; env->kind != HLL_OBJ_NIL && result == NULL;
+  for (; env->kind != HLL_OBJ_NIL && result == NULL;
        env = hll_unwrap_env(env)->up) {
     for (hll_obj *cons = hll_unwrap_env(env)->vars;
          cons->kind != HLL_OBJ_NIL && result == NULL;
@@ -231,15 +232,30 @@ static void runtime_error(hll_vm *vm, const char *fmt, ...) {
 //   printf("wrote trace to %s\n", file_dump_name);
 // }
 
-bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
+typedef struct {
+  const hll_bytecode *bytecode;
+  const uint8_t *ip;
+} hll_call_frame;
+
+bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
                             bool print_result) {
   (void)vm;
-  uint8_t *ip = bytecode->ops;
+  hll_call_frame *call_stack = NULL;
   hll_obj **stack = NULL;
+  hll_obj *env = vm->global_env;
 
-  uint8_t op;
-  while ((op = *ip++) != HLL_BYTECODE_END) {
+  hll_call_frame original_frame = {0};
+  original_frame.ip = initial_bytecode->ops;
+  original_frame.bytecode = initial_bytecode;
+  hll_sb_push(call_stack, original_frame);
+
+  while (hll_sb_len(call_stack)) {
+    uint8_t op = *hll_sb_last(call_stack).ip++;
     switch (op) {
+    case HLL_BYTECODE_END:
+      (void)hll_sb_pop(call_stack);
+      env = hll_unwrap_env(env)->up;
+      break;
     case HLL_BYTECODE_POP:
       (void)hll_sb_pop(stack);
       break;
@@ -250,15 +266,18 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
       hll_sb_push(stack, vm->true_);
       break;
     case HLL_BYTECODE_CONST: {
-      uint16_t idx = (ip[0] << 8) | ip[1];
-      ip += 2;
-      if (HLL_UNLIKELY(idx >= hll_sb_len(bytecode->constant_pool))) {
+      uint16_t idx =
+          (hll_sb_last(call_stack).ip[0] << 8) | hll_sb_last(call_stack).ip[1];
+      hll_sb_last(call_stack).ip += 2;
+      if (HLL_UNLIKELY(
+              idx >=
+              hll_sb_len(hll_sb_last(call_stack).bytecode->constant_pool))) {
         internal_compiler_error(
             vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
-            idx, hll_sb_len(bytecode->constant_pool));
+            idx, hll_sb_len(hll_sb_last(call_stack).bytecode->constant_pool));
         goto bail;
       }
-      hll_obj *value = bytecode->constant_pool[idx];
+      hll_obj *value = hll_sb_last(call_stack).bytecode->constant_pool[idx];
       hll_sb_push(stack, value);
     } break;
     case HLL_BYTECODE_APPEND: {
@@ -288,7 +307,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
         goto bail;
       }
 
-      hll_obj *found = hll_find_var(vm, symb);
+      hll_obj *found = hll_find_var(vm, env, symb);
       if (HLL_UNLIKELY(found == NULL)) {
         runtime_error(vm, "failed to find variable '%s' in current scope",
                       hll_unwrap_zsymb(symb));
@@ -297,54 +316,133 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
 
       hll_sb_push(stack, found);
     } break;
+    case HLL_BYTECODE_MAKEFUN: {
+      uint16_t idx =
+          (hll_sb_last(call_stack).ip[0] << 8) | hll_sb_last(call_stack).ip[1];
+      hll_sb_last(call_stack).ip += 2;
+      if (HLL_UNLIKELY(
+              idx >=
+              hll_sb_len(hll_sb_last(call_stack).bytecode->constant_pool))) {
+        internal_compiler_error(
+            vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
+            idx, hll_sb_len(hll_sb_last(call_stack).bytecode->constant_pool));
+        goto bail;
+      }
+
+      hll_obj *value = hll_sb_last(call_stack).bytecode->constant_pool[idx];
+      if (HLL_UNLIKELY(value->kind != HLL_OBJ_FUNC)) {
+        internal_compiler_error(vm,
+                                "specified object is not a function (got %s)",
+                                hll_get_object_kind_str(value->kind));
+        goto bail;
+      }
+      // Copy the function
+      value = hll_copy_obj(vm, value);
+      hll_obj_func *func = hll_unwrap_func(value);
+      assert(func->var_list->kind == HLL_OBJ_NIL);
+      func->var_list = vm->nil;
+
+      for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
+        hll_obj *test = func->bytecode->constant_pool[i];
+        hll_obj *found = NULL;
+        if (test->kind == HLL_OBJ_SYMB &&
+            (found = hll_find_var(vm, env, test)) != NULL) {
+          func->var_list = hll_new_cons(vm, found, func->var_list);
+        }
+      }
+
+      hll_sb_push(stack, value);
+    } break;
     case HLL_BYTECODE_CALL: {
       hll_obj *args = hll_sb_pop(stack);
       hll_obj *callable = hll_sb_pop(stack);
       switch (callable->kind) {
-      case HLL_OBJ_FUNC:
-        assert(!"TODO");
-        break;
+      case HLL_OBJ_FUNC: {
+        hll_obj_func *func = hll_unwrap_func(callable);
+        hll_obj *new_env = hll_new_env(vm, env, func->var_list);
+        if (HLL_UNLIKELY(hll_list_length(args) !=
+                         hll_list_length(func->param_names))) {
+          runtime_error(vm, "param count does not match: expected %zu, got %zu",
+                        hll_list_length(func->param_names),
+                        hll_list_length(args));
+          goto bail;
+        }
+
+        for (hll_obj *param_name = func->param_names, *param_value = args;
+             param_name->kind != HLL_OBJ_NIL;
+             param_name = hll_unwrap_cdr(param_name),
+                     param_value = hll_unwrap_cdr(param_value)) {
+          hll_obj *name = hll_unwrap_car(param_name);
+          hll_obj *value = hll_unwrap_car(param_value);
+
+          bool found_in_captured = false;
+          for (hll_obj *var = hll_unwrap_env(new_env)->vars;
+               var->kind != HLL_OBJ_NIL; var = hll_unwrap_cdr(var)) {
+            hll_obj *cons = hll_unwrap_car(var);
+            hll_obj *test_name = hll_unwrap_car(cons);
+            if (strcmp(hll_unwrap_zsymb(test_name), hll_unwrap_zsymb(name)) ==
+                0) {
+              found_in_captured = true;
+              hll_unwrap_cons(cons)->cdr = value;
+            }
+          }
+
+          if (!found_in_captured) {
+            hll_obj *cons = hll_new_cons(vm, name, value);
+            hll_unwrap_env(new_env)->vars =
+                hll_new_cons(vm, cons, hll_unwrap_env(new_env)->vars);
+          }
+        }
+
+        env = new_env;
+        hll_call_frame new_frame = {0};
+        new_frame.bytecode = func->bytecode;
+        new_frame.ip = func->bytecode->ops;
+        hll_sb_push(call_stack, new_frame);
+      } break;
       case HLL_OBJ_BIND: {
         hll_obj *new_env = vm->global_env;
-        hll_obj *cur_env = vm->env;
+        hll_obj *cur_env = env;
 
-        vm->env = new_env;
+        env = new_env;
         hll_obj *result = hll_unwrap_bind(callable)->bind(vm, args);
-        vm->env = cur_env;
+        env = cur_env;
 
         hll_sb_push(stack, result);
       } break;
       default:
-        assert(0);
-        break; // TODO throw
+        runtime_error(vm, "object is not callable (got %s)",
+                      hll_get_object_kind_str(callable->kind));
+        goto bail;
+        break;
       }
     } break;
     case HLL_BYTECODE_JN: {
-      int16_t offset = (ip[0] << 8) | ip[1];
-      ip += 2;
+      int16_t offset =
+          (hll_sb_last(call_stack).ip[0] << 8) | hll_sb_last(call_stack).ip[1];
+      hll_sb_last(call_stack).ip += 2;
 
       hll_obj *cond = hll_sb_pop(stack);
       if (cond->kind == HLL_OBJ_NIL) {
-        ip += offset;
-        if (HLL_UNLIKELY(ip > &hll_sb_last(bytecode->ops))) {
-          internal_compiler_error(vm,
-                                  "jump is out of bytecode bounds (was %p, "
-                                  "jump %p, became %p, bound %p)",
-                                  (void *)(ip - offset),
-                                  (void *)(uintptr_t)offset, (void *)ip,
-                                  (void *)&hll_sb_last(bytecode->ops));
+        hll_sb_last(call_stack).ip += offset;
+        if (HLL_UNLIKELY(hll_sb_last(call_stack).ip >
+                         &hll_sb_last(hll_sb_last(call_stack).bytecode->ops))) {
+          internal_compiler_error(
+              vm,
+              "jump is out of bytecode bounds (was %p, "
+              "jump %p, became %p, bound %p)",
+              (void *)(hll_sb_last(call_stack).ip - offset),
+              (void *)(uintptr_t)offset, (void *)hll_sb_last(call_stack).ip,
+              (void *)&hll_sb_last(hll_sb_last(call_stack).bytecode->ops));
           goto bail;
         }
       }
     } break;
-    case HLL_BYTECODE_MAKE_LAMBDA:
-      assert(!"Not implemented LAMBDA");
-      break;
     case HLL_BYTECODE_LET: {
       hll_obj *value = hll_sb_pop(stack);
       hll_obj *name = hll_sb_last(stack);
-      hll_unwrap_env(vm->env)->vars = hll_new_cons(
-          vm, hll_new_cons(vm, name, value), hll_unwrap_env(vm->env)->vars);
+      hll_unwrap_env(env)->vars = hll_new_cons(
+          vm, hll_new_cons(vm, name, value), hll_unwrap_env(env)->vars);
 
     } break;
     case HLL_BYTECODE_PUSHENV:
@@ -410,7 +508,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *bytecode,
   if (print_result) {
     if (hll_sb_len(stack) != 1) {
       internal_compiler_error(vm, "stack is empty (expected value to print)");
-      hll_dump_bytecode(stderr, bytecode);
+      hll_dump_bytecode(stderr, hll_sb_last(call_stack).bytecode);
     }
     hll_obj *obj = stack[0];
     hll_print(vm, obj, stdout);
