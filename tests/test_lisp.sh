@@ -134,4 +134,14 @@ run_test "fib 1" "1" "$fib_source (fib 1)"
 run_test "fib 8" "21" "$fib_source (fib 8)"
 run_test "fib 20" "6765" "$fib_source (fib 20)"
 
+run_test "lambda" "t" "((lambda () t))"
+run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
+
+#(defun call (f)
+#  ((lambda (var) (f)) 5))
+#((lambda (var) (call (lambda () var))) 3)
+
+run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
+  ((lambda (var) (call (lambda () var))) 3)"
+
 exit $failed

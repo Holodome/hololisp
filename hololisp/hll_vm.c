@@ -373,6 +373,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
              param_name = hll_unwrap_cdr(param_name),
                      param_value = hll_unwrap_cdr(param_value)) {
           hll_obj *name = hll_unwrap_car(param_name);
+          assert(name->kind == HLL_OBJ_SYMB);
           hll_obj *value = hll_unwrap_car(param_value);
 
           bool found_in_captured = false;
@@ -383,7 +384,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
             if (strcmp(hll_unwrap_zsymb(test_name), hll_unwrap_zsymb(name)) ==
                 0) {
               found_in_captured = true;
-              hll_unwrap_cons(cons)->cdr = value;
+//              hll_unwrap_cons(cons)->cdr = value;
             }
           }
 

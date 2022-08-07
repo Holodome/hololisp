@@ -633,6 +633,7 @@ typedef enum {
   HLL_FORM_SETCDR,
   HLL_FORM_DEFUN,
   HLL_FORM_PROGN,
+  HLL_FORM_LAMBDA,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -664,6 +665,8 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_DEFUN;
   } else if (strcmp(symb, "progn") == 0) {
     kind = HLL_FORM_PROGN;
+  } else if (strcmp(symb, "lambda") == 0) {
+    kind = HLL_FORM_LAMBDA;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -856,32 +859,6 @@ static void compile_let(hll_compiler *compiler, const hll_ast *args) {
   compile_progn(compiler, args->as.cons.cdr);
   emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
 }
-
-#if 0
-static void compile_lambda(hll_compiler *compiler, hll_ast *args) {
-  size_t length = ast_list_length(args);
-  if (length != 2) {
-    compiler_error(compiler, args, "'lambda' expects exactly 2 arguments");
-    return;
-  }
-  hll_ast *params = args->as.cons.car;
-  for (hll_ast *test = params; test->kind == HLL_AST_CONS;
-       test = test->as.cons.cdr) {
-    if (test->as.cons.car->kind != HLL_AST_SYMB) {
-      compiler_error(compiler, args,
-                     "'lambda' parameter list must consist only of symbols");
-    }
-  }
-  hll_ast *body = args->as.cons.cdr;
-  assert(body->kind == HLL_AST_CONS);
-  assert(body->as.cons.cdr->kind == HLL_AST_NIL);
-  body = body->as.cons.car;
-
-  compile_expression(compiler, params);
-  compile_expression(compiler, body);
-  emit_op(compiler->bytecode, HLL_BYTECODE_MAKE_LAMBDA);
-}
-#endif
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
   static void compile_c##_lower##r(hll_compiler *compiler,                     \
@@ -1096,10 +1073,13 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
       return true;
     }
 
+    uint16_t symb_idx = add_symbol_and_return_its_index(
+        &new_compiler, car->as.symb.str, car->as.symb.length);
+    hll_obj *symb = bytecode->constant_pool[symb_idx];
+    assert(symb != NULL);
     hll_obj *cons =
         hll_new_cons(compiler->vm,
-                     bytecode->constant_pool[add_symbol_and_return_its_index(
-                         &new_compiler, car->as.symb.str, car->as.symb.length)],
+                     symb,
                      compiler->vm->nil);
     if (param_list == NULL) {
       param_list = param_list_tail = cons;
@@ -1143,13 +1123,32 @@ static void compile_defun(hll_compiler *compiler, const hll_ast *args) {
   compile_expression(compiler, name);
 
   uint16_t function_idx;
-  if (compile_function(compiler, params, body, "func", &function_idx)) {
+  if (compile_function(compiler, params, body, "defun", &function_idx)) {
     return;
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
   emit_u16(compiler->bytecode, function_idx);
   emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+}
+
+static void compile_lambda(hll_compiler *compiler, const hll_ast *args) {
+  if (ast_list_length(args) < 2) {
+    compiler_error(compiler, args, "'lambda' expects at least 2 arguments");
+    return;
+  }
+
+  const hll_ast *params = args->as.cons.car;
+  args = args->as.cons.cdr;
+  const hll_ast *body = args;
+
+  uint16_t function_idx;
+  if (compile_function(compiler, params, body, "lambda", &function_idx)) {
+    return;
+  }
+
+  emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
+  emit_u16(compiler->bytecode, function_idx);
 }
 
 static void compile_form(hll_compiler *compiler, const hll_ast *args,
@@ -1172,9 +1171,9 @@ static void compile_form(hll_compiler *compiler, const hll_ast *args,
   case HLL_FORM_LET:
     compile_let(compiler, args);
     break;
-    //  case HLL_FORM_LAMBDA:
-    //    compile_lambda(compiler, args);
-    //    break;
+  case HLL_FORM_LAMBDA:
+    compile_lambda(compiler, args);
+    break;
   case HLL_FORM_SETF:
     compile_setf(compiler, args);
     break;

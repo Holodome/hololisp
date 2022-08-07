@@ -34,7 +34,7 @@ static void dump_object(void *file, hll_obj *obj) {
     fprintf(file, "true");
     break;
   case HLL_OBJ_FUNC:
-    fprintf(file, "func");
+    fprintf(file, "func %s", hll_unwrap_func(obj)->name);
     break;
   }
 }

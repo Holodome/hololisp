@@ -1,5 +1,4 @@
-run_test "lambda" "t" "((lambda () t))"
-run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
+
 
 run_test "defun" "12" "(defun double (x) (+ x x)) (double 6)"
 run_test "defun" "15" "(defun f (x y z) (+ x y z)) (f 3 5 7)"
