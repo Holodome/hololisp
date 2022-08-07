@@ -254,6 +254,7 @@ static void test_compiler_compiles_let(void) {
       0x01,
       // (c 2)
       HLL_BYTECODE_LET,
+      HLL_BYTECODE_POP,
       // a
       HLL_BYTECODE_CONST,
       0x00,
@@ -281,6 +282,7 @@ static void test_compiler_compiles_let(void) {
       // (+ c 1)
       HLL_BYTECODE_CALL,
       HLL_BYTECODE_LET,
+      HLL_BYTECODE_POP,
       HLL_BYTECODE_POPENV,
       HLL_BYTECODE_END,
   };
@@ -304,6 +306,7 @@ static void test_compiler_compiles_let_with_body(void) {
       0x01,
       // (c 2)
       HLL_BYTECODE_LET,
+      HLL_BYTECODE_POP,
       // a
       HLL_BYTECODE_CONST,
       0x00,
@@ -331,6 +334,7 @@ static void test_compiler_compiles_let_with_body(void) {
       // (+ c 1)
       HLL_BYTECODE_CALL,
       HLL_BYTECODE_LET,
+      HLL_BYTECODE_POP,
       // (* c a)
       HLL_BYTECODE_CONST,
       0x00,

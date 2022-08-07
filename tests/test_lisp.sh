@@ -118,4 +118,9 @@ run_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
 run_test "defun" "double" "(defun double (x) (+ x x))"
 run_test "defun & call" "12" "(defun double (x) (+ x x)) (double 6)"
 
+run_test "let" "t" "(let ((x t)) x)"
+run_test "let" "2" "(let ((x 1)) (+ x 1))"
+run_test "let" "3" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
+
+
 exit $failed

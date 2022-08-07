@@ -16,7 +16,7 @@ extern void add_builtins(hll_vm *vm);
 
 static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;
-  fprintf(stderr, "%s\n", text);
+  fprintf(stderr, "%s", text);
 }
 
 static void default_write_fn(hll_vm *vm, const char *text) {
@@ -445,9 +445,13 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
           vm, hll_new_cons(vm, name, value), hll_unwrap_env(env)->vars);
 
     } break;
-    case HLL_BYTECODE_PUSHENV:
-      break;
+    case HLL_BYTECODE_PUSHENV: {
+      hll_obj *new_env = hll_new_env(vm, env, vm->nil);
+      env = new_env;
+    }break;
     case HLL_BYTECODE_POPENV:
+      env = hll_unwrap_env(env)->up;
+      assert(env->kind == HLL_OBJ_ENV);
       break;
     case HLL_BYTECODE_CAR: {
       hll_obj *cons = hll_sb_pop(stack);
@@ -507,8 +511,10 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
 
   if (print_result) {
     if (hll_sb_len(stack) != 1) {
-      internal_compiler_error(vm, "stack is empty (expected value to print)");
-      hll_dump_bytecode(stderr, hll_sb_last(call_stack).bytecode);
+      internal_compiler_error(
+          vm, "stack size is not one (expected one value to print, got %zu)",
+          hll_sb_len(stack));
+      hll_dump_bytecode(stderr, initial_bytecode);
     }
     hll_obj *obj = stack[0];
     hll_print(vm, obj, stdout);

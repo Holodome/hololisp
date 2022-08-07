@@ -33,10 +33,6 @@ run_test () {
     echo "ok"
 }
 
-run_test "let" "t" "(let ((x t)) x)"
-run_test "let" "2" "(let ((x 1)) (+ x 1))"
-run_test "let" "2" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
-
 run_test "while with defvar and defq" "45" "(defvar i 0) \
   (defvar sum 0) \
   (while (< i 10) \

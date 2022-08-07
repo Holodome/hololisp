@@ -809,6 +809,15 @@ static void compile_if(hll_compiler *compiler, const hll_ast *args) {
                get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
+static void compile_progn(hll_compiler *compiler, const hll_ast *prog) {
+  for (; prog->kind == HLL_AST_CONS; prog = prog->as.cons.cdr) {
+    compile_eval_expression(compiler, prog->as.cons.car);
+    if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
+      emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    }
+  }
+}
+
 static void compile_let(hll_compiler *compiler, const hll_ast *args) {
   size_t length = ast_list_length(args);
   if (length < 1) {
@@ -833,16 +842,10 @@ static void compile_let(hll_compiler *compiler, const hll_ast *args) {
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   }
 
-  for (const hll_ast *prog = args->as.cons.cdr; prog->kind == HLL_AST_CONS;
-       prog = prog->as.cons.cdr) {
-    compile_eval_expression(compiler, prog->as.cons.car);
-    if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
-      emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-    }
-  }
-
+  compile_progn(compiler, args->as.cons.cdr);
   emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
 }
 
@@ -1068,13 +1071,7 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
   hll_compiler new_compiler = {0};
   new_compiler.vm = compiler->vm;
   new_compiler.bytecode = bytecode;
-  for (const hll_ast *prog = body; prog->kind == HLL_AST_CONS;
-       prog = prog->as.cons.cdr) {
-    compile_eval_expression(&new_compiler, prog->as.cons.car);
-    if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
-      emit_op(new_compiler.bytecode, HLL_BYTECODE_POP);
-    }
-  }
+  compile_progn(&new_compiler, body);
   emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {
     compiler->has_errors = true;
