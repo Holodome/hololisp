@@ -122,5 +122,16 @@ run_test "let" "t" "(let ((x t)) x)"
 run_test "let" "2" "(let ((x 1)) (+ x 1))"
 run_test "let" "3" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
 
+run_test "progn" "()" "(progn)"
+run_test "progn" "t" "(progn t)"
+run_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
+
+fib_source="(defun fib (n) \
+(if (<= n 1) n \
+(+ (fib (- n 1)) (fib (- n 2)))))"
+
+run_test "fib 1" "1" "$fib_source (fib 1)"
+run_test "fib 8" "21" "$fib_source (fib 8)"
+run_test "fib 20" "6765" "$fib_source (fib 20)"
 
 exit $failed

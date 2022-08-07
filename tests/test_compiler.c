@@ -283,6 +283,7 @@ static void test_compiler_compiles_let(void) {
       HLL_BYTECODE_CALL,
       HLL_BYTECODE_LET,
       HLL_BYTECODE_POP,
+      HLL_BYTECODE_NIL,
       HLL_BYTECODE_POPENV,
       HLL_BYTECODE_END,
   };

@@ -632,6 +632,7 @@ typedef enum {
   HLL_FORM_SETCAR,
   HLL_FORM_SETCDR,
   HLL_FORM_DEFUN,
+  HLL_FORM_PROGN,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -661,6 +662,8 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_SETCDR;
   } else if (strcmp(symb, "defun") == 0) {
     kind = HLL_FORM_DEFUN;
+  } else if (strcmp(symb, "progn") == 0) {
+    kind = HLL_FORM_PROGN;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -810,6 +813,11 @@ static void compile_if(hll_compiler *compiler, const hll_ast *args) {
 }
 
 static void compile_progn(hll_compiler *compiler, const hll_ast *prog) {
+  if (prog->kind == HLL_AST_NIL) {
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    return;
+  }
+
   for (; prog->kind == HLL_AST_CONS; prog = prog->as.cons.cdr) {
     compile_eval_expression(compiler, prog->as.cons.car);
     if (prog->as.cons.cdr->kind != HLL_AST_NIL) {
@@ -1187,6 +1195,9 @@ static void compile_form(hll_compiler *compiler, const hll_ast *args,
     break;
   case HLL_FORM_DEFUN:
     compile_defun(compiler, args);
+    break;
+  case HLL_FORM_PROGN:
+    compile_progn(compiler, args);
     break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_FORM_C##_upper##R:                                                  \

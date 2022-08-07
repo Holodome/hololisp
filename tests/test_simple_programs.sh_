@@ -33,14 +33,6 @@ run_test () {
     echo "ok"
 }
 
-fib_source="(defun fib (n) \
-(if (<= n 1) n \
-(+ (fib (- n 1)) (fib (- n 2)))))"
-
-run_test "fib 1" "1" "$fib_source (fib 1)"
-run_test "fib 8" "21" "$fib_source (fib 8)"
-run_test "fib 20" "6765" "$fib_source (fib 20)"
-
 fizzbuzz_source="(defun fizzbuzz (n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
 (let ((mult-3 (is-mult-p 3)) \
