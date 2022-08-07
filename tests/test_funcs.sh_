@@ -100,5 +100,4 @@ run_test "max" "4" "(max 1 2 3 4)"
 run_test "abs" "1" "(abs -1)"
 run_test "abs" "1" "(abs 1)"
 
-
 exit $failed

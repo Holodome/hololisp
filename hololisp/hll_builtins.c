@@ -1,6 +1,7 @@
 #include "hll_obj.h"
 #include "hll_vm.h"
 
+#include <math.h>
 #include <stdio.h>
 
 static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
@@ -191,6 +192,28 @@ static hll_obj *builtin_num_le(hll_vm *vm, hll_obj *args) {
   return vm->true_;
 }
 
+static hll_obj *builtin_rem(hll_vm *vm, hll_obj *args) {
+  //  CHECK_HAS_N_ARGS(2);
+
+  hll_obj *x = hll_unwrap_car(args);
+  //  CHECK_TYPE(x, HLL_OBJ_INT, "dividend");
+  hll_obj *y = hll_unwrap_car(hll_unwrap_cdr(args));
+  //  CHECK_TYPE(y, HLL_OBJ_INT, "divisor");
+
+  return hll_new_num(vm, fmod(x->as.num, y->as.num));
+}
+
+static hll_obj *builtin_and(hll_vm *vm, hll_obj *args) {
+  for (hll_obj *obj = args; obj->kind != HLL_OBJ_NIL;
+       obj = hll_unwrap_cdr(obj)) {
+    if (hll_unwrap_car(obj)->kind == HLL_OBJ_NIL) {
+      return vm->nil;
+    }
+  }
+
+  return vm->true_;
+}
+
 void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "print", builtin_print);
   hll_add_binding(vm, "+", builtin_add);
@@ -203,4 +226,7 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, ">=", builtin_num_ge);
   hll_add_binding(vm, "=", builtin_num_eq);
   hll_add_binding(vm, "/=", builtin_num_ne);
+  hll_add_binding(vm, "rem", builtin_rem);
+  hll_add_binding(vm, "and", builtin_and);
+
 }
