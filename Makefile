@@ -2,6 +2,7 @@ SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
 CFLAGS = -O2
+LDFLAGS = -lm
 
 ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
@@ -30,7 +31,7 @@ $(OUT_DIR):
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
 $(TARGET): $(OBJS)
-	$(CC) $(COVERAGE_FLAGS) -o $@ $(LDFLAGS) $^
+	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LDFLAGS)
 
 $(OUT_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
@@ -54,7 +55,7 @@ UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
 -include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
 $(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^ $(LDFLAGS)
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  

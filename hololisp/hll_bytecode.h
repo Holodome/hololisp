@@ -4,63 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/*
-NIL
-    s[n++] = nil
-TRUE
-    s[n++] = true
-CONST(u16 x)
-    s[n++] = consts[x]
-APPEND
-    a := cons(s[n - 1], nil);
-    if list_head == NULL:
-        s[n - 3] = s[n - 2] = a
-    else:
-        s[n - 2].cdr = cons
-        s[n - 2] = a
-    pop()
-POP
-    --n
-FIND
-    symb := s[--n]
-    s[n++] = search(env, symb)
-CALL
-    args := s[--n]
-    callable := s[--n]
-    callable(args)
-JN(u16 x)
-    if s[n - 1] == nil:
-        ip += x
-MAKELAMBDA
-    body := s[--n]
-    params := s[--n]
-    s[n++] = lambda(cur_env, body, params)
-LET
-    value := s[--n]
-    name := s[--n]
-    cur_env[name] = value
-PUSHENV
-    cur_env = env()
-POPENV
-    cur_env = cur_env.up
-CAR
-    list := s[--n]
-    s[n++] = list.car
-CDR
-    list := s[--n]
-    s[n++] = list.cdr
-SETCAR
-    list := s[--n]
-    value := s[--n]
-    list.car = value
-SETCDR
-    list := s[--n]
-    value := s[--n]
-    list.cdr = value
- */
-
 typedef enum {
-  /// Bytecode must be terminated with 0.
+  // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
   // Pushes nil on stack
   HLL_BYTECODE_NIL,
@@ -71,6 +16,8 @@ typedef enum {
   // Uses 3 last items on stack. First two are considered list head and tail,
   // 3 is element that needs to be appended to list. Pops last element
   // leaving only head and tail.
+  // The reason for this instruction is to ease up creation of lists,
+  // in favor of conses because the latter appear much rarer than lists.
   HLL_BYTECODE_APPEND,
   // Removes top element from stack
   HLL_BYTECODE_POP,
@@ -82,41 +29,41 @@ typedef enum {
   // First is callable object. This is lisp object either a function (lambda)
   // or C binding. In first case creates new env and calls that function.
   HLL_BYTECODE_CALL,
-  // Jump if true (u16 offset).
+  // Jump if true (i16 offset, two's complement).
   HLL_BYTECODE_JN,
-  // Create function. Uses two values on stack. First is arguments list,
-  // second is function body. Appends new function on stack.
-  HLL_BYTECODE_MAKE_LAMBDA,
   // Defines new variable with given name in current env (lexical env).
   // If variable with same name is defined in current env, error.
   // If variable with same name is defined in outer scope it is redefined in
   // current.
   HLL_BYTECODE_LET,
-  // Creates new variable scope context
+  // Creates new variable scope context. Used in let statements.
+  // Form applications that feature manipulation of envs do it inline.
   HLL_BYTECODE_PUSHENV,
-  // Removes last variable scope context
+  // Removes last variable scope context. Used when leaving let statements
   HLL_BYTECODE_POPENV,
+  // Returns car of top object on stack. If object is nil, return nil
   HLL_BYTECODE_CAR,
+  // Returns cdr of top object on stack. If object is nil, return nil
   HLL_BYTECODE_CDR,
+  // Sets car of 2-nd object on stack. Pops the value.
   HLL_BYTECODE_SETCAR,
+  // Sets cdr of 2-nd object on stack. Pops the value.
   HLL_BYTECODE_SETCDR,
+  // Creates function object using constant index (u16). Object in constant slot
+  // should be compiled function object. It is copied and pushed on top of the
+  // stack.
+  // Then all symbols referenced in function definition are captured.
+  HLL_BYTECODE_MAKEFUN,
 } hll_bytecode_op;
-
-typedef struct {
-  uint8_t *ops;
-} hll_function;
 
 typedef struct hll_bytecode {
   // Bytecode dynamic array
   uint8_t *ops;
   // Constant pool dynamic array
   struct hll_obj **constant_pool;
-  // Functions dynamic array. If bytecode structure refers to function,
-  // this is always empty.
-  struct hll_bytecode **function_pool;
 } hll_bytecode;
 
 void hll_free_bytecode(hll_bytecode *bytecode);
-void hll_dump_bytecode(void *file, hll_bytecode *bytecode);
+void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
 
 #endif

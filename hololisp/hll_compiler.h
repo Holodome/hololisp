@@ -114,7 +114,7 @@ typedef struct {
   struct hll_bytecode *bytecode;
 } hll_compiler;
 
-void hll_compile_ast(hll_compiler *compiler, hll_ast *ast);
+void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast);
 
 // Compiles hololisp code as a hololisp bytecode.
 // Because internally lisp is represented as a tree of conses (lists),
