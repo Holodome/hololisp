@@ -584,9 +584,7 @@ static void test_compiler_basic_special_forms(void) {
 #endif
 
 #define TCASE(_name)                                                           \
-  {                                                                            \
-#_name, _name                                                              \
-  }
+  { #_name, _name }
 
 TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_addition),
