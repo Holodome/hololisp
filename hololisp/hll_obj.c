@@ -242,7 +242,7 @@ hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src) {
     hll_obj_func *func = hll_unwrap_func(src);
     result = hll_new_func(vm, func->param_names, func->bytecode, func->name);
     hll_unwrap_func(result)->var_list = vm->nil;
-  }break;
+  } break;
   default:
     HLL_UNREACHABLE;
     break;

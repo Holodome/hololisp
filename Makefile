@@ -2,6 +2,7 @@ SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
 CFLAGS = -O2
+LDFLAGS = -lm
 
 ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage

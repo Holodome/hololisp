@@ -228,5 +228,4 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "/=", builtin_num_ne);
   hll_add_binding(vm, "rem", builtin_rem);
   hll_add_binding(vm, "and", builtin_and);
-
 }

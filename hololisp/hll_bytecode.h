@@ -50,7 +50,8 @@ typedef enum {
   // Sets cdr of 2-nd object on stack. Pops the value.
   HLL_BYTECODE_SETCDR,
   // Creates function object using constant index (u16). Object in constant slot
-  // should be compiled function object. It is copied and pushed on top of the stack.
+  // should be compiled function object. It is copied and pushed on top of the
+  // stack.
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
 } hll_bytecode_op;

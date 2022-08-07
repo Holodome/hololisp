@@ -1077,10 +1077,7 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
         &new_compiler, car->as.symb.str, car->as.symb.length);
     hll_obj *symb = bytecode->constant_pool[symb_idx];
     assert(symb != NULL);
-    hll_obj *cons =
-        hll_new_cons(compiler->vm,
-                     symb,
-                     compiler->vm->nil);
+    hll_obj *cons = hll_new_cons(compiler->vm, symb, compiler->vm->nil);
     if (param_list == NULL) {
       param_list = param_list_tail = cons;
     } else {

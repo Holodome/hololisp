@@ -384,7 +384,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
             if (strcmp(hll_unwrap_zsymb(test_name), hll_unwrap_zsymb(name)) ==
                 0) {
               found_in_captured = true;
-//              hll_unwrap_cons(cons)->cdr = value;
+              //              hll_unwrap_cons(cons)->cdr = value;
             }
           }
 
@@ -449,7 +449,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
     case HLL_BYTECODE_PUSHENV: {
       hll_obj *new_env = hll_new_env(vm, env, vm->nil);
       env = new_env;
-    }break;
+    } break;
     case HLL_BYTECODE_POPENV:
       env = hll_unwrap_env(env)->up;
       assert(env->kind == HLL_OBJ_ENV);
