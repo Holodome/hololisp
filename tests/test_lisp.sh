@@ -205,10 +205,12 @@ run_test "when false" "()" "(when () t)"
 run_test "unless true" "()" "(unless t t)"
 run_test "unless false" "t" "(unless () t)"
 
-run_test "or true" "t" "(or () () 1)"
+run_test "or true" "1" "(or () () 1)"
 run_test "or false" "()" "(or () () ())"
+run_test "or empty" "()" "(or)"
 run_test "and true" "3" "(and 1 2 3)"
 run_test "and false" "()" "(and () () ())"
+run_test "and empty" "t" "(and)"
 
 #run_test "not true" "()" "(not t)"
 #run_test "not nil" "t" "(not ())"

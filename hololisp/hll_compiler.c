@@ -1185,8 +1185,8 @@ static void compile_not(hll_compiler *compiler, const hll_ast *args) {
 }
 
 static void compile_and(hll_compiler *compiler, const hll_ast *args) {
-  if (ast_list_length(args) < 1) {
-    compiler_error(compiler, args, "'and' form expects at least 1 argument");
+  if (ast_list_length(args) == 0) {
+    emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
     return;
   }
 
@@ -1195,9 +1195,6 @@ static void compile_and(hll_compiler *compiler, const hll_ast *args) {
   for (const hll_ast *arg_slot = args; arg_slot->kind == HLL_AST_CONS;
        arg_slot = arg_slot->as.cons.cdr) {
     const hll_ast *item = arg_slot->as.cons.car;
-//    if (arg_slot != args) {
-//      emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-//    }
     compile_eval_expression(compiler, item);
     if (arg_slot->as.cons.cdr->kind != HLL_AST_CONS) {
       emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
@@ -1225,8 +1222,51 @@ static void compile_and(hll_compiler *compiler, const hll_ast *args) {
 }
 
 static void compile_or(hll_compiler *compiler, const hll_ast *args) {
-  (void)compiler;
-  (void)args;
+  if (ast_list_length(args) == 0) {
+    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    return;
+  }
+
+  // if nil, jump to next
+  // otherwise jump out
+
+  size_t previous_jump;
+  size_t original_idx = get_current_op_idx(compiler->bytecode);
+  for (const hll_ast *arg_slot = args; arg_slot->kind == HLL_AST_CONS;
+       arg_slot = arg_slot->as.cons.cdr) {
+    const hll_ast *item = arg_slot->as.cons.car;
+
+    if (arg_slot != args) {
+      write_u16_be(compiler->bytecode->ops + previous_jump,
+                   get_current_op_idx(compiler->bytecode) - previous_jump - 2);
+      emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    }
+
+    compile_eval_expression(compiler, item);
+    emit_op(compiler->bytecode, HLL_BYTECODE_DUP);
+    emit_op(compiler->bytecode, HLL_BYTECODE_JN); // jump to next
+    previous_jump = emit_u16(compiler->bytecode, 0);
+    if (arg_slot->as.cons.cdr->kind != HLL_AST_NIL) {
+      emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+      emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+      emit_u16(compiler->bytecode, 0);
+    }
+  }
+
+  size_t total_out = get_current_op_idx(compiler->bytecode);
+
+  uint8_t *cursor = compiler->bytecode->ops + original_idx;
+  while (cursor < compiler->bytecode->ops + total_out) {
+    if (*cursor++ == HLL_BYTECODE_JN) {
+      uint16_t current;
+      memcpy(&current, cursor, sizeof(uint16_t));
+      if (current == 0) {
+        write_u16_be(cursor,
+                     total_out - (cursor - compiler->bytecode->ops) - 2);
+      }
+      cursor += 2;
+    }
+  }
 }
 
 static void compile_when(hll_compiler *compiler, const hll_ast *args) {
