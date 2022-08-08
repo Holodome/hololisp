@@ -375,24 +375,9 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
           hll_obj *name = hll_unwrap_car(param_name);
           assert(name->kind == HLL_OBJ_SYMB);
           hll_obj *value = hll_unwrap_car(param_value);
-
-          bool found_in_captured = false;
-          for (hll_obj *var = hll_unwrap_env(new_env)->vars;
-               var->kind != HLL_OBJ_NIL; var = hll_unwrap_cdr(var)) {
-            hll_obj *cons = hll_unwrap_car(var);
-            hll_obj *test_name = hll_unwrap_car(cons);
-            if (strcmp(hll_unwrap_zsymb(test_name), hll_unwrap_zsymb(name)) ==
-                0) {
-              found_in_captured = true;
-              //              hll_unwrap_cons(cons)->cdr = value;
-            }
-          }
-
-          if (!found_in_captured) {
-            hll_obj *cons = hll_new_cons(vm, name, value);
-            hll_unwrap_env(new_env)->vars =
-                hll_new_cons(vm, cons, hll_unwrap_env(new_env)->vars);
-          }
+          hll_obj *cons = hll_new_cons(vm, name, value);
+          hll_unwrap_env(new_env)->vars =
+              hll_new_cons(vm, cons, hll_unwrap_env(new_env)->vars);
         }
 
         env = new_env;
