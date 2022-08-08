@@ -200,4 +200,18 @@ run_test "reverse" "()" "(reverse ())"
 run_test "reverse" "(1)" "(reverse '(1))"
 run_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
 
+run_test "when true" "t" "(when t t)"
+run_test "when false" "()" "(when () t)"
+run_test "unless true" "()" "(unless t t)"
+run_test "unless false" "t" "(unless () t)"
+
+run_test "or true" "t" "(or () () 1)"
+run_test "or false" "()" "(or () () ())"
+run_test "and true" "t" "(and 1 2 3)"
+run_test "and false" "()" "(and () () ())"
+
+run_test "not true" "()" "(not t)"
+run_test "not nil" "t" "(not ())"
+run_test "not eval" "()" "(not (+ 1 2))"
+
 exit $failed

@@ -634,6 +634,11 @@ typedef enum {
   HLL_FORM_DEFUN,
   HLL_FORM_PROGN,
   HLL_FORM_LAMBDA,
+  HLL_FORM_OR,
+  HLL_FORM_AND,
+  HLL_FORM_WHEN,
+  HLL_FORM_UNLESS,
+  HLL_FORM_NOT,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -667,6 +672,16 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_PROGN;
   } else if (strcmp(symb, "lambda") == 0) {
     kind = HLL_FORM_LAMBDA;
+  } else if (strcmp(symb, "or") == 0) {
+    kind = HLL_FORM_OR;
+  } else if (strcmp(symb, "and") == 0) {
+    kind = HLL_FORM_AND;
+  } else if (strcmp(symb, "when") == 0) {
+    kind = HLL_FORM_WHEN;
+  } else if (strcmp(symb, "unless") == 0) {
+    kind = HLL_FORM_UNLESS;
+  } else if (strcmp(symb, "not") == 0) {
+    kind = HLL_FORM_NOT;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -1148,6 +1163,47 @@ static void compile_lambda(hll_compiler *compiler, const hll_ast *args) {
   emit_u16(compiler->bytecode, function_idx);
 }
 
+static void compile_not(hll_compiler *compiler, const hll_ast *args) {
+  if (ast_list_length(args) != 1) {
+    compiler_error(compiler, args, "'not' form expects exactly 1 argument");
+    return;
+  }
+
+  compile_eval_expression(compiler, args->as.cons.car);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_nil = emit_u16(compiler->bytecode, 0);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_out = emit_u16(compiler->bytecode, 0);
+  write_u16_be(compiler->bytecode->ops + jump_nil,
+               get_current_op_idx(compiler->bytecode) - jump_nil - 2);
+  emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+
+  write_u16_be(compiler->bytecode->ops + jump_out,
+               get_current_op_idx(compiler->bytecode) - jump_out - 2);
+}
+
+static void compile_and(hll_compiler *compiler, const hll_ast *args) {
+  (void)compiler;
+  (void)args;
+}
+
+static void compile_or(hll_compiler *compiler, const hll_ast *args) {
+  (void)compiler;
+  (void)args;
+}
+
+static void compile_when(hll_compiler *compiler, const hll_ast *args) {
+  (void)compiler;
+  (void)args;
+}
+
+static void compile_unless(hll_compiler *compiler, const hll_ast *args) {
+  (void)compiler;
+  (void)args;
+}
+
 static void compile_form(hll_compiler *compiler, const hll_ast *args,
                          hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
@@ -1201,6 +1257,21 @@ static void compile_form(hll_compiler *compiler, const hll_ast *args,
     break;
     HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
+  case HLL_FORM_OR:
+    compile_or(compiler, args);
+    break;
+  case HLL_FORM_AND:
+    compile_and(compiler, args);
+    break;
+  case HLL_FORM_WHEN:
+    compile_when(compiler, args);
+    break;
+  case HLL_FORM_UNLESS:
+    compile_unless(compiler, args);
+    break;
+  case HLL_FORM_NOT:
+    compile_not(compiler, args);
+    break;
   }
 }
 

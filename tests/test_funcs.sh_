@@ -49,15 +49,5 @@ run_test "any true" "t" "(any (lambda (x) x) '(() 1 () '(1 2 3)))"
 run_test "any nil" "()" "(any (lambda (x) x) '(() () () ((lambda () ()))))"
 
 run_test "map" "(1 2 3 4)" "(map (lambda (x) (+ x 1)) '(0 1 2 3))"
-run_test "when true" "t" "(when t t)"
-run_test "when false" "()" "(when () t)"
-run_test "unless true" "()" "(unless t t)"
-run_test "unless false" "t" "(unless () t)"
-
-run_test "or true" "t" "(or () () 1)"
-run_test "or false" "()" "(or () () ())"
-run_test "and true" "t" "(and 1 2 3)"
-run_test "and false" "()" "(and () () ())"
-
 
 exit $failed
