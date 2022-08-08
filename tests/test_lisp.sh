@@ -141,6 +141,7 @@ run_test "lambda" "2" "(defvar x 1)
 
 run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
+run_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (setf x 3) (f)"
 
 fizzbuzz_source="(defun fizzbuzz (n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
@@ -157,5 +158,46 @@ run_test "fizzbuzz 9" "fizz" "$fizzbuzz_source (fizzbuzz 9)"
 run_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
 run_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
 run_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
+
+run_test "min" "1" "(min 1 2 3 4)"
+run_test "max" "4" "(max 1 2 3 4)"
+
+run_test "listp" "t" "(listp '(1 2 3))"
+run_test "listp" "t" "(listp ())"
+run_test "listp" "()" "(listp 1)"
+run_test "listp" "()" "(listp 'abc)"
+
+run_test "null" "()" "(null '(1 2 3))"
+run_test "null" "t" "(null ())"
+run_test "null" "()" "(null 1)"
+run_test "null" "()" "(null 'abc)"
+
+run_test "numberp" "()" "(numberp '(1 2 3))"
+run_test "numberp" "()" "(numberp ())"
+run_test "numberp" "t" "(numberp 1)"
+run_test "numberp" "()" "(numberp 'abc)"
+
+run_test "plusp" "t" "(plusp 100)"
+run_test "plusp" "()" "(plusp 0)"
+run_test "plusp" "()" "(plusp -100)"
+
+run_test "zerop" "()" "(zerop 100)"
+run_test "zerop" "t" "(zerop 0)"
+run_test "zerop" "()" "(zerop -100)"
+
+run_test "minusp" "()" "(minusp 100)"
+run_test "minusp" "()" "(minusp 0)"
+run_test "minusp" "t" "(minusp -100)"
+
+run_test "abs" "1" "(abs -1)"
+run_test "abs" "1" "(abs 1)"
+
+run_test "append" "(a b c d)" "(append '(a b) '(c d))"
+run_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
+run_test "append" "(foo . bar)" "(append '(foo) 'bar)"
+
+run_test "reverse" "()" "(reverse ())"
+run_test "reverse" "(1)" "(reverse '(1))"
+run_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
 
 exit $failed

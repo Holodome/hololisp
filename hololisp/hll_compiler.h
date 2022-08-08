@@ -36,7 +36,7 @@ typedef struct {
   hll_token_kind kind;
   size_t offset;
   uint32_t length;
-  hll_num value;
+  double value;
 } hll_token;
 
 // Lexer is designed in way it is possible to use outside of compiler to allow
@@ -73,7 +73,7 @@ typedef struct hll_ast {
   size_t offset; // offset in source file
 
   union {
-    hll_num num;
+    double num;
     struct {
       const char *str;
       size_t length;

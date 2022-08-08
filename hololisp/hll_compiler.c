@@ -705,7 +705,7 @@ static size_t emit_u16(hll_bytecode *bytecode, uint16_t value) {
 }
 
 static uint16_t add_int_constant_and_return_its_index(hll_compiler *compiler,
-                                                      hll_num value) {
+                                                      double value) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     hll_obj *test = compiler->bytecode->constant_pool[i];
     if (test->kind == HLL_OBJ_NUM && test->as.num == value) {

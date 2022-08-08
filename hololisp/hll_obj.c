@@ -85,7 +85,7 @@ hll_obj *hll_new_true(struct hll_vm *vm) {
   return obj;
 }
 
-hll_obj *hll_new_num(struct hll_vm *vm, hll_num num) {
+hll_obj *hll_new_num(struct hll_vm *vm, double num) {
   (void)vm;
   hll_obj *obj = calloc(1, sizeof(hll_obj));
   obj->kind = HLL_OBJ_NUM;

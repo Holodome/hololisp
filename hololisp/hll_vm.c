@@ -197,7 +197,7 @@ static void internal_compiler_error(hll_vm *vm, const char *fmt, ...) {
 }
 
 HLL_ATTR(format(printf, 2, 3))
-static void runtime_error(hll_vm *vm, const char *fmt, ...) {
+void hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char buffer[4096];
@@ -291,8 +291,9 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
         *headp = *tailp = cons;
       } else {
         if (HLL_UNLIKELY((*tailp)->kind != HLL_OBJ_CONS)) {
-          runtime_error(vm, "tail operand of APPEND is not a cons (found %s)",
-                        hll_get_object_kind_str((*tailp)->kind));
+          hll_runtime_error(vm,
+                            "tail operand of APPEND is not a cons (found %s)",
+                            hll_get_object_kind_str((*tailp)->kind));
           goto bail;
         }
         hll_unwrap_cons(*tailp)->cdr = cons;
@@ -302,15 +303,15 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
     case HLL_BYTECODE_FIND: {
       hll_obj *symb = hll_sb_pop(stack);
       if (HLL_UNLIKELY(symb->kind != HLL_OBJ_SYMB)) {
-        runtime_error(vm, "operand of FIND is not a symb (found %s)",
-                      hll_get_object_kind_str(symb->kind));
+        hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
+                          hll_get_object_kind_str(symb->kind));
         goto bail;
       }
 
       hll_obj *found = hll_find_var(vm, env, symb);
       if (HLL_UNLIKELY(found == NULL)) {
-        runtime_error(vm, "failed to find variable '%s' in current scope",
-                      hll_unwrap_zsymb(symb));
+        hll_runtime_error(vm, "failed to find variable '%s' in current scope",
+                          hll_unwrap_zsymb(symb));
         goto bail;
       }
 
@@ -362,9 +363,9 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
         hll_obj *new_env = hll_new_env(vm, env, func->var_list);
         if (HLL_UNLIKELY(hll_list_length(args) !=
                          hll_list_length(func->param_names))) {
-          runtime_error(vm, "param count does not match: expected %zu, got %zu",
-                        hll_list_length(func->param_names),
-                        hll_list_length(args));
+          hll_runtime_error(
+              vm, "param count does not match: expected %zu, got %zu",
+              hll_list_length(func->param_names), hll_list_length(args));
           goto bail;
         }
 
@@ -387,18 +388,15 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
         hll_sb_push(call_stack, new_frame);
       } break;
       case HLL_OBJ_BIND: {
-        hll_obj *new_env = vm->global_env;
-        hll_obj *cur_env = env;
-
-        env = new_env;
         hll_obj *result = hll_unwrap_bind(callable)->bind(vm, args);
-        env = cur_env;
-
+        if (HLL_UNLIKELY(result == NULL)) {
+          goto bail;
+        }
         hll_sb_push(stack, result);
       } break;
       default:
-        runtime_error(vm, "object is not callable (got %s)",
-                      hll_get_object_kind_str(callable->kind));
+        hll_runtime_error(vm, "object is not callable (got %s)",
+                          hll_get_object_kind_str(callable->kind));
         goto bail;
         break;
       }
@@ -445,8 +443,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       if (cons->kind == HLL_OBJ_NIL) {
         car = vm->nil;
       } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
-        runtime_error(vm, "CAR operand is not a cons (found %s)",
-                      hll_get_object_kind_str(cons->kind));
+        hll_runtime_error(vm, "CAR operand is not a cons (found %s)",
+                          hll_get_object_kind_str(cons->kind));
         goto bail;
       } else {
         car = hll_unwrap_car(cons);
@@ -461,8 +459,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       if (cons->kind == HLL_OBJ_NIL) {
         cdr = vm->nil;
       } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
-        runtime_error(vm, "CDR operand is not a cons (found %s)",
-                      hll_get_object_kind_str(cons->kind));
+        hll_runtime_error(vm, "CDR operand is not a cons (found %s)",
+                          hll_get_object_kind_str(cons->kind));
         goto bail;
       } else {
         cdr = hll_unwrap_cdr(cons);
@@ -473,8 +471,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       hll_obj *car = hll_sb_pop(stack);
       hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
-        runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
-                      hll_get_object_kind_str(cons->kind));
+        hll_runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
+                          hll_get_object_kind_str(cons->kind));
         goto bail;
       }
       hll_unwrap_cons(cons)->car = car;
@@ -483,8 +481,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       hll_obj *cdr = hll_sb_pop(stack);
       hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
-        runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
-                      hll_get_object_kind_str(cons->kind));
+        hll_runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
+                          hll_get_object_kind_str(cons->kind));
         goto bail;
       }
       hll_unwrap_cons(cons)->cdr = cdr;
