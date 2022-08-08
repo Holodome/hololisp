@@ -1195,13 +1195,47 @@ static void compile_or(hll_compiler *compiler, const hll_ast *args) {
 }
 
 static void compile_when(hll_compiler *compiler, const hll_ast *args) {
-  (void)compiler;
-  (void)args;
+  if (ast_list_length(args) < 1) {
+    compiler_error(compiler, args, "when' for expects at least 1 argument");
+    return;
+  }
+
+  hll_ast *condition = args->as.cons.car;
+  hll_ast *body = args->as.cons.cdr;
+  compile_eval_expression(compiler, condition);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_false = emit_u16(compiler->bytecode, 0);
+  compile_progn(compiler, body);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_out = emit_u16(compiler->bytecode, 0);
+  write_u16_be(compiler->bytecode->ops + jump_false,
+               get_current_op_idx(compiler->bytecode) - jump_false - 2);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  write_u16_be(compiler->bytecode->ops + jump_out,
+               get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
 static void compile_unless(hll_compiler *compiler, const hll_ast *args) {
-  (void)compiler;
-  (void)args;
+  if (ast_list_length(args) < 1) {
+    compiler_error(compiler, args, "unless' for expects at least 1 argument");
+    return;
+  }
+
+  hll_ast *condition = args->as.cons.car;
+  hll_ast *body = args->as.cons.cdr;
+  compile_eval_expression(compiler, condition);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_false = emit_u16(compiler->bytecode, 0);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_out = emit_u16(compiler->bytecode, 0);
+  write_u16_be(compiler->bytecode->ops + jump_false,
+               get_current_op_idx(compiler->bytecode) - jump_false - 2);
+  compile_progn(compiler, body);
+  write_u16_be(compiler->bytecode->ops + jump_out,
+               get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
 static void compile_form(hll_compiler *compiler, const hll_ast *args,
