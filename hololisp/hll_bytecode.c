@@ -6,13 +6,13 @@
 #include "hll_mem.h"
 #include "hll_obj.h"
 
-static void dump_object(void *file, hll_obj *obj) {
+void hll_dump_object(void *file, hll_obj *obj) {
   switch (obj->kind) {
   case HLL_OBJ_CONS:
     fprintf(file, "cons(");
-    dump_object(file, ((hll_obj_cons *)obj->as.body)->car);
+    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->car);
     fprintf(file, ", ");
-    dump_object(file, ((hll_obj_cons *)obj->as.body)->cdr);
+    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->cdr);
     fprintf(file, ")");
     break;
   case HLL_OBJ_SYMB:
@@ -74,12 +74,15 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
     case HLL_BYTECODE_LET:
       fprintf(file, "LET\n");
       break;
+    case HLL_BYTECODE_DUP:
+      fprintf(file, "DUP\n");
+      break ;
     case HLL_BYTECODE_JN: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t offset = ((uint16_t)high) << 8 | low;
       fprintf(file, "JN %" PRIx16 " (->#%llX)\n", offset,
-              (long long unsigned)(instruction + offset - bytecode->ops - 2));
+              (long long unsigned)(instruction + offset - bytecode->ops));
     } break;
     case HLL_BYTECODE_FIND:
       fprintf(file, "FIND\n");
@@ -98,7 +101,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
         fprintf(file, "MAKEFUN <err>\n");
       } else {
         fprintf(file, "MAKEFUN %" PRId16 " ", idx);
-        dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_object(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;
@@ -110,7 +113,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
         fprintf(file, "CONST <err>\n");
       } else {
         fprintf(file, "CONST %" PRId16 " ", idx);
-        dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_object(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;

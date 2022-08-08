@@ -249,14 +249,18 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
   original_frame.bytecode = initial_bytecode;
   hll_sb_push(call_stack, original_frame);
 
+//  hll_dump_bytecode(stderr, initial_bytecode);
+
   while (hll_sb_len(call_stack)) {
     uint8_t op = *hll_sb_last(call_stack).ip++;
     switch (op) {
     case HLL_BYTECODE_END:
+      assert(hll_sb_len(stack) != 0);
       (void)hll_sb_pop(call_stack);
       env = hll_unwrap_env(env)->up;
       break;
     case HLL_BYTECODE_POP:
+      assert(hll_sb_len(stack) != 0);
       (void)hll_sb_pop(stack);
       break;
     case HLL_BYTECODE_NIL:
@@ -284,6 +288,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       assert(hll_sb_len(stack) >= 3);
       hll_obj **headp = &hll_sb_last(stack) + -2;
       hll_obj **tailp = &hll_sb_last(stack) + -1;
+      assert(hll_sb_len(stack) != 0);
       hll_obj *obj = hll_sb_pop(stack);
 
       hll_obj *cons = hll_new_cons(vm, obj, vm->nil);
@@ -401,11 +406,17 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
         break;
       }
     } break;
+    case HLL_BYTECODE_DUP: {
+      assert(hll_sb_len(stack) != 0);
+      hll_obj *last = hll_sb_last(stack);
+      hll_sb_push(stack, last);
+    } break;
     case HLL_BYTECODE_JN: {
       int16_t offset =
           (hll_sb_last(call_stack).ip[0] << 8) | hll_sb_last(call_stack).ip[1];
       hll_sb_last(call_stack).ip += 2;
 
+      assert(hll_sb_len(stack) != 0);
       hll_obj *cond = hll_sb_pop(stack);
       if (cond->kind == HLL_OBJ_NIL) {
         hll_sb_last(call_stack).ip += offset;
@@ -418,11 +429,13 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
               (void *)(hll_sb_last(call_stack).ip - offset),
               (void *)(uintptr_t)offset, (void *)hll_sb_last(call_stack).ip,
               (void *)&hll_sb_last(hll_sb_last(call_stack).bytecode->ops));
+          hll_dump_bytecode(stderr, initial_bytecode);
           goto bail;
         }
       }
     } break;
     case HLL_BYTECODE_LET: {
+      assert(hll_sb_len(stack) != 0);
       hll_obj *value = hll_sb_pop(stack);
       hll_obj *name = hll_sb_last(stack);
       hll_unwrap_env(env)->vars = hll_new_cons(
@@ -438,6 +451,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       assert(env->kind == HLL_OBJ_ENV);
       break;
     case HLL_BYTECODE_CAR: {
+      assert(hll_sb_len(stack) != 0);
       hll_obj *cons = hll_sb_pop(stack);
       hll_obj *car;
       if (cons->kind == HLL_OBJ_NIL) {
@@ -454,6 +468,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       hll_sb_push(stack, car);
     } break;
     case HLL_BYTECODE_CDR: {
+      assert(hll_sb_len(stack) != 0);
       hll_obj *cons = hll_sb_pop(stack);
       hll_obj *cdr;
       if (cons->kind == HLL_OBJ_NIL) {
@@ -468,6 +483,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       hll_sb_push(stack, cdr);
     } break;
     case HLL_BYTECODE_SETCAR: {
+      assert(hll_sb_len(stack) != 0);
       hll_obj *car = hll_sb_pop(stack);
       hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
@@ -478,6 +494,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       hll_unwrap_cons(cons)->car = car;
     } break;
     case HLL_BYTECODE_SETCDR: {
+      assert(hll_sb_len(stack) != 0);
       hll_obj *cdr = hll_sb_pop(stack);
       hll_obj *cons = hll_sb_last(stack);
       if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
@@ -498,12 +515,18 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       internal_compiler_error(
           vm, "stack size is not one (expected one value to print, got %zu)",
           hll_sb_len(stack));
+      fprintf(stderr, "stack:\n");
+      for (size_t i = 0; i < hll_sb_len(stack); ++i) {
+        hll_dump_object(stderr, stack[i]);
+        fprintf(stderr, "\n");
+      }
       hll_dump_bytecode(stderr, initial_bytecode);
     }
     hll_obj *obj = stack[0];
     hll_print(vm, obj, stdout);
     printf("\n");
   }
+
 
 bail:
   hll_sb_free(stack);

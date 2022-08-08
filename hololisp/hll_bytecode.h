@@ -54,6 +54,7 @@ typedef enum {
   // stack.
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
+  HLL_BYTECODE_DUP,
 } hll_bytecode_op;
 
 typedef struct hll_bytecode {
@@ -65,5 +66,8 @@ typedef struct hll_bytecode {
 
 void hll_free_bytecode(hll_bytecode *bytecode);
 void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
+
+
+void hll_dump_object(void *file, struct hll_obj *obj);
 
 #endif
