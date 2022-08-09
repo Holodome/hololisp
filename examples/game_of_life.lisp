@@ -7,9 +7,10 @@
 (defvar *width* 40)
 (defvar *height* 40)
 
-;; Modulo operator
-(defun % (x y)
-  (- x (* (/ x y) y)))
+(defun map (functor obj)
+  (unless (null obj)
+    (cons (functor (car obj))
+          (map functor (cdr obj)))))
 
 ; ;; Function similar to python range used to create list of numbers from lo to hi
 (defun range-lo (lo hi)
@@ -24,9 +25,8 @@
 
 ; ;; Prints board
 (defun print-board (board)
-  (if (not board)
-    ()
-    (progn (print (map (lambda (it) (if (= it 1) '@ '_)) (car board)))
+  (unless (null board)
+    (progn (print (map (lambda (it) (if (= it 0) '_ '@)) (car board)))
            (print-board (cdr board)))))
 
 (defun alive-at (board x y)
@@ -70,14 +70,13 @@
        (range *height*)))
 
 (defun run (board)
-  (while t 
-    (clrscr)
-    (print-board board)
-    (setq board (simulate board))))
+  (clear)
+  (print-board board)
+  (run (simulate board)))
 
 (defun create-row (width)
   (unless (<= width 0)
-    (cons (% (rand) 2) (create-row (- width 1)))))
+    (cons (random 2) (create-row (- width 1)))))
 
 (defun create-board (width height)
   (unless (<= height 0)

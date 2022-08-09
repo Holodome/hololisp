@@ -559,7 +559,8 @@ void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
   compiler->nthcdr_symb = calloc(sizeof(hll_ast), 1);
   compiler->nthcdr_symb->kind = HLL_AST_SYMB;
   compiler->nthcdr_symb->as.symb.str = "nthcdr";
-  compiler->nthcdr_symb->as.symb.length = strlen("nthcdr");}
+  compiler->nthcdr_symb->as.symb.length = strlen("nthcdr");
+}
 
 HLL_ATTR(format(printf, 3, 4))
 static void compiler_error(hll_compiler *compiler, const hll_ast *ast,
@@ -1267,7 +1268,10 @@ static void compile_and(hll_compiler *compiler, const hll_ast *args) {
   while (cursor < compiler->bytecode->ops + total_out) {
     // TODO: This can get suddenly broken if any of the values of jump/constant
     //  match jump opcode
-    if (*cursor++ == HLL_BYTECODE_JN) {
+    uint8_t op = *cursor++;
+    if (op == HLL_BYTECODE_MAKEFUN || op == HLL_BYTECODE_CONST) {
+      cursor += 2;
+    } else if (op == HLL_BYTECODE_JN) {
       if (cursor != compiler->bytecode->ops + last_jump) {
         write_u16_be(cursor,
                      short_circuit - (cursor - compiler->bytecode->ops) - 2);

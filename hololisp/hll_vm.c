@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
@@ -90,6 +91,7 @@ hll_vm *hll_make_vm(hll_config const *config) {
   vm->nil = hll_new_nil(vm);
   vm->true_ = hll_new_true(vm);
   vm->global_env = hll_new_env(vm, vm->nil, vm->nil);
+  vm->rng_state = time(NULL);
 
   add_builtins(vm);
 
@@ -177,6 +179,15 @@ void hll_print(hll_vm *vm, hll_obj *obj, void *file) {
   case HLL_OBJ_TRUE:
     fprintf(file, "t");
     break;
+  case HLL_OBJ_BIND:
+    fprintf(file, "bind");
+    break;
+  case HLL_OBJ_ENV:
+    fprintf(file, "env");
+    break;
+  case HLL_OBJ_FUNC:
+    fprintf(file, "func");
+    break;
   default:
     assert(!"Not implemented");
     break;
@@ -248,8 +259,6 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
   original_frame.ip = initial_bytecode->ops;
   original_frame.bytecode = initial_bytecode;
   hll_sb_push(call_stack, original_frame);
-
-  //  hll_dump_bytecode(stderr, initial_bytecode);
 
   while (hll_sb_len(call_stack)) {
     uint8_t op = *hll_sb_last(call_stack).ip++;
@@ -519,18 +528,25 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       for (size_t i = 0; i < hll_sb_len(stack); ++i) {
         hll_dump_object(stderr, stack[i]);
         fprintf(stderr, "\n");
+        goto bail;
       }
-      hll_dump_bytecode(stderr, initial_bytecode);
+      hll_obj *obj = stack[0];
+      hll_print(vm, obj, stdout);
+      printf("\n");
     }
-    hll_obj *obj = stack[0];
-    hll_print(vm, obj, stdout);
-    printf("\n");
+
+    goto out;
+  bail:
+    hll_dump_bytecode(stderr, initial_bytecode);
+    for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
+      hll_obj *test = initial_bytecode->constant_pool[i];
+      fprintf(stderr, "\n\n");
+      if (test->kind == HLL_OBJ_FUNC) {
+        hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
+      }
+    }
   }
-//  hll_dump_bytecode(stderr, initial_bytecode);
-
-
-bail:
   hll_sb_free(stack);
-
+out:
   return HLL_RESULT_OK;
 }

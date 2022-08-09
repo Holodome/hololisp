@@ -206,7 +206,7 @@ static hll_obj *builtin_rem(hll_vm *vm, hll_obj *args) {
 }
 
 static uint64_t xorshift64(uint64_t *state) {
-  uint32_t x = *state;
+  uint64_t x = *state;
   x ^= x << 13;
   x ^= x >> 7;
   x ^= x << 17;
@@ -527,6 +527,12 @@ static hll_obj *builtin_nth(hll_vm *vm, hll_obj *args) {
   return result;
 }
 
+static hll_obj *builtin_clear(hll_vm *vm, hll_obj *args) {
+  (void)args;
+  printf("\033[2J");
+  return vm->nil;
+}
+
 void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "print", builtin_print);
   hll_add_binding(vm, "+", builtin_add);
@@ -555,5 +561,5 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "append", builtin_append);
   hll_add_binding(vm, "nthcdr", builtin_nthcdr);
   hll_add_binding(vm, "nth", builtin_nth);
-
+  hll_add_binding(vm, "clear", builtin_clear);
 }
