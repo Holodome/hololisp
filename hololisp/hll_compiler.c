@@ -25,9 +25,8 @@ hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
   hll_ast *ast = hll_read_ast(&reader);
 
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
-  hll_compiler compiler = {0};
-  compiler.vm = vm;
-  compiler.bytecode = bytecode;
+  hll_compiler compiler;
+  hll_compiler_init(&compiler, vm, bytecode);
   hll_compile_ast(&compiler, ast);
 
   hll_memory_arena_clear(&compilation_arena);
@@ -552,6 +551,16 @@ static size_t ast_list_length(const hll_ast *ast) {
   return length;
 }
 
+void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
+                       struct hll_bytecode *bytecode) {
+  memset(compiler, 0, sizeof(hll_compiler));
+  compiler->vm = vm;
+  compiler->bytecode = bytecode;
+  compiler->nthcdr_symb = calloc(sizeof(hll_ast), 1);
+  compiler->nthcdr_symb->kind = HLL_AST_SYMB;
+  compiler->nthcdr_symb->as.symb.str = "nthcdr";
+  compiler->nthcdr_symb->as.symb.length = strlen("nthcdr");}
+
 HLL_ATTR(format(printf, 3, 4))
 static void compiler_error(hll_compiler *compiler, const hll_ast *ast,
                            const char *fmt, ...) {
@@ -771,13 +780,11 @@ static void compile_symbol(hll_compiler *compiler, const hll_ast *ast) {
 static void compile_expression(hll_compiler *compiler, const hll_ast *ast);
 static void compile_eval_expression(hll_compiler *compiler, const hll_ast *ast);
 
-static void compile_function_call(hll_compiler *compiler, const hll_ast *list) {
-  hll_ast *fn = list->as.cons.car;
-  compile_eval_expression(compiler, fn);
-  // Now make arguments
+static void compile_function_call_internal(hll_compiler *compiler,
+                                           const hll_ast *list) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (hll_ast *arg = list->as.cons.cdr; arg->kind != HLL_AST_NIL;
+  for (const hll_ast *arg = list; arg->kind != HLL_AST_NIL;
        arg = arg->as.cons.cdr) {
     assert(arg->kind == HLL_AST_CONS);
     hll_ast *obj = arg->as.cons.car;
@@ -786,6 +793,12 @@ static void compile_function_call(hll_compiler *compiler, const hll_ast *list) {
   }
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
+}
+
+static void compile_function_call(hll_compiler *compiler, const hll_ast *list) {
+  hll_ast *fn = list->as.cons.car;
+  compile_eval_expression(compiler, fn);
+  compile_function_call_internal(compiler, list->as.cons.cdr);
 }
 
 static void compile_quote(hll_compiler *compiler, const hll_ast *args) {
@@ -906,6 +919,7 @@ HLL_ENUMERATE_CAR_CDR
 typedef enum {
   HLL_LOC_NONE,
   HLL_LOC_FORM_SYMB,
+  HLL_LOC_FORM_NTH,
 #define HLL_CAR_CDR(_, _letters) HLL_LOC_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -916,10 +930,11 @@ static hll_location_form get_location_form(const hll_ast *location) {
   if (location->kind == HLL_AST_SYMB) {
     kind = HLL_LOC_FORM_SYMB;
   } else if (location->kind == HLL_AST_CONS) {
-    hll_ast *first = location->as.cons.car;
+    const hll_ast *first = location->as.cons.car;
     if (first->kind == HLL_AST_SYMB) {
       const char *symb = first->as.symb.str;
-      if (0) {
+      if (strcmp(symb, "nth") == 0) {
+        kind = HLL_LOC_FORM_NTH;
       }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -947,6 +962,20 @@ static void compile_set_location(hll_compiler *compiler,
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
+  case HLL_LOC_FORM_NTH: {
+    if (ast_list_length(location) != 3) {
+      compiler_error(compiler, location, "'nth' expects exactly 2 arguments");
+      break;
+    }
+    // get the nth function
+    compile_symbol(compiler, compiler->nthcdr_symb);
+    emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    // call nth
+    compile_function_call_internal(compiler, location->as.cons.cdr);
+    compile_eval_expression(compiler, value);
+    emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+  } break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_LOC_FORM_C##_upper##R: {                                            \
     if (ast_list_length(location) != 2) {                                      \

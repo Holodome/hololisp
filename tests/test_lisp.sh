@@ -242,4 +242,6 @@ run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
 run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
 run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
+run_test "setf nth" "(100 2 3)" "(defvar x '(1 2 3)) (setf (nth 0 x) 100) x"
+
 exit $failed

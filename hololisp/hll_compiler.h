@@ -101,6 +101,7 @@ typedef struct {
   hll_ast *nil;
   hll_ast *true_;
   hll_ast *quote_symb;
+
   bool should_return_old_token;
 } hll_reader;
 
@@ -112,8 +113,12 @@ typedef struct {
   struct hll_vm *vm;
   bool has_errors;
   struct hll_bytecode *bytecode;
+  hll_ast *nthcdr_symb;
+
 } hll_compiler;
 
+void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
+                       struct hll_bytecode *bytecode);
 void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast);
 
 // Compiles hololisp code as a hololisp bytecode.

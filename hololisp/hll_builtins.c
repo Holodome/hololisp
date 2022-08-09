@@ -499,6 +499,34 @@ static hll_obj *builtin_nthcdr(hll_vm *vm, hll_obj *args) {
   return result;
 }
 
+static hll_obj *builtin_nth(hll_vm *vm, hll_obj *args) {
+  if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
+    hll_runtime_error(vm, "'nthcdr' expects exactly 2 arguments");
+    return NULL;
+  }
+
+  hll_obj *num = hll_unwrap_car(args);
+  if (HLL_UNLIKELY(num->kind != HLL_OBJ_NUM)) {
+    hll_runtime_error(vm, "'nthcdr' first argument must be a number");
+    return NULL;
+  } else if (HLL_UNLIKELY(num->as.num < 0)) {
+    hll_runtime_error(vm, "'nthcdr' expects non-negative number");
+    return NULL;
+  }
+
+  size_t n = (size_t)floor(num->as.num);
+  hll_obj *list = hll_unwrap_car(hll_unwrap_cdr(args));
+  for (; list->kind == HLL_OBJ_CONS && n != 0; --n, list = hll_unwrap_cdr(list))
+    ;
+
+  hll_obj *result = vm->nil;
+  if (n == 0 && list->kind == HLL_OBJ_CONS) {
+    result = hll_unwrap_car(list);
+  }
+
+  return result;
+}
+
 void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "print", builtin_print);
   hll_add_binding(vm, "+", builtin_add);
@@ -526,4 +554,6 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "reverse", builtin_reverse);
   hll_add_binding(vm, "append", builtin_append);
   hll_add_binding(vm, "nthcdr", builtin_nthcdr);
+  hll_add_binding(vm, "nth", builtin_nth);
+
 }
