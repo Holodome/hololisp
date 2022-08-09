@@ -249,7 +249,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
   original_frame.bytecode = initial_bytecode;
   hll_sb_push(call_stack, original_frame);
 
-//  hll_dump_bytecode(stderr, initial_bytecode);
+  //  hll_dump_bytecode(stderr, initial_bytecode);
 
   while (hll_sb_len(call_stack)) {
     uint8_t op = *hll_sb_last(call_stack).ip++;

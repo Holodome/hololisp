@@ -67,7 +67,6 @@ typedef struct hll_bytecode {
 void hll_free_bytecode(hll_bytecode *bytecode);
 void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
 
-
 void hll_dump_object(void *file, struct hll_obj *obj);
 
 #endif

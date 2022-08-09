@@ -1208,6 +1208,8 @@ static void compile_and(hll_compiler *compiler, const hll_ast *args) {
 
   uint8_t *cursor = compiler->bytecode->ops + original_idx;
   while (cursor < compiler->bytecode->ops + total_out) {
+    // TODO: This can get suddenly broken if any of the values of jump/constant
+    //  match jump opcode
     if (*cursor++ == HLL_BYTECODE_JN) {
       if (cursor != compiler->bytecode->ops + last_jump) {
         write_u16_be(cursor,
@@ -1226,9 +1228,6 @@ static void compile_or(hll_compiler *compiler, const hll_ast *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
   }
-
-  // if nil, jump to next
-  // otherwise jump out
 
   size_t previous_jump;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
@@ -1478,8 +1477,6 @@ void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast) {
       case HLL_AST_TRUE:
       case HLL_AST_INT:
       case HLL_AST_SYMB:
-        compile_expression(compiler, toplevel);
-        break;
       case HLL_AST_CONS:
         compile_eval_expression(compiler, toplevel);
         break;

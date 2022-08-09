@@ -76,7 +76,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
       break;
     case HLL_BYTECODE_DUP:
       fprintf(file, "DUP\n");
-      break ;
+      break;
     case HLL_BYTECODE_JN: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
