@@ -530,20 +530,19 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
         fprintf(stderr, "\n");
         goto bail;
       }
-      hll_obj *obj = stack[0];
-      hll_print(vm, obj, stdout);
-      printf("\n");
     }
-
-    goto out;
-  bail:
-    hll_dump_bytecode(stderr, initial_bytecode);
-    for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
-      hll_obj *test = initial_bytecode->constant_pool[i];
-      fprintf(stderr, "\n\n");
-      if (test->kind == HLL_OBJ_FUNC) {
-        hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
-      }
+    hll_obj *obj = stack[0];
+    hll_print(vm, obj, stdout);
+    printf("\n");
+  }
+  goto out;
+bail:
+  hll_dump_bytecode(stderr, initial_bytecode);
+  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
+    hll_obj *test = initial_bytecode->constant_pool[i];
+    fprintf(stderr, "\n\n");
+    if (test->kind == HLL_OBJ_FUNC) {
+      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
     }
   }
   hll_sb_free(stack);
