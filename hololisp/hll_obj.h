@@ -22,7 +22,7 @@ typedef enum {
 typedef struct hll_obj {
   hll_object_kind kind;
   union {
-    hll_num num;
+    double num;
     void *body;
   } as;
 } hll_obj;
@@ -61,7 +61,7 @@ hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src);
 hll_obj *hll_new_nil(struct hll_vm *vm);
 hll_obj *hll_new_true(struct hll_vm *vm);
 
-hll_obj *hll_new_num(struct hll_vm *vm, hll_num num);
+hll_obj *hll_new_num(struct hll_vm *vm, double num);
 hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length);
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr);
 hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars);

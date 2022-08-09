@@ -9,8 +9,6 @@
 
 struct hll_vm;
 
-typedef double hll_num;
-
 // Describes function that is used to perform error reporting (it's user
 // part). This means that internally, if any part of language encounters
 // error it will be handled accordingly. This function is responsible for

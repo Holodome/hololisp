@@ -136,9 +136,12 @@ run_test "fib 20" "6765" "$fib_source (fib 20)"
 
 run_test "lambda" "t" "((lambda () t))"
 run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
+run_test "lambda" "2" "(defvar x 1)
+((lambda (x) x) 2)"
 
 run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
+run_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (setf x 3) (f)"
 
 fizzbuzz_source="(defun fizzbuzz (n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
@@ -155,5 +158,90 @@ run_test "fizzbuzz 9" "fizz" "$fizzbuzz_source (fizzbuzz 9)"
 run_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
 run_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
 run_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
+
+run_test "min" "1" "(min 1 2 3 4)"
+run_test "max" "4" "(max 1 2 3 4)"
+
+run_test "listp" "t" "(listp '(1 2 3))"
+run_test "listp" "t" "(listp ())"
+run_test "listp" "()" "(listp 1)"
+run_test "listp" "()" "(listp 'abc)"
+
+run_test "null" "()" "(null '(1 2 3))"
+run_test "null" "t" "(null ())"
+run_test "null" "()" "(null 1)"
+run_test "null" "()" "(null 'abc)"
+
+run_test "numberp" "()" "(numberp '(1 2 3))"
+run_test "numberp" "()" "(numberp ())"
+run_test "numberp" "t" "(numberp 1)"
+run_test "numberp" "()" "(numberp 'abc)"
+
+run_test "plusp" "t" "(plusp 100)"
+run_test "plusp" "()" "(plusp 0)"
+run_test "plusp" "()" "(plusp -100)"
+
+run_test "zerop" "()" "(zerop 100)"
+run_test "zerop" "t" "(zerop 0)"
+run_test "zerop" "()" "(zerop -100)"
+
+run_test "minusp" "()" "(minusp 100)"
+run_test "minusp" "()" "(minusp 0)"
+run_test "minusp" "t" "(minusp -100)"
+
+run_test "abs" "1" "(abs -1)"
+run_test "abs" "1" "(abs 1)"
+
+run_test "append" "(a b c d)" "(append '(a b) '(c d))"
+run_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
+run_test "append" "(foo . bar)" "(append '(foo) 'bar)"
+
+run_test "reverse" "()" "(reverse ())"
+run_test "reverse" "(1)" "(reverse '(1))"
+run_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
+
+run_test "when true" "t" "(when t t)"
+run_test "when false" "()" "(when () t)"
+run_test "unless true" "()" "(unless t t)"
+run_test "unless false" "t" "(unless () t)"
+
+run_test "or true" "1" "(or () () 1)"
+run_test "or false" "()" "(or () () ())"
+run_test "or empty" "()" "(or)"
+run_test "and true" "3" "(and 1 2 3)"
+run_test "and false" "()" "(and () () ())"
+run_test "and empty" "t" "(and)"
+
+run_test "not true" "()" "(not t)"
+run_test "not nil" "t" "(not ())"
+run_test "not eval" "()" "(not (+ 1 2))"
+
+run_test "setf" "321" "(defvar x 123)
+(setf x 321)
+x"
+run_test "setf" "(1 100 3)" "
+(defvar x '(1 2 3))
+(defvar c (cdr x))
+(setf (car (cdr x)) 100)
+x"
+run_test "setf" "(1 100 3)" "
+(defvar x '(1 2 3))
+(defvar c (cdr x))
+(setf (cadr x) 100)
+x"
+
+run_test "nthcdr nil" "()" "(nthcdr 0 ())"
+run_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
+run_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
+run_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
+run_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
+
+run_test "nth nil" "()" "(nth 0 ())"
+run_test "nth more than length nil" "()" "(nth 100 ())"
+run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
+run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
+run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
+
+run_test "setf nth" "(100 2 3)" "(defvar x '(1 2 3)) (setf (nth 0 x) 100) x"
 
 exit $failed
