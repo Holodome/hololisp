@@ -906,8 +906,9 @@ HLL_ENUMERATE_CAR_CDR
 typedef enum {
   HLL_LOC_NONE,
   HLL_LOC_FORM_SYMB,
-  HLL_LOC_FORM_CAR,
-  HLL_LOC_FORM_CDR,
+#define HLL_CAR_CDR(_, _letters) HLL_LOC_FORM_C##_letters##R,
+  HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
 } hll_location_form;
 
 static hll_location_form get_location_form(const hll_ast *location) {
@@ -917,11 +918,15 @@ static hll_location_form get_location_form(const hll_ast *location) {
   } else if (location->kind == HLL_AST_CONS) {
     hll_ast *first = location->as.cons.car;
     if (first->kind == HLL_AST_SYMB) {
-      if (strcmp(first->as.symb.str, "car") == 0) {
-        kind = HLL_LOC_FORM_CAR;
-      } else if (strcmp(first->as.symb.str, "cdr") == 0) {
-        kind = HLL_LOC_FORM_CDR;
+      const char *symb = first->as.symb.str;
+      if (0) {
       }
+#define HLL_CAR_CDR(_lower, _upper)                                            \
+  else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
+    kind = HLL_LOC_FORM_C##_upper##R;                                          \
+  }
+      HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
     }
   }
 
@@ -942,18 +947,41 @@ static void compile_set_location(hll_compiler *compiler,
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
-  case HLL_LOC_FORM_CAR:
-    assert(ast_list_length(location) == 2);
-    compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
-    compile_eval_expression(compiler, value);
-    emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
-    break;
-  case HLL_LOC_FORM_CDR:
-    assert(ast_list_length(location) == 2);
-    compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);
-    compile_eval_expression(compiler, value);
-    emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
-    break;
+#define HLL_CAR_CDR(_lower, _upper)                                            \
+  case HLL_LOC_FORM_C##_upper##R: {                                            \
+    if (ast_list_length(location) != 2) {                                      \
+      compiler_error(compiler, location,                                       \
+                     "'c" #_lower "r' expects exactly 1 argument");            \
+      break;                                                                   \
+    }                                                                          \
+    compile_eval_expression(compiler, location->as.cons.cdr->as.cons.car);     \
+    const char *ops = #_lower;                                                 \
+    const char *op = ops + sizeof(#_lower) - 2;                                \
+    for (;;) {                                                                 \
+      if (op == ops) {                                                         \
+        compile_eval_expression(compiler, value);                              \
+        if (*op == 'a') {                                                      \
+          emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);                    \
+        } else if (*op == 'd') {                                               \
+          emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);                    \
+        } else {                                                               \
+          HLL_UNREACHABLE;                                                     \
+        }                                                                      \
+        break;                                                                 \
+      } else {                                                                 \
+        if (*op == 'a') {                                                      \
+          emit_op(compiler->bytecode, HLL_BYTECODE_CAR);                       \
+        } else if (*op == 'd') {                                               \
+          emit_op(compiler->bytecode, HLL_BYTECODE_CDR);                       \
+        } else {                                                               \
+          HLL_UNREACHABLE;                                                     \
+        }                                                                      \
+      }                                                                        \
+      --op;                                                                    \
+    }                                                                          \
+  } break;
+    HLL_ENUMERATE_CAR_CDR
+#undef HLL_CAR_CDR
   default:
     HLL_UNREACHABLE;
     break;

@@ -526,6 +526,8 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
     hll_print(vm, obj, stdout);
     printf("\n");
   }
+//  hll_dump_bytecode(stderr, initial_bytecode);
+
 
 bail:
   hll_sb_free(stack);

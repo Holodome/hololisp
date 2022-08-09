@@ -216,10 +216,18 @@ run_test "not true" "()" "(not t)"
 run_test "not nil" "t" "(not ())"
 run_test "not eval" "()" "(not (+ 1 2))"
 
+run_test "setf" "321" "(defvar x 123)
+(setf x 321)
+x"
 run_test "setf" "(1 100 3)" "
 (defvar x '(1 2 3))
 (defvar c (cdr x))
 (setf (car (cdr x)) 100)
+x"
+run_test "setf" "(1 100 3)" "
+(defvar x '(1 2 3))
+(defvar c (cdr x))
+(setf (cadr x) 100)
 x"
 
 run_test "nthcdr nil" "()" "(nthcdr 0 ())"
@@ -227,5 +235,11 @@ run_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
 run_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
 run_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
 run_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
+
+run_test "nth nil" "()" "(nth 0 ())"
+run_test "nth more than length nil" "()" "(nth 100 ())"
+run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
+run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
+run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
 exit $failed

@@ -33,12 +33,6 @@ run_test () {
     echo "ok"
 }
 
-run_test "nth nil" "()" "(nth 0 ())"
-run_test "nth more than length nil" "()" "(nth 100 ())"
-run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
-run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
-run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
-
 
 run_test "any true" "t" "(any (lambda (x) x) '(() 1 () '(1 2 3)))"
 run_test "any nil" "()" "(any (lambda (x) x) '(() () () ((lambda () ()))))"
