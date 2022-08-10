@@ -375,11 +375,11 @@ static void test_compiler_compiles_let_with_body(void) {
 }
 
 static void test_compiler_compiles_setf_symbol(void) {
-  const char *source = "(defvar x) (setf x t)";
+  const char *source = "(defvar x) (set x t)";
   uint8_t bytecode[] = {// defvar x
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_LET, HLL_BYTECODE_POP,
-                        // setf
+                        // set
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND,
                         HLL_BYTECODE_TRUE, HLL_BYTECODE_SETCDR,
                         HLL_BYTECODE_END};
@@ -390,13 +390,13 @@ static void test_compiler_compiles_setf_symbol(void) {
 }
 
 static void test_compiler_compiles_setf_cdr(void) {
-  const char *source = "(defvar x '(1)) (setf (cdr x) '(2))";
+  const char *source = "(defvar x '(1)) (set (cdr x) '(2))";
   uint8_t bytecode[] = {
       // defvar x
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
       HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
       HLL_BYTECODE_LET, HLL_BYTECODE_POP,
-      // setf
+      // set
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_FIND, HLL_BYTECODE_CDR,
       HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST, 0x00, 0x02,
       HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
@@ -411,9 +411,9 @@ static void test_compiler_compiles_setf_cdr(void) {
 #if 0
 static void test_compiler_basic_special_forms(void) {
   const char *source = "(let ((f (lambda (x) (* x 2))) (y (f 2)))\n"
-                       "  (setf f (lambda (x) (f (f x))))\n"
+                       "  (set f (lambda (x) (f (f x))))\n"
                        "  (defvar l (list (if (= y 4) 1 0) (f 1)))\n"
-                       "  (setf (car l) (* 100 (car l))))";
+                       "  (set (car l) (* 100 (car l))))";
   uint8_t bytecode[] = {HLL_BYTECODE_PUSHENV,
                         HLL_BYTECODE_CONST,
                         0x00,

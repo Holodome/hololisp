@@ -64,6 +64,8 @@ typedef struct hll_bytecode {
   struct hll_obj **constant_pool;
 } hll_bytecode;
 
+size_t hll_get_bytecode_op_body_size(hll_bytecode_op op);
+
 void hll_free_bytecode(hll_bytecode *bytecode);
 void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
 

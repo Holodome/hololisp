@@ -631,7 +631,7 @@ typedef enum {
   // Setf sets value pointed to by location defined by first argument
   // as second argument. First argument is of special kind of form,
   // which denotes location and requires special handling from compiler.
-  HLL_FORM_SETF,
+  HLL_FORM_SET,
   // Defines variable in current context.
   HLL_FORM_DEFVAR,
   // let is different from defvar because it creates new lexical context
@@ -662,8 +662,8 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_IF;
     //  } else if (strcmp(symb, "lambda") == 0) {
     //    kind = HLL_FORM_LAMBDA;
-  } else if (strcmp(symb, "setf") == 0) {
-    kind = HLL_FORM_SETF;
+  } else if (strcmp(symb, "set") == 0) {
+    kind = HLL_FORM_SET;
   } else if (strcmp(symb, "defvar") == 0) {
     kind = HLL_FORM_DEFVAR;
   } else if (strcmp(symb, "let") == 0) {
@@ -814,36 +814,6 @@ static void compile_quote(hll_compiler *compiler, const hll_ast *args) {
   compile_expression(compiler, args->as.cons.car);
 }
 
-static void compile_if(hll_compiler *compiler, const hll_ast *args) {
-  size_t length = ast_list_length(args);
-  if (length != 2 && length != 3) {
-    compiler_error(compiler, args, "'if' form expects 2 or 3 arguments");
-    return;
-  }
-
-  hll_ast *cond = args->as.cons.car;
-  compile_eval_expression(compiler, cond);
-  hll_ast *pos_arm = args->as.cons.cdr;
-  assert(pos_arm->kind == HLL_AST_CONS);
-  hll_ast *neg_arm = pos_arm->as.cons.cdr;
-  if (neg_arm->kind == HLL_AST_CONS) {
-    neg_arm = neg_arm->as.cons.car;
-  }
-
-  pos_arm = pos_arm->as.cons.car;
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_false = emit_u16(compiler->bytecode, 0);
-  compile_eval_expression(compiler, pos_arm);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_out = emit_u16(compiler->bytecode, 0);
-  write_u16_be(compiler->bytecode->ops + jump_false,
-               get_current_op_idx(compiler->bytecode) - jump_false - 2);
-  compile_eval_expression(compiler, neg_arm);
-  write_u16_be(compiler->bytecode->ops + jump_out,
-               get_current_op_idx(compiler->bytecode) - jump_out - 2);
-}
-
 static void compile_progn(hll_compiler *compiler, const hll_ast *prog) {
   if (prog->kind == HLL_AST_NIL) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
@@ -856,6 +826,33 @@ static void compile_progn(hll_compiler *compiler, const hll_ast *prog) {
       emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     }
   }
+}
+
+static void compile_if(hll_compiler *compiler, const hll_ast *args) {
+  size_t length = ast_list_length(args);
+  if (length < 2) {
+    compiler_error(compiler, args, "'if' form expects at least 2 arguments");
+    return;
+  }
+
+  hll_ast *cond = args->as.cons.car;
+  compile_eval_expression(compiler, cond);
+  hll_ast *pos_arm = args->as.cons.cdr;
+  assert(pos_arm->kind == HLL_AST_CONS);
+  hll_ast *neg_arm = pos_arm->as.cons.cdr;
+
+  pos_arm = pos_arm->as.cons.car;
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_false = emit_u16(compiler->bytecode, 0);
+  compile_eval_expression(compiler, pos_arm);
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  size_t jump_out = emit_u16(compiler->bytecode, 0);
+  write_u16_be(compiler->bytecode->ops + jump_false,
+               get_current_op_idx(compiler->bytecode) - jump_false - 2);
+  compile_progn(compiler, neg_arm);
+  write_u16_be(compiler->bytecode->ops + jump_out,
+               get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
 static void compile_let(hll_compiler *compiler, const hll_ast *args) {
@@ -1020,7 +1017,7 @@ static void compile_set_location(hll_compiler *compiler,
 
 static void compile_setf(hll_compiler *compiler, const hll_ast *args) {
   if (ast_list_length(args) < 1) {
-    compiler_error(compiler, args, "'setf' expects at least 1 argument");
+    compiler_error(compiler, args, "'set' expects at least 1 argument");
     return;
   }
 
@@ -1136,6 +1133,11 @@ static bool compile_function(hll_compiler *compiler, const hll_ast *params,
     return true;
   }
 
+  if (params->kind != HLL_AST_NIL && params->kind != HLL_AST_CONS) {
+    compiler_error(compiler, params, "param list must be a list");
+    return true;
+  }
+
   hll_obj *param_list = NULL;
   hll_obj *param_list_tail = NULL;
   for (const hll_ast *obj = params; obj->kind == HLL_AST_CONS;
@@ -1237,7 +1239,6 @@ static void compile_not(hll_compiler *compiler, const hll_ast *args) {
   write_u16_be(compiler->bytecode->ops + jump_nil,
                get_current_op_idx(compiler->bytecode) - jump_nil - 2);
   emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
-
   write_u16_be(compiler->bytecode->ops + jump_out,
                get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
@@ -1266,21 +1267,17 @@ static void compile_and(hll_compiler *compiler, const hll_ast *args) {
 
   uint8_t *cursor = compiler->bytecode->ops + original_idx;
   while (cursor < compiler->bytecode->ops + total_out) {
-    // TODO: This can get suddenly broken if any of the values of jump/constant
-    //  match jump opcode
     uint8_t op = *cursor++;
-    if (op == HLL_BYTECODE_MAKEFUN || op == HLL_BYTECODE_CONST) {
-      cursor += 2;
-    } else if (op == HLL_BYTECODE_JN) {
+    if (op == HLL_BYTECODE_JN) {
+      uint16_t value;
       if (cursor != compiler->bytecode->ops + last_jump) {
-        write_u16_be(cursor,
-                     short_circuit - (cursor - compiler->bytecode->ops) - 2);
+        value = short_circuit - (cursor - compiler->bytecode->ops) - 2;
       } else {
-        write_u16_be(cursor,
-                     total_out - (cursor - compiler->bytecode->ops) - 2);
+        value = total_out - (cursor - compiler->bytecode->ops) - 2;
       }
-      cursor += 2;
+      write_u16_be(cursor, value);
     }
+    cursor += hll_get_bytecode_op_body_size(op);
   }
 }
 
@@ -1317,15 +1314,16 @@ static void compile_or(hll_compiler *compiler, const hll_ast *args) {
 
   uint8_t *cursor = compiler->bytecode->ops + original_idx;
   while (cursor < compiler->bytecode->ops + total_out) {
-    if (*cursor++ == HLL_BYTECODE_JN) {
+    uint8_t op = *cursor++;
+    if (op == HLL_BYTECODE_JN) {
       uint16_t current;
       memcpy(&current, cursor, sizeof(uint16_t));
       if (current == 0) {
         write_u16_be(cursor,
                      total_out - (cursor - compiler->bytecode->ops) - 2);
       }
-      cursor += 2;
     }
+    cursor += hll_get_bytecode_op_body_size(op);
   }
 }
 
@@ -1396,7 +1394,7 @@ static void compile_form(hll_compiler *compiler, const hll_ast *args,
   case HLL_FORM_LAMBDA:
     compile_lambda(compiler, args);
     break;
-  case HLL_FORM_SETF:
+  case HLL_FORM_SET:
     compile_setf(compiler, args);
     break;
   case HLL_FORM_DEFVAR:
@@ -1441,6 +1439,9 @@ static void compile_form(hll_compiler *compiler, const hll_ast *args,
   case HLL_FORM_NOT:
     compile_not(compiler, args);
     break;
+  default:
+    HLL_UNREACHABLE;
+    break;
   }
 }
 
@@ -1473,7 +1474,7 @@ static void compile_eval_expression(hll_compiler *compiler,
     emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     break;
   default:
-    assert(!"Unreachable");
+    HLL_UNREACHABLE;
     break;
   }
 }
@@ -1513,43 +1514,18 @@ static void compile_expression(hll_compiler *compiler, const hll_ast *ast) {
 
       obj = cdr;
     }
-    // pop the tail
     emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   } break;
   case HLL_AST_SYMB:
     compile_symbol(compiler, ast);
     break;
   default:
-    assert(!"Unreachable");
+    HLL_UNREACHABLE;
     break;
   }
 }
 
 void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast) {
-  if (ast->kind == HLL_AST_NIL) {
-    emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  } else {
-    for (const hll_ast *obj = ast; obj->kind != HLL_AST_NIL;
-         obj = obj->as.cons.cdr) {
-      assert(obj->kind == HLL_AST_CONS);
-      hll_ast *toplevel = obj->as.cons.car;
-      switch (toplevel->kind) {
-      case HLL_AST_NIL:
-      case HLL_AST_TRUE:
-      case HLL_AST_INT:
-      case HLL_AST_SYMB:
-      case HLL_AST_CONS:
-        compile_eval_expression(compiler, toplevel);
-        break;
-      default:
-        assert(!"Unreachable");
-        break;
-      }
-
-      if (obj->as.cons.cdr->kind != HLL_AST_NIL) {
-        emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-      }
-    }
-  }
+  compile_progn(compiler, ast);
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
 }

@@ -10,7 +10,7 @@ panic () {
     failed=1
 }
 
-run_test () {
+pos_test () {
     echo -n "Testing $1 ... "
 
     error=$("$EXECUTABLE" -e "$3" 2>&1 > /dev/null)
@@ -30,118 +30,153 @@ run_test () {
     echo "ok"
 }
 
-run_test comment 5 "
+neg_test () {
+    echo -n "Testing $1 ... "
+     error=$("$EXECUTABLE" -e "$2" 2>&1 > /dev/null)
+    if [ -z "$error" ]; then
+        echo FAILED
+        panic "$1"
+        return
+    fi
+
+    echo "ok"
+}
+
+pos_test comment 5 "
     ; 2
     5 ; 3"
 
-run_test integer 1 1
-run_test integer -1 -1
+pos_test integer 1 1
+pos_test integer -1 -1
 
-run_test nil "()" "()"
-run_test "true" "t" "t"
+pos_test nil "()" "()"
+pos_test "true" "t" "t"
 
-run_test "+" 3 "(+ 1 2)"
-run_test "+" -2 "(+ 1 -3)"
+pos_test "+" 3 "(+ 1 2)"
+pos_test "+" -2 "(+ 1 -3)"
 
-run_test "=" "t" "(= 1 1)"
-run_test "=" "()" "(= 1 -1)"
-run_test "=" "t" "(= 1 1 1 1)"
-run_test "=" "()" "(= 1 1 1 -1)"
+pos_test "=" "t" "(= 1 1)"
+pos_test "=" "()" "(= 1 -1)"
+pos_test "=" "t" "(= 1 1 1 1)"
+pos_test "=" "()" "(= 1 1 1 -1)"
 
-run_test "/=" "()" "(/= 1 1)"
-run_test "/=" "t" "(/= 1 -1)"
-run_test "/=" "t" "(/= 1 2 3 4)"
-run_test "/=" "()" "(/= 1 2 3 1)"
+pos_test "/=" "()" "(/= 1 1)"
+pos_test "/=" "t" "(/= 1 -1)"
+pos_test "/=" "t" "(/= 1 2 3 4)"
+pos_test "/=" "()" "(/= 1 2 3 1)"
 
-run_test "<" "t" "(< 1 2)"
-run_test "<" "()" "(< 1 -2)"
-run_test "<" "t" "(< 1 2 3 4)"
-run_test "<" "()" "(< 1 3 5 5)"
+pos_test "<" "t" "(< 1 2)"
+pos_test "<" "()" "(< 1 -2)"
+pos_test "<" "t" "(< 1 2 3 4)"
+pos_test "<" "()" "(< 1 3 5 5)"
 
-run_test "<=" "t" "(<= 1 1)"
-run_test "<=" "()" "(<= 1 -2)"
-run_test "<=" "t" "(<= 1 2 2 4)"
-run_test "<=" "()" "(<= 1 1 1 -1)"
+pos_test "<=" "t" "(<= 1 1)"
+pos_test "<=" "()" "(<= 1 -2)"
+pos_test "<=" "t" "(<= 1 2 2 4)"
+pos_test "<=" "()" "(<= 1 1 1 -1)"
 
-run_test ">" "t" "(> 2 1)"
-run_test ">" "()" "(> -2 1)"
-run_test ">" "t" "(> 4 3 2 1)"
-run_test ">" "()" "(> -1 3 5 1)"
+pos_test ">" "t" "(> 2 1)"
+pos_test ">" "()" "(> -2 1)"
+pos_test ">" "t" "(> 4 3 2 1)"
+pos_test ">" "()" "(> -1 3 5 1)"
 
-run_test ">=" "t" "(>= 1 1)"
-run_test ">=" "()" "(>= -2 1)"
-run_test ">=" "t" "(>= 4 2 2 1)"
-run_test ">=" "()" "(>= -1 1 1 1)"
+pos_test ">=" "t" "(>= 1 1)"
+pos_test ">=" "()" "(>= -2 1)"
+pos_test ">=" "t" "(>= 4 2 2 1)"
+pos_test ">=" "()" "(>= -1 1 1 1)"
 
-run_test "'" "1" "'1"
-run_test "'" "abc" "'abc"
-run_test "'" "(a b c)" "'(a b c)"
+pos_test "'" "1" "'1"
+pos_test "'" "abc" "'abc"
+pos_test "'" "(a b c)" "'(a b c)"
 
-run_test "+ '" 10 "(+ 1 2 . (3 4))"
-run_test ". '" "(1 . 2)" "'(1 . 2)"
+pos_test "+ '" 10 "(+ 1 2 . (3 4))"
+pos_test ". '" "(1 . 2)" "'(1 . 2)"
 
-run_test "car" "()" "(car ())"
-run_test "cdr" "2" "(cdr '(1 . 2))"
-run_test "cdr" "(2)" "(cdr '(1 2))" 
-run_test "cadr" "2" "(cadr '(1 2))" 
-run_test "car" "a" "(car '(a b c))" 
-run_test "cdr" "(b c)" "(cdr '(a b c))"
+neg_test "car args" "(car)"
+neg_test "car args" "(car () ())"
+neg_test "cdr args" "(cdr)"
+neg_test "cdr args" "(cdr () ())"
+pos_test "car" "()" "(car ())"
+pos_test "cdr" "2" "(cdr '(1 . 2))"
+pos_test "cdr" "(2)" "(cdr '(1 2))" 
+pos_test "cadr" "2" "(cadr '(1 2))" 
+pos_test "car" "a" "(car '(a b c))" 
+pos_test "cdr" "(b c)" "(cdr '(a b c))"
 
-run_test "cadr" "2" "(cadr '(1 2 3 4))"
-run_test "caddr" "3" "(caddr '(1 2 3 4))"
-run_test "cadddr" "4" "(cadddr '(1 2 3 4))"
+pos_test "cadr" "2" "(cadr '(1 2 3 4))"
+pos_test "caddr" "3" "(caddr '(1 2 3 4))"
+pos_test "cadddr" "4" "(cadddr '(1 2 3 4))"
 
-run_test "if" "1" "(if t 1 2)"
-run_test "if" "2" "(if () 1 2)"
-run_test "if" "less" "(if (> 3 4) 'more 'less)"
-run_test "if" "more" "(if (> 4 3) 'more 'less)"
-run_test "if" "123" "(if t 123)"
-run_test "if" "()" "(if () 123)"
+neg_test "if args" "(if)"
+neg_test "if args" "(if t)"
+pos_test "if" "1" "(if t 1 2)"
+pos_test "if" "2" "(if () 1 2)"
+pos_test "if" "less" "(if (> 3 4) 'more 'less)"
+pos_test "if" "more" "(if (> 4 3) 'more 'less)"
+pos_test "if" "123" "(if t 123)"
+pos_test "if" "()" "(if () 123)"
+pos_test "if progn" "1" "(if () t t 1)"
 
-run_test "if" "a" "(if 1 'a)"
-run_test "if" "()" "(if () 'a)"
-run_test "if" "a" "(if 1 'a 'b)"
-run_test "if" "a" "(if 0 'a 'b)"
-run_test "if" "a" "(if 'x 'a 'b)"
-run_test "if" "b" "(if () 'a 'b)"
+pos_test "if" "a" "(if 1 'a)"
+pos_test "if" "()" "(if () 'a)"
+pos_test "if" "a" "(if 1 'a 'b)"
+pos_test "if" "a" "(if 0 'a 'b)"
+pos_test "if" "a" "(if 'x 'a 'b)"
+pos_test "if" "b" "(if () 'a 'b)"
 
-run_test "cons" "(a a b)" "(cons 'a '(a b))"
-run_test "cons" "((a b) . a)" "(cons '(a b) 'a)"
+neg_test "cons args" "(cons)"
+neg_test "cons args" "(cons 1)"
+neg_test "cons args" "(cons 1 2 3)"
+pos_test "cons" "(a a b)" "(cons 'a '(a b))"
+pos_test "cons" "((a b) . a)" "(cons '(a b) 'a)"
 
-run_test "list" "(1)" "(list 1)"
-run_test "list" "()" "(list)"
-run_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
+pos_test "list" "(1)" "(list 1)"
+pos_test "list" "()" "(list)"
+pos_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 
-run_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
-run_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
+neg_test "setcar args" "(setcar)"
+neg_test "setcar args" "(setcar '(1))"
+pos_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
+neg_test "setcdr args" "(setcdr)"
+neg_test "setcdr args" "(setcdr '(1))"
+pos_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
 
-run_test "defun" "double" "(defun double (x) (+ x x))"
-run_test "defun & call" "12" "(defun double (x) (+ x x)) (double 6)"
+neg_test "defun args" "(defun)"
+neg_test "defun args" "(defun x)"
+neg_test "defun name" "(defun 1 () ())"
+neg_test "defun args" "(defun f ())"
+pos_test "defun" "double" "(defun double (x) (+ x x))"
+pos_test "defun & call" "12" "(defun double (x) (+ x x)) (double 6)"
 
-run_test "let" "t" "(let ((x t)) x)"
-run_test "let" "2" "(let ((x 1)) (+ x 1))"
-run_test "let" "3" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
+neg_test "let args" "(let)"
+pos_test "let" "t" "(let ((x t)) x)"
+pos_test "let" "2" "(let ((x 1)) (+ x 1))"
+pos_test "let" "3" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
 
-run_test "progn" "()" "(progn)"
-run_test "progn" "t" "(progn t)"
-run_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
+pos_test "progn" "()" "(progn)"
+pos_test "progn" "t" "(progn t)"
+pos_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
 
 fib_source="(defun fib (n) \
 (if (<= n 1) n \
 (+ (fib (- n 1)) (fib (- n 2)))))"
 
-run_test "fib 1" "1" "$fib_source (fib 1)"
-run_test "fib 8" "21" "$fib_source (fib 8)"
-run_test "fib 20" "6765" "$fib_source (fib 20)"
+pos_test "fib 1" "1" "$fib_source (fib 1)"
+pos_test "fib 8" "21" "$fib_source (fib 8)"
+pos_test "fib 20" "6765" "$fib_source (fib 20)"
 
-run_test "lambda" "t" "((lambda () t))"
-run_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
-run_test "lambda" "2" "(defvar x 1)
+neg_test "lambda args" "(lambda)"
+neg_test "lambda args" "(lambda ())"
+neg_test "lambda wrong param list" "(lambda 1 ())"
+neg_test "lambda wrong param list" "(lambda (1) ())"
+pos_test "lambda" "t" "((lambda () t))"
+pos_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
+pos_test "lambda" "2" "(defvar x 1)
 ((lambda (x) x) 2)"
 
-run_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
+pos_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
-run_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (setf x 3) (f)"
+pos_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (set x 3) (f)"
 
 fizzbuzz_source="(defun fizzbuzz (n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
@@ -152,96 +187,106 @@ fizzbuzz_source="(defun fizzbuzz (n) \
 (if mult-3 'fizz \
 (if mult-5 'buzz n))))))"
 
-run_test "fizzbuzz 3" "fizz" "$fizzbuzz_source (fizzbuzz 3)"
-run_test "fizzbuzz 5" "buzz" "$fizzbuzz_source (fizzbuzz 5)"
-run_test "fizzbuzz 9" "fizz" "$fizzbuzz_source (fizzbuzz 9)"
-run_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
-run_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
-run_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
+pos_test "fizzbuzz 3" "fizz" "$fizzbuzz_source (fizzbuzz 3)"
+pos_test "fizzbuzz 5" "buzz" "$fizzbuzz_source (fizzbuzz 5)"
+pos_test "fizzbuzz 9" "fizz" "$fizzbuzz_source (fizzbuzz 9)"
+pos_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
+pos_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
+pos_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
 
-run_test "min" "1" "(min 1 2 3 4)"
-run_test "max" "4" "(max 1 2 3 4)"
+pos_test "min" "1" "(min 1 2 3 4)"
+pos_test "max" "4" "(max 1 2 3 4)"
 
-run_test "listp" "t" "(listp '(1 2 3))"
-run_test "listp" "t" "(listp ())"
-run_test "listp" "()" "(listp 1)"
-run_test "listp" "()" "(listp 'abc)"
+neg_test "list? args" "(list?)"
+neg_test "list? args" "(list? () 1)"
+pos_test "list?" "t" "(list? '(1 2 3))"
+pos_test "list?" "t" "(list? ())"
+pos_test "list?" "()" "(list? 1)"
+pos_test "list?" "()" "(list? 'abc)"
 
-run_test "null" "()" "(null '(1 2 3))"
-run_test "null" "t" "(null ())"
-run_test "null" "()" "(null 1)"
-run_test "null" "()" "(null 'abc)"
+neg_test "null? args" "(null?)"
+neg_test "null? args" "(null? () ())"
+pos_test "null?" "()" "(null? '(1 2 3))"
+pos_test "null?" "t" "(null? ())"
+pos_test "null?" "()" "(null? 1)"
+pos_test "null?" "()" "(null? 'abc)"
 
-run_test "numberp" "()" "(numberp '(1 2 3))"
-run_test "numberp" "()" "(numberp ())"
-run_test "numberp" "t" "(numberp 1)"
-run_test "numberp" "()" "(numberp 'abc)"
+neg_test "number? args" "(number?)"
+neg_test "number? args" "(number? () ())"
+pos_test "number?" "()" "(number? '(1 2 3))"
+pos_test "number?" "()" "(number? ())"
+pos_test "number?" "t" "(number? 1)"
+pos_test "number?" "()" "(number? 'abc)"
 
-run_test "plusp" "t" "(plusp 100)"
-run_test "plusp" "()" "(plusp 0)"
-run_test "plusp" "()" "(plusp -100)"
+neg_test "positive? args" "(positive?)"
+neg_test "positive? args" "(positive? () ())"
+pos_test "positive?" "t" "(positive? 100)"
+pos_test "positive?" "()" "(positive? 0)"
+pos_test "positive?" "()" "(positive? -100)"
 
-run_test "zerop" "()" "(zerop 100)"
-run_test "zerop" "t" "(zerop 0)"
-run_test "zerop" "()" "(zerop -100)"
+neg_test "zero? args" "(zero?)"
+neg_test "zero? args" "(zero? 1 2)"
+pos_test "zero?" "()" "(zero? 100)"
+pos_test "zero?" "t" "(zero? 0)"
+pos_test "zero?" "()" "(zero? -100)"
 
-run_test "minusp" "()" "(minusp 100)"
-run_test "minusp" "()" "(minusp 0)"
-run_test "minusp" "t" "(minusp -100)"
+pos_test "negative?" "()" "(negative? 100)"
+pos_test "negative?" "()" "(negative? 0)"
+pos_test "negative?" "t" "(negative? -100)"
 
-run_test "abs" "1" "(abs -1)"
-run_test "abs" "1" "(abs 1)"
+pos_test "abs" "1" "(abs -1)"
+pos_test "abs" "1" "(abs 1)"
 
-run_test "append" "(a b c d)" "(append '(a b) '(c d))"
-run_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
-run_test "append" "(foo . bar)" "(append '(foo) 'bar)"
+pos_test "append" "(a b c d)" "(append '(a b) '(c d))"
+pos_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
+pos_test "append" "(foo . bar)" "(append '(foo) 'bar)"
 
-run_test "reverse" "()" "(reverse ())"
-run_test "reverse" "(1)" "(reverse '(1))"
-run_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
+pos_test "reverse" "()" "(reverse ())"
+pos_test "reverse" "(1)" "(reverse '(1))"
+pos_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
 
-run_test "when true" "t" "(when t t)"
-run_test "when false" "()" "(when () t)"
-run_test "unless true" "()" "(unless t t)"
-run_test "unless false" "t" "(unless () t)"
+pos_test "when true" "t" "(when t t)"
+pos_test "when false" "()" "(when () t)"
+pos_test "unless true" "()" "(unless t t)"
+pos_test "unless false" "t" "(unless () t)"
 
-run_test "or true" "1" "(or () () 1)"
-run_test "or false" "()" "(or () () ())"
-run_test "or empty" "()" "(or)"
-run_test "and true" "3" "(and 1 2 3)"
-run_test "and false" "()" "(and () () ())"
-run_test "and empty" "t" "(and)"
+pos_test "or true" "1" "(or () () 1)"
+pos_test "or false" "()" "(or () () ())"
+pos_test "or empty" "()" "(or)"
+pos_test "and true" "3" "(and 1 2 3)"
+pos_test "and false" "()" "(and () () ())"
+pos_test "and empty" "t" "(and)"
 
-run_test "not true" "()" "(not t)"
-run_test "not nil" "t" "(not ())"
-run_test "not eval" "()" "(not (+ 1 2))"
+pos_test "not true" "()" "(not t)"
+pos_test "not nil" "t" "(not ())"
+pos_test "not eval" "()" "(not (+ 1 2))"
 
-run_test "setf" "321" "(defvar x 123)
-(setf x 321)
+pos_test "set" "321" "(defvar x 123)
+(set x 321)
 x"
-run_test "setf" "(1 100 3)" "
+pos_test "set" "(1 100 3)" "
 (defvar x '(1 2 3))
 (defvar c (cdr x))
-(setf (car (cdr x)) 100)
+(set (car (cdr x)) 100)
 x"
-run_test "setf" "(1 100 3)" "
+pos_test "set" "(1 100 3)" "
 (defvar x '(1 2 3))
 (defvar c (cdr x))
-(setf (cadr x) 100)
+(set (cadr x) 100)
 x"
 
-run_test "nthcdr nil" "()" "(nthcdr 0 ())"
-run_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
-run_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
-run_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
-run_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
+pos_test "nthcdr nil" "()" "(nthcdr 0 ())"
+pos_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
+pos_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
+pos_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
+pos_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
 
-run_test "nth nil" "()" "(nth 0 ())"
-run_test "nth more than length nil" "()" "(nth 100 ())"
-run_test "nth first" "0" "(nth 0 '(0 1 2 3))"
-run_test "nth second" "1" "(nth 1 '(0 1 2 3))"
-run_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
+pos_test "nth nil" "()" "(nth 0 ())"
+pos_test "nth more than length nil" "()" "(nth 100 ())"
+pos_test "nth first" "0" "(nth 0 '(0 1 2 3))"
+pos_test "nth second" "1" "(nth 1 '(0 1 2 3))"
+pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
-run_test "setf nth" "(100 2 3)" "(defvar x '(1 2 3)) (setf (nth 0 x) 100) x"
+pos_test "set nth" "(100 2 3)" "(defvar x '(1 2 3)) (set (nth 0 x) 100) x"
 
 exit $failed
