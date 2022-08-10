@@ -63,6 +63,8 @@ hll_obj *hll_new_true(struct hll_vm *vm);
 
 hll_obj *hll_new_num(struct hll_vm *vm, double num);
 hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length);
+hll_obj *hll_new_symbolz(struct hll_vm *vm, const char *symbol);
+
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr);
 hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars);
 hll_obj *hll_new_bind(struct hll_vm *vm,

@@ -60,31 +60,6 @@ typedef struct {
 void hll_lexer_init(hll_lexer *lexer, const char *input, struct hll_vm *vm);
 void hll_lexer_next(hll_lexer *lexer);
 
-typedef enum {
-  HLL_AST_NIL = 0x1,
-  HLL_AST_TRUE,
-  HLL_AST_INT,
-  HLL_AST_CONS,
-  HLL_AST_SYMB,
-} hll_ast_kind;
-
-typedef struct hll_ast {
-  hll_ast_kind kind;
-  size_t offset; // offset in source file
-
-  union {
-    double num;
-    struct {
-      const char *str;
-      size_t length;
-    } symb;
-    struct {
-      struct hll_ast *car;
-      struct hll_ast *cdr;
-    } cons;
-  } as;
-} hll_ast;
-
 typedef struct {
   // Needed for error reporting.
   struct hll_vm *vm;
@@ -94,32 +69,28 @@ typedef struct {
   // Reader process all tokens produced by lexer until EOF, so lifetime of
   // this lexer is associated with reader.
   hll_lexer *lexer;
-  // This is the arena that is used for allocating AST nodes during parsing.
-  // After work with AST is finished, they can all be freed at once.
-  struct hll_memory_arena *arena;
 
-  hll_ast *nil;
-  hll_ast *true_;
-  hll_ast *quote_symb;
+  struct hll_obj *nil;
+  struct hll_obj *true_;
+  struct hll_obj *quote_symb;
 
   bool should_return_old_token;
 } hll_reader;
 
-void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
-                     hll_memory_arena *arena, struct hll_vm *vm);
-hll_ast *hll_read_ast(hll_reader *reader);
+void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm);
+struct hll_obj *hll_read_ast(hll_reader *reader);
 
 typedef struct {
   struct hll_vm *vm;
   bool has_errors;
   struct hll_bytecode *bytecode;
-  hll_ast *nthcdr_symb;
+  struct hll_obj *nthcdr_symb;
 
 } hll_compiler;
 
 void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
                        struct hll_bytecode *bytecode);
-void hll_compile_ast(hll_compiler *compiler, const hll_ast *ast);
+void hll_compile_ast(hll_compiler *compiler, const struct hll_obj *ast);
 
 // Compiles hololisp code as a hololisp bytecode.
 // Because internally lisp is represented as a tree of conses (lists),

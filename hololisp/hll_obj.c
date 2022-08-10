@@ -107,6 +107,10 @@ hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
   return obj;
 }
 
+hll_obj *hll_new_symbolz(struct hll_vm *vm, const char *symbol) {
+  return hll_new_symbol(vm, symbol, strlen(symbol));
+}
+
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
   (void)vm;
   hll_obj_cons *body = calloc(1, sizeof(hll_obj_cons));
