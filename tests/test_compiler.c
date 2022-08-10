@@ -214,32 +214,6 @@ static void test_compiler_compiles_defun(void) {
                        function_bytecode_compiled);
 }
 
-#if 0
-static void test_lambda_application_working(void) {
-  const char *source = "((lambda (x) (* x 2)) 10)";
-  uint8_t bytecode[] = {// (x)
-                        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST,
-                        0x00, 0x00, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
-                        // (* x 2)
-                        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST,
-                        0x00, 0x01, HLL_BYTECODE_APPEND, HLL_BYTECODE_CONST,
-                        0x00, 0x00, HLL_BYTECODE_APPEND, HLL_BYTECODE_CONST,
-                        0x00, 0x02, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
-                        // lambda
-                        HLL_BYTECODE_MAKE_LAMBDA,
-                        // (10)
-                        HLL_BYTECODE_NIL, HLL_BYTECODE_NIL, HLL_BYTECODE_CONST,
-                        0x00, 0x03, HLL_BYTECODE_APPEND, HLL_BYTECODE_POP,
-                        // (lambda... 10)
-                        HLL_BYTECODE_CALL, HLL_BYTECODE_END};
-  hll_vm *vm = hll_make_vm(NULL);
-
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
-}
-
-#endif
-
 static void test_compiler_compiles_let(void) {
   const char *source = "(let ((c 2) (a (+ c 1))))";
   uint8_t bytecode[] = {
@@ -408,183 +382,34 @@ static void test_compiler_compiles_setf_cdr(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
 
-#if 0
-static void test_compiler_basic_special_forms(void) {
-  const char *source = "(let ((f (lambda (x) (* x 2))) (y (f 2)))\n"
-                       "  (set f (lambda (x) (f (f x))))\n"
-                       "  (defvar l (list (if (= y 4) 1 0) (f 1)))\n"
-                       "  (set (car l) (* 100 (car l))))";
-  uint8_t bytecode[] = {HLL_BYTECODE_PUSHENV,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_NIL,
+static void test_compiler_compiles_macro(void) {
+  const char *source = "(defmacro hello () (list 1 2 3)) (hello)";
+  uint8_t bytecode[] = {HLL_BYTECODE_NIL,
                         HLL_BYTECODE_NIL,
                         HLL_BYTECODE_CONST,
                         0x00,
-                        0x01, // x
+                        0x00,
+                        HLL_BYTECODE_APPEND,
+                        HLL_BYTECODE_CONST,
+                        0x00,
+                        0x01,
+                        HLL_BYTECODE_APPEND,
+                        HLL_BYTECODE_CONST,
+                        0x00,
+                        0x02,
                         HLL_BYTECODE_APPEND,
                         HLL_BYTECODE_POP,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x02, // *
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x01, // x
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x03, // 2
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_MAKE_LAMBDA,
-                        HLL_BYTECODE_LET,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x04, // y
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x03, // 2
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CALL,
-                        HLL_BYTECODE_LET,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x01, // x
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x01, // x
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_MAKE_LAMBDA,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_SETCDR,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x05, // l
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x06, // =
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x04, // y
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x07, // 4
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CALL,
-                        HLL_BYTECODE_JN,
-                        0x00,
-                        0x09,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x08, // 1
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_JN,
-                        0x00,
-                        0x05,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x09, // 0
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00, // f
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x08, // 1
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CALL,
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_LET,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x02, // *
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_NIL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x0A, // 100
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x05, // l
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_CAR,
-                        HLL_BYTECODE_APPEND,
-                        HLL_BYTECODE_POP,
-                        HLL_BYTECODE_CALL,
-                        HLL_BYTECODE_CONST,
-                        0x00,
-                        0x05, // l
-                        HLL_BYTECODE_FIND,
-                        HLL_BYTECODE_CDR,
-                        HLL_BYTECODE_SETCAR,
-                        HLL_BYTECODE_POPENV,
                         HLL_BYTECODE_END};
-  hll_vm *vm = hll_make_vm(NULL);
 
+  hll_vm *vm = hll_make_vm(NULL);
   hll_bytecode *result = hll_compile(vm, source);
   test_bytecode_equals(bytecode, sizeof(bytecode), result);
 }
 
-#endif
-
 #define TCASE(_name)                                                           \
-  { #_name, _name }
+  {                                                                            \
+#_name, _name                                                              \
+  }
 
 TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_addition),
@@ -592,10 +417,9 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_if),
              TCASE(test_compiler_compiles_quote),
              TCASE(test_compiler_compiles_defun),
-             //             TCASE(test_lambda_application_working),
              TCASE(test_compiler_compiles_let),
              TCASE(test_compiler_compiles_let_with_body),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
-             //             TCASE(test_compiler_basic_special_forms),
+             TCASE(test_compiler_compiles_macro),
              {NULL, NULL}};

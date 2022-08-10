@@ -610,6 +610,7 @@ typedef enum {
   HLL_FORM_WHEN,
   HLL_FORM_UNLESS,
   HLL_FORM_NOT,
+  HLL_FORM_DEFMACRO,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -653,6 +654,8 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_UNLESS;
   } else if (strcmp(symb, "not") == 0) {
     kind = HLL_FORM_NOT;
+  } else if (strcmp(symb, "defmacro") == 0) {
+    kind = HLL_FORM_DEFMACRO;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -1081,9 +1084,10 @@ static void compile_cons(hll_compiler *compiler, const hll_obj *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
-static bool compile_function(hll_compiler *compiler, const hll_obj *params,
-                             const hll_obj *body, const char *name,
-                             uint16_t *idx) {
+static hll_obj *compile_function_internal(hll_compiler *compiler,
+                                          const hll_obj *params,
+                                          const hll_obj *body,
+                                          const char *name) {
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
   new_compiler.vm = compiler->vm;
@@ -1092,12 +1096,12 @@ static bool compile_function(hll_compiler *compiler, const hll_obj *params,
   emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {
     compiler->has_errors = true;
-    return true;
+    return NULL;
   }
 
   if (params->kind != HLL_OBJ_NIL && params->kind != HLL_OBJ_CONS) {
     compiler_error(compiler, params, "param list must be a list");
-    return true;
+    return NULL;
   }
 
   hll_obj *param_list = NULL;
@@ -1107,7 +1111,7 @@ static bool compile_function(hll_compiler *compiler, const hll_obj *params,
     hll_obj *car = hll_unwrap_car(obj);
     if (car->kind != HLL_OBJ_SYMB) {
       compiler_error(compiler, car, "function param name is not a symbol");
-      return true;
+      return NULL;
     }
 
     uint16_t symb_idx = add_symbol_and_return_its_index(
@@ -1128,6 +1132,17 @@ static bool compile_function(hll_compiler *compiler, const hll_obj *params,
   }
 
   hll_obj *func = hll_new_func(compiler->vm, param_list, bytecode, name);
+  return func;
+}
+
+static bool compile_function(hll_compiler *compiler, const hll_obj *params,
+                             const hll_obj *body, const char *name,
+                             uint16_t *idx) {
+  hll_obj *func = compile_function_internal(compiler, params, body, name);
+  if (func == NULL) {
+    return true;
+  }
+
   hll_sb_push(compiler->bytecode->constant_pool, func);
   size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
   uint16_t narrowed = result;
@@ -1333,6 +1348,11 @@ static void compile_unless(hll_compiler *compiler, const hll_obj *args) {
                get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
+static void process_defmacro(hll_compiler *compiler, const hll_obj *args) {
+  (void)compiler;
+  (void)args;
+}
+
 static void compile_form(hll_compiler *compiler, const hll_obj *args,
                          hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
@@ -1400,6 +1420,9 @@ static void compile_form(hll_compiler *compiler, const hll_obj *args,
     break;
   case HLL_FORM_NOT:
     compile_not(compiler, args);
+    break;
+  case HLL_FORM_DEFMACRO:
+    process_defmacro(compiler, args);
     break;
   default:
     HLL_UNREACHABLE;
