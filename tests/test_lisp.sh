@@ -294,8 +294,8 @@ pos_test "macro" "7" "(defmacro seven () 7) ((lambda () (seven)))"
 pos_test "macro" "42" "(defmacro if-zero (x then) (list 'if (list '= x 0) then))
   (if-zero 0 42)"
 
-#pos_test "macroexpand" '(if (= x 0) (print x))' "
-#  (defmacro if-zero (x then) (list 'if (list '= x 0) then))
-#  (macroexpand (if-zero x (print x)))"
+pos_test "macroexpand" '(if (= x 0) (print x))' "
+  (defmacro if-zero (x then) (list 'if (list '= x 0) then))
+  (macroexpand (if-zero x (print x)))"
 
 exit $failed

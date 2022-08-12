@@ -612,6 +612,7 @@ typedef enum {
   HLL_FORM_UNLESS,
   HLL_FORM_NOT,
   HLL_FORM_DEFMACRO,
+  HLL_FORM_MACROEXPAND,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -657,6 +658,8 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_NOT;
   } else if (strcmp(symb, "defmacro") == 0) {
     kind = HLL_FORM_DEFMACRO;
+  } else if (strcmp(symb, "macroexpand") == 0) {
+    kind = HLL_FORM_MACROEXPAND;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -761,10 +764,10 @@ static void compile_function_call_internal(hll_compiler *compiler,
   emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
 }
 
-static bool expand_macro(hll_compiler *compiler, const hll_obj *macro,
+static hll_obj *expand_macro(hll_compiler *compiler, const hll_obj *macro,
                          const hll_obj *args) {
   if (macro->kind != HLL_OBJ_SYMB) {
-    return false;
+    return NULL;
   }
   hll_obj *macro_body = NULL;
   for (hll_obj *slot = compiler->macro_list; slot->kind == HLL_OBJ_CONS;
@@ -779,20 +782,20 @@ static bool expand_macro(hll_compiler *compiler, const hll_obj *macro,
   }
 
   if (macro_body == NULL) {
-    return false;
+    return NULL;
   }
 
   hll_obj *result = hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
-//  hll_print(compiler->vm, result, stderr);
-  compile_eval_expression(compiler, result);
-
-  return true;
+  //  hll_print(compiler->vm, result, stderr);
+  return result;
 }
 
 static void compile_function_call(hll_compiler *compiler, const hll_obj *list) {
   hll_obj *fn = hll_unwrap_car(list);
   hll_obj *args = hll_unwrap_cdr(list);
-  if (expand_macro(compiler, fn, args)) {
+  hll_obj *expanded;
+  if ((expanded = expand_macro(compiler, fn, args))) {
+    compile_eval_expression(compiler, expanded);
     return;
   }
   compile_eval_expression(compiler, fn);
@@ -1410,6 +1413,25 @@ static void process_defmacro(hll_compiler *compiler, const hll_obj *args) {
   }
 }
 
+static void compile_macroexpand(hll_compiler *compiler, const hll_obj *args) {
+  if (hll_list_length(args) != 1) {
+    compiler_error(compiler, args,
+                   "'macroexpand' expects exactly one argument");
+    return;
+  }
+
+  const hll_obj *macro_list = hll_unwrap_car(args);
+  if (hll_list_length(macro_list) < 1) {
+    compiler_error(compiler, macro_list,
+                   "'macroexpand' argument is not a list");
+    return;
+  }
+
+  hll_obj *expanded = expand_macro(compiler, hll_unwrap_car(macro_list), hll_unwrap_cdr(macro_list));
+  assert(expanded != NULL);
+  compile_expression(compiler, expanded);
+}
+
 static void compile_form(hll_compiler *compiler, const hll_obj *args,
                          hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
@@ -1480,6 +1502,9 @@ static void compile_form(hll_compiler *compiler, const hll_obj *args,
     break;
   case HLL_FORM_DEFMACRO:
     process_defmacro(compiler, args);
+    break;
+  case HLL_FORM_MACROEXPAND:
+    compile_macroexpand(compiler, args);
     break;
   default:
     HLL_UNREACHABLE;
