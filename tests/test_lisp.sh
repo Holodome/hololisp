@@ -298,4 +298,7 @@ pos_test "macroexpand" '(if (= x 0) (print x))' "
   (defmacro if-zero (x then) (list 'if (list '= x 0) then))
   (macroexpand (if-zero x (print x)))"
 
+pos_test "restargs" "(3 5 7)" "(defun f (x . y) (cons x y)) (f 3 5 7)"
+pos_test "restargs" "(3)" "(defun f (x . y) (cons x y)) (f 3)"
+
 exit $failed

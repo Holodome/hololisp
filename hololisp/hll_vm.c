@@ -381,24 +381,25 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
       case HLL_OBJ_FUNC: {
         hll_obj_func *func = hll_unwrap_func(callable);
         hll_obj *new_env = hll_new_env(vm, env, func->var_list);
-        if (HLL_UNLIKELY(hll_list_length(args) !=
-                         hll_list_length(func->param_names))) {
-          hll_runtime_error(
-              vm, "param count does not match: expected %zu, got %zu",
-              hll_list_length(func->param_names), hll_list_length(args));
-          goto bail;
-        }
 
-        for (hll_obj *param_name = func->param_names, *param_value = args;
-             param_name->kind != HLL_OBJ_NIL;
+        hll_obj *param_name = func->param_names;
+        hll_obj *param_value = args;
+        for (; param_name->kind == HLL_OBJ_CONS;
              param_name = hll_unwrap_cdr(param_name),
-                     param_value = hll_unwrap_cdr(param_value)) {
+             param_value = hll_unwrap_cdr(param_value)) {
+          if (param_value->kind != HLL_OBJ_CONS) {
+            hll_runtime_error(vm, "number of arguments does not match");
+            goto bail;
+          }
           hll_obj *name = hll_unwrap_car(param_name);
           assert(name->kind == HLL_OBJ_SYMB);
           hll_obj *value = hll_unwrap_car(param_value);
-          hll_obj *cons = hll_new_cons(vm, name, value);
-          hll_unwrap_env(new_env)->vars =
-              hll_new_cons(vm, cons, hll_unwrap_env(new_env)->vars);
+          add_variable(vm, new_env, name, value);
+        }
+
+        if (param_name->kind != HLL_OBJ_NIL) {
+          assert(param_name->kind == HLL_OBJ_SYMB);
+          add_variable(vm, new_env, param_name, param_value);
         }
 
         env = new_env;
