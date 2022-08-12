@@ -542,7 +542,8 @@ out:
 
 bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
                             bool print_result) {
-  hll_obj *result = hll_interpret_bytecode_internal(vm, vm->global_env, bytecode);
+  hll_obj *result =
+      hll_interpret_bytecode_internal(vm, vm->global_env, bytecode);
   if (print_result) {
     if (result == NULL) {
       internal_compiler_error(vm, "expected one value to print");

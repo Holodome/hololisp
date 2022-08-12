@@ -394,9 +394,7 @@ static void test_compiler_compiles_macro(void) {
 }
 
 #define TCASE(_name)                                                           \
-  {                                                                            \
-#_name, _name                                                              \
-  }
+  { #_name, _name }
 
 TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_addition),

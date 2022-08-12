@@ -765,7 +765,7 @@ static void compile_function_call_internal(hll_compiler *compiler,
 }
 
 static hll_obj *expand_macro(hll_compiler *compiler, const hll_obj *macro,
-                         const hll_obj *args) {
+                             const hll_obj *args) {
   if (macro->kind != HLL_OBJ_SYMB) {
     return NULL;
   }
@@ -1427,7 +1427,8 @@ static void compile_macroexpand(hll_compiler *compiler, const hll_obj *args) {
     return;
   }
 
-  hll_obj *expanded = expand_macro(compiler, hll_unwrap_car(macro_list), hll_unwrap_cdr(macro_list));
+  hll_obj *expanded = expand_macro(compiler, hll_unwrap_car(macro_list),
+                                   hll_unwrap_cdr(macro_list));
   assert(expanded != NULL);
   compile_expression(compiler, expanded);
 }
