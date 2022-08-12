@@ -302,7 +302,7 @@ static hll_obj *builtin_max(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_listp(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
-    hll_runtime_error(vm, "'listp' expects exactly 1 argument");
+    hll_runtime_error(vm, "'list?' expects exactly 1 argument");
     return NULL;
   }
 
@@ -333,13 +333,13 @@ static hll_obj *builtin_null(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_minusp(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
-    hll_runtime_error(vm, "'minusp' expects exactly 1 argument");
+    hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return NULL;
   }
 
   hll_obj *obj = hll_unwrap_car(args);
   if (HLL_UNLIKELY(obj->kind != HLL_OBJ_NUM)) {
-    hll_runtime_error(vm, "'minusp' expects number argument");
+    hll_runtime_error(vm, "'negative?' expects number argument");
     return NULL;
   }
 
@@ -353,13 +353,13 @@ static hll_obj *builtin_minusp(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_zerop(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
-    hll_runtime_error(vm, "'minusp' expects exactly 1 argument");
+    hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return NULL;
   }
 
   hll_obj *obj = hll_unwrap_car(args);
   if (HLL_UNLIKELY(obj->kind != HLL_OBJ_NUM)) {
-    hll_runtime_error(vm, "'minusp' expects number argument");
+    hll_runtime_error(vm, "'negative?' expects number argument");
     return NULL;
   }
 
@@ -373,13 +373,13 @@ static hll_obj *builtin_zerop(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_plusp(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
-    hll_runtime_error(vm, "'minusp' expects exactly 1 argument");
+    hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return NULL;
   }
 
   hll_obj *obj = hll_unwrap_car(args);
   if (HLL_UNLIKELY(obj->kind != HLL_OBJ_NUM)) {
-    hll_runtime_error(vm, "'minusp' expects number argument");
+    hll_runtime_error(vm, "'negative?' expects number argument");
     return NULL;
   }
 
@@ -460,17 +460,6 @@ static hll_obj *builtin_reverse(hll_vm *vm, hll_obj *args) {
   return result;
 }
 
-static hll_obj *builtin_and(hll_vm *vm, hll_obj *args) {
-  for (hll_obj *obj = args; obj->kind != HLL_OBJ_NIL;
-       obj = hll_unwrap_cdr(obj)) {
-    if (hll_unwrap_car(obj)->kind == HLL_OBJ_NIL) {
-      return vm->nil;
-    }
-  }
-
-  return vm->true_;
-}
-
 static hll_obj *builtin_nthcdr(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
     hll_runtime_error(vm, "'nthcdr' expects exactly 2 arguments");
@@ -546,16 +535,15 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "=", builtin_num_eq);
   hll_add_binding(vm, "/=", builtin_num_ne);
   hll_add_binding(vm, "rem", builtin_rem);
-  hll_add_binding(vm, "and", builtin_and);
   hll_add_binding(vm, "random", builtin_random);
   hll_add_binding(vm, "max", builtin_max);
   hll_add_binding(vm, "min", builtin_min);
-  hll_add_binding(vm, "listp", builtin_listp);
-  hll_add_binding(vm, "null", builtin_null);
-  hll_add_binding(vm, "minusp", builtin_minusp);
-  hll_add_binding(vm, "plusp", builtin_plusp);
-  hll_add_binding(vm, "zerop", builtin_zerop);
-  hll_add_binding(vm, "numberp", builtin_numberp);
+  hll_add_binding(vm, "list?", builtin_listp);
+  hll_add_binding(vm, "null?", builtin_null);
+  hll_add_binding(vm, "negative?", builtin_minusp);
+  hll_add_binding(vm, "positive?", builtin_plusp);
+  hll_add_binding(vm, "zero?", builtin_zerop);
+  hll_add_binding(vm, "number?", builtin_numberp);
   hll_add_binding(vm, "abs", builtin_abs);
   hll_add_binding(vm, "reverse", builtin_reverse);
   hll_add_binding(vm, "append", builtin_append);
