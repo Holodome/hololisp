@@ -79,6 +79,12 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
   vm->config.error_fn(vm, buffer);
 }
 
+static void add_variable(hll_vm *vm, hll_obj *env, hll_obj *name,
+                         hll_obj *value) {
+  hll_unwrap_env(env)->vars = hll_new_cons(vm, hll_new_cons(vm, name, value),
+                                           hll_unwrap_env(env)->vars);
+}
+
 hll_vm *hll_make_vm(hll_config const *config) {
   hll_vm *vm = calloc(1, sizeof(hll_vm));
 
@@ -248,12 +254,11 @@ typedef struct {
   const uint8_t *ip;
 } hll_call_frame;
 
-bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
-                            bool print_result) {
+hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
+                                         const hll_bytecode *initial_bytecode) {
   (void)vm;
   hll_call_frame *call_stack = NULL;
   hll_obj **stack = NULL;
-  hll_obj *env = vm->global_env;
 
   hll_call_frame original_frame = {0};
   original_frame.ip = initial_bytecode->ops;
@@ -447,8 +452,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
       assert(hll_sb_len(stack) != 0);
       hll_obj *value = hll_sb_pop(stack);
       hll_obj *name = hll_sb_last(stack);
-      hll_unwrap_env(env)->vars = hll_new_cons(
-          vm, hll_new_cons(vm, name, value), hll_unwrap_env(env)->vars);
+      add_variable(vm, env, name, value);
 
     } break;
     case HLL_BYTECODE_PUSHENV: {
@@ -519,22 +523,6 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_bytecode *initial_bytecode,
     }
   }
 
-  if (print_result) {
-    if (hll_sb_len(stack) != 1) {
-      internal_compiler_error(
-          vm, "stack size is not one (expected one value to print, got %zu)",
-          hll_sb_len(stack));
-      fprintf(stderr, "stack:\n");
-      for (size_t i = 0; i < hll_sb_len(stack); ++i) {
-        hll_dump_object(stderr, stack[i]);
-        fprintf(stderr, "\n");
-        goto bail;
-      }
-    }
-    hll_obj *obj = stack[0];
-    hll_print(vm, obj, stdout);
-    printf("\n");
-  }
   goto out;
 bail:
   hll_dump_bytecode(stderr, initial_bytecode);
@@ -545,7 +533,41 @@ bail:
       hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
     }
   }
-  hll_sb_free(stack);
+  return NULL;
 out:
-  return HLL_RESULT_OK;
+  assert(hll_sb_len(stack));
+  return stack[0];
+}
+
+bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
+                            bool print_result) {
+  hll_obj *result = hll_interpret_bytecode_internal(vm, vm->global_env, bytecode);
+  if (print_result) {
+    if (result == NULL) {
+      internal_compiler_error(vm, "expected one value to print");
+      return true;
+    }
+    hll_print(vm, result, stdout);
+    printf("\n");
+  }
+
+  return false;
+}
+
+struct hll_obj *hll_expand_macro(hll_vm *vm, const struct hll_obj *macro,
+                                 struct hll_obj *args) {
+  hll_obj *env = hll_new_env(vm, vm->global_env, vm->nil);
+  hll_obj_func *fun = hll_unwrap_func(macro);
+  assert(hll_list_length(args) == hll_list_length(fun->param_names));
+  for (hll_obj *name_slot = fun->param_names, *value_slot = args;
+       name_slot->kind == HLL_OBJ_CONS; name_slot = hll_unwrap_cdr(name_slot),
+               value_slot = hll_unwrap_cdr(value_slot)) {
+    add_variable(vm, env, hll_unwrap_car(name_slot),
+                 hll_unwrap_car(value_slot));
+  }
+
+  hll_obj *result = hll_interpret_bytecode_internal(vm, env, fun->bytecode);
+  assert(result);
+
+  return result;
 }

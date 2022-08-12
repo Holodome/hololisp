@@ -46,8 +46,11 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len, const char *msg);
 void hll_add_binding(hll_vm *vm, const char *symb,
                      struct hll_obj *(*bind)(hll_vm *vm, struct hll_obj *args));
 
-bool hll_interpret_bytecode(hll_vm *vm, struct hll_bytecode *bytecode,
+bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
                             bool print_result);
+
+struct hll_obj *hll_expand_macro(hll_vm *vm, const struct hll_obj *macro,
+                                 struct hll_obj *args);
 
 void hll_print(hll_vm *vm, struct hll_obj *obj, void *file);
 

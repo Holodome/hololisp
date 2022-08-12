@@ -520,6 +520,7 @@ void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
   compiler->vm = vm;
   compiler->bytecode = bytecode;
   compiler->nthcdr_symb = hll_new_symbolz(vm, "nthcdr");
+  compiler->macro_list = vm->nil;
 }
 
 HLL_ATTR(format(printf, 3, 4))
@@ -760,10 +761,42 @@ static void compile_function_call_internal(hll_compiler *compiler,
   emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
 }
 
+static bool expand_macro(hll_compiler *compiler, const hll_obj *macro,
+                         const hll_obj *args) {
+  if (macro->kind != HLL_OBJ_SYMB) {
+    return false;
+  }
+  hll_obj *macro_body = NULL;
+  for (hll_obj *slot = compiler->macro_list; slot->kind == HLL_OBJ_CONS;
+       slot = hll_unwrap_cdr(slot)) {
+    hll_obj *name = hll_unwrap_car(hll_unwrap_car(slot));
+    hll_obj *value = hll_unwrap_cdr(hll_unwrap_car(slot));
+    assert(name->kind == HLL_OBJ_SYMB);
+    if (strcmp(hll_unwrap_zsymb(macro), hll_unwrap_zsymb(name)) == 0) {
+      macro_body = value;
+      break;
+    }
+  }
+
+  if (macro_body == NULL) {
+    return false;
+  }
+
+  hll_obj *result = hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
+  hll_print(compiler->vm, result, stderr);
+  compile_expression(compiler, result);
+
+  return true;
+}
+
 static void compile_function_call(hll_compiler *compiler, const hll_obj *list) {
   hll_obj *fn = hll_unwrap_car(list);
+  hll_obj *args = hll_unwrap_cdr(list);
+  if (expand_macro(compiler, fn, args)) {
+    return;
+  }
   compile_eval_expression(compiler, fn);
-  compile_function_call_internal(compiler, hll_unwrap_cdr(list));
+  compile_function_call_internal(compiler, args);
 }
 
 static void compile_quote(hll_compiler *compiler, const hll_obj *args) {
@@ -1090,8 +1123,7 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
                                           const char *name) {
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
-  new_compiler.vm = compiler->vm;
-  new_compiler.bytecode = bytecode;
+  hll_compiler_init(&new_compiler, compiler->vm, bytecode);
   compile_progn(&new_compiler, body);
   emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {
@@ -1349,8 +1381,32 @@ static void compile_unless(hll_compiler *compiler, const hll_obj *args) {
 }
 
 static void process_defmacro(hll_compiler *compiler, const hll_obj *args) {
-  (void)compiler;
-  (void)args;
+  if (hll_list_length(args) < 3) {
+    compiler_error(compiler, args, "'defmacro' expects at least 3 arguments");
+    return;
+  }
+
+  hll_obj *name = hll_unwrap_car(args);
+  if (name->kind != HLL_OBJ_SYMB) {
+    compiler_error(compiler, name, "'defmacro' name should be a symbol");
+    return;
+  }
+
+  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+
+  args = hll_unwrap_cdr(args);
+  const hll_obj *params = hll_unwrap_car(args);
+  args = hll_unwrap_cdr(args);
+  const hll_obj *body = args;
+
+  hll_obj *macro_expansion =
+      compile_function_internal(compiler, params, body, "defmacro");
+  if (macro_expansion != NULL) {
+    // TODO: Test if macro with same name exists
+    compiler->macro_list = hll_new_cons(
+        compiler->vm, hll_new_cons(compiler->vm, name, macro_expansion),
+        compiler->macro_list);
+  }
 }
 
 static void compile_form(hll_compiler *compiler, const hll_obj *args,
