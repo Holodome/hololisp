@@ -384,10 +384,9 @@ static void test_compiler_compiles_setf_cdr(void) {
 
 static void test_compiler_compiles_macro(void) {
   const char *source = "(defmacro hello () (+ 1 2 3)) (hello)";
-  uint8_t bytecode[] = {HLL_BYTECODE_NIL, HLL_BYTECODE_POP, HLL_BYTECODE_CONST,
-                        0x00,
-                        0x00,
-                        HLL_BYTECODE_END};
+  uint8_t bytecode[] = {
+      HLL_BYTECODE_NIL, HLL_BYTECODE_POP, HLL_BYTECODE_CONST, 0x00, 0x00,
+      HLL_BYTECODE_END};
 
   hll_vm *vm = hll_make_vm(NULL);
   hll_bytecode *result = hll_compile(vm, source);

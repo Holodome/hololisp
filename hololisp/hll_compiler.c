@@ -783,8 +783,8 @@ static bool expand_macro(hll_compiler *compiler, const hll_obj *macro,
   }
 
   hll_obj *result = hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
-  hll_print(compiler->vm, result, stderr);
-  compile_expression(compiler, result);
+//  hll_print(compiler->vm, result, stderr);
+  compile_eval_expression(compiler, result);
 
   return true;
 }
@@ -1124,6 +1124,7 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
   hll_compiler_init(&new_compiler, compiler->vm, bytecode);
+  new_compiler.macro_list = compiler->macro_list;
   compile_progn(&new_compiler, body);
   emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {

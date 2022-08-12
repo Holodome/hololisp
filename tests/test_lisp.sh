@@ -289,4 +289,13 @@ pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
 pos_test "set nth" "(100 2 3)" "(defvar x '(1 2 3)) (set (nth 0 x) 100) x"
 
+pos_test "macro" "19" "(defmacro mac1 (a b) (list '+ a (list '* b 3))) (mac1 4 5)"
+pos_test "macro" "7" "(defmacro seven () 7) ((lambda () (seven)))"
+pos_test "macro" "42" "(defmacro if-zero (x then) (list 'if (list '= x 0) then))
+  (if-zero 0 42)"
+
+#pos_test "macroexpand" '(if (= x 0) (print x))' "
+#  (defmacro if-zero (x then) (list 'if (list '= x 0) then))
+#  (macroexpand (if-zero x (print x)))"
+
 exit $failed

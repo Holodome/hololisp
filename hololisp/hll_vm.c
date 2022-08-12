@@ -81,6 +81,7 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
 
 static void add_variable(hll_vm *vm, hll_obj *env, hll_obj *name,
                          hll_obj *value) {
+  assert(name->kind == HLL_OBJ_SYMB);
   hll_unwrap_env(env)->vars = hll_new_cons(vm, hll_new_cons(vm, name, value),
                                            hll_unwrap_env(env)->vars);
 }
