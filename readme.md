@@ -10,8 +10,6 @@ Simple minimal lisp dialect runtime.
 The goal is to provide simple embeddable version of lisp that can be used as a playground for exploring various interpreter design and programming languages' ideas.
 C was chosen because of its ease of use and integration into other systems.
 
-This goal of this project is to be optimized for speed on modern computers.
-
 ## Features 
 
 hololisp implements some common standard functions and features found in most popular lisp dialects, like [Common Lisp](https://common-lisp.net/) and [Scheme](https://www.scheme.com/tspl4/).
@@ -28,8 +26,13 @@ Language features include:
 * *if* conditionals
 * Primitive functions (+, =, list and others)
 * User-defined functions
-* Bytecode compilation and interpretation 
+* Functions with variadic number of arguments
+* Macros
 * Runtime evaluation
+
+Things not yet covered:
+* Tail call optimization
+* Recursive macros
 
 ## Compile
 
@@ -37,7 +40,7 @@ Language features include:
 make
 ```
 
-hololisp is currently tested on arm64 macOS and Linux amd64. The code uses some POSIX functions, so it is not portable to Windows without modification.
+hololisp is currently tested on arm64 macOS and Linux amd64. 
 
 By default, hololisp is compiled in release mode. If you want to compile in debug mode add `DEBUG=1` flag to make.
 
