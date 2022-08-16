@@ -152,6 +152,7 @@ neg_test "let args" "(let)"
 pos_test "let" "t" "(let ((x t)) x)"
 pos_test "let" "2" "(let ((x 1)) (+ x 1))"
 pos_test "let" "3" "(let ((c 1)) (let ((c 2) (a (+ c 1))) a))"
+pos_test "let" "2" "(let ((x (+ 0 1))) (+ x 1))"
 
 pos_test "progn" "()" "(progn)"
 pos_test "progn" "t" "(progn t)"
@@ -194,7 +195,11 @@ pos_test "fizzbuzz 25" "buzz" "$fizzbuzz_source (fizzbuzz 25)"
 pos_test "fizzbuzz 15" "fizzbuzz" "$fizzbuzz_source (fizzbuzz 15)"
 pos_test "fizzbuzz 17" "17" "$fizzbuzz_source (fizzbuzz 17)"
 
+neg_test "min args" "(min)"
+neg_test "min type" "(min ())"
 pos_test "min" "1" "(min 1 2 3 4)"
+neg_test "max args" "(max)"
+neg_test "max type" "(min ())"
 pos_test "max" "4" "(max 1 2 3 4)"
 
 neg_test "list? args" "(list?)"
@@ -220,27 +225,40 @@ pos_test "number?" "()" "(number? 'abc)"
 
 neg_test "positive? args" "(positive?)"
 neg_test "positive? args" "(positive? () ())"
+neg_test "positive? type" "(positive? ())"
 pos_test "positive?" "t" "(positive? 100)"
 pos_test "positive?" "()" "(positive? 0)"
 pos_test "positive?" "()" "(positive? -100)"
 
 neg_test "zero? args" "(zero?)"
 neg_test "zero? args" "(zero? 1 2)"
+neg_test "zero? type" "(zero? ())"
 pos_test "zero?" "()" "(zero? 100)"
 pos_test "zero?" "t" "(zero? 0)"
 pos_test "zero?" "()" "(zero? -100)"
 
+neg_test "negative? args" "(negative?)"
+neg_test "negative? args" "(negative? 1 2)"
+neg_test "negative? type" "(negative? ())"
 pos_test "negative?" "()" "(negative? 100)"
 pos_test "negative?" "()" "(negative? 0)"
 pos_test "negative?" "t" "(negative? -100)"
 
+neg_test "abs args" "(abs)"
+neg_test "abs args" "(abs 1 2)"
+neg_test "abs type" "(abs ())"
 pos_test "abs" "1" "(abs -1)"
 pos_test "abs" "1" "(abs 1)"
 
+neg_test "append args" "(append)"
+neg_test "append args" "(append '(a b))"
+neg_test "append args" "(append '(a b) '(c d) ())"
 pos_test "append" "(a b c d)" "(append '(a b) '(c d))"
 pos_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
 pos_test "append" "(foo . bar)" "(append '(foo) 'bar)"
 
+neg_test "reverse args" "(reverse)"
+neg_test "reverse args" "(reverse () ())"
 pos_test "reverse" "()" "(reverse ())"
 pos_test "reverse" "(1)" "(reverse '(1))"
 pos_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
@@ -275,12 +293,22 @@ pos_test "set" "(1 100 3)" "
 (set (cadr x) 100)
 x"
 
+neg_test "nthcdr args" "(nthcdr)"
+neg_test "nthcdr args" "(nthcdr 0)"
+neg_test "nthcdr args" "(nthcdr 0 () ())"
+neg_test "nthcdr negative" "(nthcdr -1 ())"
+neg_test "nthcdr non-number" "(nthcdr () ())"
 pos_test "nthcdr nil" "()" "(nthcdr 0 ())"
 pos_test "nthcdr more than length nil" "()" "(nthcdr 100 ())"
 pos_test "nthcdr first" "(0 1 2 3)" "(nthcdr 0 '(0 1 2 3))"
 pos_test "nthcdr second" "(1 2 3)" "(nthcdr 1 '(0 1 2 3))"
 pos_test "nthcdr more than length" "()" "(nthcdr 100 '(0 1 2 3))"
 
+neg_test "nth args" "(nth)"
+neg_test "nth args" "(nth 0)"
+neg_test "nth args" "(nth 0 () ())"
+neg_test "nth negative" "(nth -1 ())"
+neg_test "nth non-number" "(nth () ())"
 pos_test "nth nil" "()" "(nth 0 ())"
 pos_test "nth more than length nil" "()" "(nth 100 ())"
 pos_test "nth first" "0" "(nth 0 '(0 1 2 3))"
@@ -297,5 +325,21 @@ pos_test "macro" "42" "(defmacro if-zero (x then) (list 'if (list '= x 0) then))
 pos_test "macroexpand" '(if (= x 0) (print x))' "
   (defmacro if-zero (x then) (list 'if (list '= x 0) then))
   (macroexpand (if-zero x (print x)))"
+
+pos_test "restargs" "(3 5 7)" "(defun f (x . y) (cons x y)) (f 3 5 7)"
+pos_test "restargs" "(3)" "(defun f (x . y) (cons x y)) (f 3)"
+
+neg_test "random args" "(random ())"
+neg_test "random args" "(random 1 2 3)"
+pos_test "random" "()" "(= (random) (random) (random) (random) (random) (random) (random) (random) (random) (random))"
+pos_test "random high" "t" "(defun test () (< (random 1024) 1024)) (and (test) (test) (test) (test) (test))"
+pos_test "random high low" "t" "(defun test () (let ((x (random 1024 2048))) (and (< x 2048) (>= x 1024)))) (and (test) (test) (test) (test) (test))"
+
+
+#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
+#                                (if rest
+#                                    (list 'if expr (&& rest))
+#                                    expr))
+#(macroexpand (&& 1 2 3))"
 
 exit $failed
