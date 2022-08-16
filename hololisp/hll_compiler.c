@@ -769,6 +769,7 @@ static hll_obj *expand_macro(hll_compiler *compiler, const hll_obj *macro,
   if (macro->kind != HLL_OBJ_SYMB) {
     return NULL;
   }
+
   hll_obj *macro_body = NULL;
   for (hll_obj *slot = compiler->macro_list; slot->kind == HLL_OBJ_CONS;
        slot = hll_unwrap_cdr(slot)) {
@@ -786,7 +787,6 @@ static hll_obj *expand_macro(hll_compiler *compiler, const hll_obj *macro,
   }
 
   hll_obj *result = hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
-  //  hll_print(compiler->vm, result, stderr);
   return result;
 }
 

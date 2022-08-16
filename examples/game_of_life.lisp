@@ -83,3 +83,6 @@
     (cons (create-row width) (create-board width (- height 1)))))
 
 (run (create-board *width* *height*))
+(defun test ()
+  (let ((x (random 1024 2048)))
+    (and (< x 2048) (>= x 1024))))

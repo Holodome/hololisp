@@ -245,10 +245,11 @@ static hll_obj *builtin_random(hll_vm *vm, hll_obj *args) {
     result = random % upper;
   } else {
     assert(low != NULL && high != NULL);
-    uint64_t lower = floor(low->as.num);
-    uint64_t upper = floor(high->as.num);
+    uint64_t lower = floor(high->as.num);
+    uint64_t upper = floor(low->as.num);
+    assert(upper > lower);
     uint64_t random = xorshift64(&vm->rng_state);
-    result = random % upper + lower;
+    result = random % (upper - lower) + lower;
   }
 
   return hll_new_num(vm, result);
