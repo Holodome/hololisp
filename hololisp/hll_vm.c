@@ -386,7 +386,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
         hll_obj *param_name = func->param_names;
         hll_obj *param_value = args;
         if (param_name->kind == HLL_OBJ_CONS &&
-             hll_unwrap_car(param_name)->kind == HLL_OBJ_SYMB) {
+            hll_unwrap_car(param_name)->kind == HLL_OBJ_SYMB) {
           for (; param_name->kind == HLL_OBJ_CONS;
                param_name = hll_unwrap_cdr(param_name),
                param_value = hll_unwrap_cdr(param_value)) {
@@ -400,7 +400,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
             add_variable(vm, new_env, name, value);
           }
         } else if (param_name->kind == HLL_OBJ_CONS &&
-                    hll_unwrap_car(param_name)->kind == HLL_OBJ_NIL) {
+                   hll_unwrap_car(param_name)->kind == HLL_OBJ_NIL) {
           param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
         }
 

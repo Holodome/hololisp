@@ -165,7 +165,7 @@ static void test_compiler_compiles_quote(void) {
 }
 
 static void test_compiler_compiles_defun(void) {
-  const char *source = "(defun f (x) (* x 2))";
+  const char *source = "(define (f x) (* x 2))";
   uint8_t function_bytecode[] = {HLL_BYTECODE_CONST,
                                  0x00,
                                  0x00,
@@ -349,7 +349,7 @@ static void test_compiler_compiles_let_with_body(void) {
 }
 
 static void test_compiler_compiles_setf_symbol(void) {
-  const char *source = "(defvar x) (set! x t)";
+  const char *source = "(define x) (set! x t)";
   uint8_t bytecode[] = {// defvar x
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_LET, HLL_BYTECODE_POP,
@@ -364,7 +364,7 @@ static void test_compiler_compiles_setf_symbol(void) {
 }
 
 static void test_compiler_compiles_setf_cdr(void) {
-  const char *source = "(defvar x '(1)) (set! (cdr x) '(2))";
+  const char *source = "(define x '(1)) (set! (cdr x) '(2))";
   uint8_t bytecode[] = {
       // defvar x
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
