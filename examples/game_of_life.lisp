@@ -25,9 +25,9 @@
 
 ; ;; Prints board
 (defun print-board (board)
-  (unless (null board)
-    (progn (print (map (lambda (it) (if (= it 0) '_ '@)) (car board)))
-           (print-board (cdr board)))))
+  (unless (null? board)
+    (print (map (lambda (it) (if (zero? it) '_ '@)) (car board)))
+    (print-board (cdr board))))
 
 (defun alive-at (board x y)
   (and (>= x 0)

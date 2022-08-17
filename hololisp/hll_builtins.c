@@ -551,4 +551,17 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "nthcdr", builtin_nthcdr);
   hll_add_binding(vm, "nth", builtin_nth);
   hll_add_binding(vm, "clear", builtin_clear);
+#if 0
+(defmacro and (expr . rest)
+  (if rest
+      (list 'if expr (cons 'and rest))
+    expr))
+#endif
+
+  hll_interpret(vm, "builtin macros",
+                "(defmacro not (x) (if x () t))\n"
+                "(defmacro when (expr . body)\n"
+                "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
+                "(defmacro unless (expr . body)\n"
+                "  (cons 'if (cons expr (cons () body))))\n");
 }

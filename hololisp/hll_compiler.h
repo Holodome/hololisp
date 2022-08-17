@@ -86,7 +86,6 @@ typedef struct {
   struct hll_bytecode *bytecode;
   struct hll_obj *nthcdr_symb;
 
-  struct hll_obj *macro_list;
 } hll_compiler;
 
 void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,

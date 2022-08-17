@@ -30,6 +30,8 @@ typedef struct hll_vm {
   // toplevel functions.
   struct hll_obj *global_env;
 
+  struct hll_obj *macro_list;
+
   uint32_t error_count;
   // We use xorshift64 for random number generation. Because hololisp is
   // single-threaded, we can use single global variable for rng state.

@@ -134,12 +134,12 @@ pos_test "list" "(1)" "(list 1)"
 pos_test "list" "()" "(list)"
 pos_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 
-neg_test "setcar args" "(setcar)"
-neg_test "setcar args" "(setcar '(1))"
-pos_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
-neg_test "setcdr args" "(setcdr)"
-neg_test "setcdr args" "(setcdr '(1))"
-pos_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
+neg_test "setcar! args" "(setcar!)"
+neg_test "setcar! args" "(setcar! '(1))"
+pos_test "setcar!" "(0 1)" "(setcar! '(() 1) 0)"
+neg_test "setcdr! args" "(setcdr!)"
+neg_test "setcdr! args" "(setcdr! '(1))"
+pos_test "setcdr!" "(1 2)" "(setcdr! '(1) '(2))"
 
 neg_test "defun args" "(defun)"
 neg_test "defun args" "(defun x)"
@@ -177,7 +177,7 @@ pos_test "lambda" "2" "(defvar x 1)
 
 pos_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
-pos_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (set x 3) (f)"
+pos_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (set! x 3) (f)"
 
 fizzbuzz_source="(defun fizzbuzz (n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
@@ -279,18 +279,18 @@ pos_test "not true" "()" "(not t)"
 pos_test "not nil" "t" "(not ())"
 pos_test "not eval" "()" "(not (+ 1 2))"
 
-pos_test "set" "321" "(defvar x 123)
-(set x 321)
+pos_test "set!" "321" "(defvar x 123)
+(set! x 321)
 x"
-pos_test "set" "(1 100 3)" "
+pos_test "set!" "(1 100 3)" "
 (defvar x '(1 2 3))
 (defvar c (cdr x))
-(set (car (cdr x)) 100)
+(set! (car (cdr x)) 100)
 x"
-pos_test "set" "(1 100 3)" "
+pos_test "set!" "(1 100 3)" "
 (defvar x '(1 2 3))
 (defvar c (cdr x))
-(set (cadr x) 100)
+(set! (cadr x) 100)
 x"
 
 neg_test "nthcdr args" "(nthcdr)"
@@ -315,7 +315,7 @@ pos_test "nth first" "0" "(nth 0 '(0 1 2 3))"
 pos_test "nth second" "1" "(nth 1 '(0 1 2 3))"
 pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
-pos_test "set nth" "(100 2 3)" "(defvar x '(1 2 3)) (set (nth 0 x) 100) x"
+pos_test "set! nth" "(100 2 3)" "(defvar x '(1 2 3)) (set! (nth 0 x) 100) x"
 
 pos_test "macro" "19" "(defmacro mac1 (a b) (list '+ a (list '* b 3))) (mac1 4 5)"
 pos_test "macro" "7" "(defmacro seven () 7) ((lambda () (seven)))"
@@ -334,7 +334,6 @@ neg_test "random args" "(random 1 2 3)"
 pos_test "random" "()" "(= (random) (random) (random) (random) (random) (random) (random) (random) (random) (random))"
 pos_test "random high" "t" "(defun test () (< (random 1024) 1024)) (and (test) (test) (test) (test) (test))"
 pos_test "random high low" "t" "(defun test () (let ((x (random 1024 2048))) (and (< x 2048) (>= x 1024)))) (and (test) (test) (test) (test) (test))"
-
 
 #pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
 #                                (if rest

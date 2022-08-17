@@ -520,7 +520,6 @@ void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
   compiler->vm = vm;
   compiler->bytecode = bytecode;
   compiler->nthcdr_symb = hll_new_symbolz(vm, "nthcdr");
-  compiler->macro_list = vm->nil;
 }
 
 HLL_ATTR(format(printf, 3, 4))
@@ -608,9 +607,6 @@ typedef enum {
   HLL_FORM_LAMBDA,
   HLL_FORM_OR,
   HLL_FORM_AND,
-  HLL_FORM_WHEN,
-  HLL_FORM_UNLESS,
-  HLL_FORM_NOT,
   HLL_FORM_DEFMACRO,
   HLL_FORM_MACROEXPAND,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
@@ -626,7 +622,7 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_IF;
     //  } else if (strcmp(symb, "lambda") == 0) {
     //    kind = HLL_FORM_LAMBDA;
-  } else if (strcmp(symb, "set") == 0) {
+  } else if (strcmp(symb, "set!") == 0) {
     kind = HLL_FORM_SET;
   } else if (strcmp(symb, "defvar") == 0) {
     kind = HLL_FORM_DEFVAR;
@@ -636,9 +632,9 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_LIST;
   } else if (strcmp(symb, "cons") == 0) {
     kind = HLL_FORM_CONS;
-  } else if (strcmp(symb, "setcar") == 0) {
+  } else if (strcmp(symb, "setcar!") == 0) {
     kind = HLL_FORM_SETCAR;
-  } else if (strcmp(symb, "setcdr") == 0) {
+  } else if (strcmp(symb, "setcdr!") == 0) {
     kind = HLL_FORM_SETCDR;
   } else if (strcmp(symb, "defun") == 0) {
     kind = HLL_FORM_DEFUN;
@@ -650,12 +646,6 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_OR;
   } else if (strcmp(symb, "and") == 0) {
     kind = HLL_FORM_AND;
-  } else if (strcmp(symb, "when") == 0) {
-    kind = HLL_FORM_WHEN;
-  } else if (strcmp(symb, "unless") == 0) {
-    kind = HLL_FORM_UNLESS;
-  } else if (strcmp(symb, "not") == 0) {
-    kind = HLL_FORM_NOT;
   } else if (strcmp(symb, "defmacro") == 0) {
     kind = HLL_FORM_DEFMACRO;
   } else if (strcmp(symb, "macroexpand") == 0) {
@@ -771,7 +761,7 @@ static hll_obj *expand_macro(hll_compiler *compiler, const hll_obj *macro,
   }
 
   hll_obj *macro_body = NULL;
-  for (hll_obj *slot = compiler->macro_list; slot->kind == HLL_OBJ_CONS;
+  for (hll_obj *slot = compiler->vm->macro_list; slot->kind == HLL_OBJ_CONS;
        slot = hll_unwrap_cdr(slot)) {
     hll_obj *name = hll_unwrap_car(hll_unwrap_car(slot));
     hll_obj *value = hll_unwrap_cdr(hll_unwrap_car(slot));
@@ -1018,7 +1008,7 @@ static void compile_set_location(hll_compiler *compiler,
 
 static void compile_setf(hll_compiler *compiler, const hll_obj *args) {
   if (hll_list_length(args) < 1) {
-    compiler_error(compiler, args, "'set' expects at least 1 argument");
+    compiler_error(compiler, args, "'set!' expects at least 1 argument");
     return;
   }
 
@@ -1034,7 +1024,7 @@ static void compile_setf(hll_compiler *compiler, const hll_obj *args) {
 
 static void compile_setcar(hll_compiler *compiler, const hll_obj *args) {
   if (hll_list_length(args) != 2) {
-    compiler_error(compiler, args, "'setcar' expects exactly 2 arguments");
+    compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
@@ -1052,7 +1042,7 @@ static void compile_setcar(hll_compiler *compiler, const hll_obj *args) {
 
 static void compile_setcdr(hll_compiler *compiler, const hll_obj *args) {
   if (hll_list_length(args) != 2) {
-    compiler_error(compiler, args, "'setcar' expects exactly 2 arguments");
+    compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
@@ -1144,7 +1134,6 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
   hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
   hll_compiler_init(&new_compiler, compiler->vm, bytecode);
-  new_compiler.macro_list = compiler->macro_list;
   compile_progn(&new_compiler, body);
   emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
   if (new_compiler.has_errors) {
@@ -1253,26 +1242,6 @@ static void compile_lambda(hll_compiler *compiler, const hll_obj *args) {
   emit_u16(compiler->bytecode, function_idx);
 }
 
-static void compile_not(hll_compiler *compiler, const hll_obj *args) {
-  if (hll_list_length(args) != 1) {
-    compiler_error(compiler, args, "'not' form expects exactly 1 argument");
-    return;
-  }
-
-  compile_eval_expression(compiler, hll_unwrap_car(args));
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_nil = emit_u16(compiler->bytecode, 0);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_out = emit_u16(compiler->bytecode, 0);
-  write_u16_be(compiler->bytecode->ops + jump_nil,
-               get_current_op_idx(compiler->bytecode) - jump_nil - 2);
-  emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
-  write_u16_be(compiler->bytecode->ops + jump_out,
-               get_current_op_idx(compiler->bytecode) - jump_out - 2);
-}
-
 static void compile_and(hll_compiler *compiler, const hll_obj *args) {
   if (hll_list_length(args) == 0) {
     emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
@@ -1357,50 +1326,6 @@ static void compile_or(hll_compiler *compiler, const hll_obj *args) {
   }
 }
 
-static void compile_when(hll_compiler *compiler, const hll_obj *args) {
-  if (hll_list_length(args) < 1) {
-    compiler_error(compiler, args, "when' for expects at least 1 argument");
-    return;
-  }
-
-  hll_obj *condition = hll_unwrap_car(args);
-  hll_obj *body = hll_unwrap_cdr(args);
-  compile_eval_expression(compiler, condition);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_false = emit_u16(compiler->bytecode, 0);
-  compile_progn(compiler, body);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_out = emit_u16(compiler->bytecode, 0);
-  write_u16_be(compiler->bytecode->ops + jump_false,
-               get_current_op_idx(compiler->bytecode) - jump_false - 2);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  write_u16_be(compiler->bytecode->ops + jump_out,
-               get_current_op_idx(compiler->bytecode) - jump_out - 2);
-}
-
-static void compile_unless(hll_compiler *compiler, const hll_obj *args) {
-  if (hll_list_length(args) < 1) {
-    compiler_error(compiler, args, "unless' for expects at least 1 argument");
-    return;
-  }
-
-  hll_obj *condition = hll_unwrap_car(args);
-  hll_obj *body = hll_unwrap_cdr(args);
-  compile_eval_expression(compiler, condition);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_false = emit_u16(compiler->bytecode, 0);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-  size_t jump_out = emit_u16(compiler->bytecode, 0);
-  write_u16_be(compiler->bytecode->ops + jump_false,
-               get_current_op_idx(compiler->bytecode) - jump_false - 2);
-  compile_progn(compiler, body);
-  write_u16_be(compiler->bytecode->ops + jump_out,
-               get_current_op_idx(compiler->bytecode) - jump_out - 2);
-}
-
 static void process_defmacro(hll_compiler *compiler, const hll_obj *args) {
   if (hll_list_length(args) < 3) {
     compiler_error(compiler, args, "'defmacro' expects at least 3 arguments");
@@ -1424,9 +1349,9 @@ static void process_defmacro(hll_compiler *compiler, const hll_obj *args) {
       compile_function_internal(compiler, params, body, "defmacro");
   if (macro_expansion != NULL) {
     // TODO: Test if macro with same name exists
-    compiler->macro_list = hll_new_cons(
+    compiler->vm->macro_list = hll_new_cons(
         compiler->vm, hll_new_cons(compiler->vm, name, macro_expansion),
-        compiler->macro_list);
+        compiler->vm->macro_list);
   }
 }
 
@@ -1508,15 +1433,6 @@ static void compile_form(hll_compiler *compiler, const hll_obj *args,
     break;
   case HLL_FORM_AND:
     compile_and(compiler, args);
-    break;
-  case HLL_FORM_WHEN:
-    compile_when(compiler, args);
-    break;
-  case HLL_FORM_UNLESS:
-    compile_unless(compiler, args);
-    break;
-  case HLL_FORM_NOT:
-    compile_not(compiler, args);
     break;
   case HLL_FORM_DEFMACRO:
     process_defmacro(compiler, args);

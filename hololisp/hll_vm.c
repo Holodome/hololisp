@@ -99,6 +99,7 @@ hll_vm *hll_make_vm(hll_config const *config) {
   vm->true_ = hll_new_true(vm);
   vm->global_env = hll_new_env(vm, vm->nil, vm->nil);
   vm->rng_state = time(NULL);
+  vm->macro_list = vm->nil;
 
   add_builtins(vm);
 
