@@ -1350,7 +1350,7 @@ static void compile_define(hll_compiler *compiler, const hll_obj *args) {
   if (decide->kind == HLL_OBJ_CONS) {
     hll_obj *name = hll_unwrap_car(decide);
     if (name->kind != HLL_OBJ_SYMB) {
-      compiler_error(compiler, name, "'defun' name should be a symbol");
+      compiler_error(compiler, name, "'define' name should be a symbol");
       return;
     }
 
@@ -1360,7 +1360,7 @@ static void compile_define(hll_compiler *compiler, const hll_obj *args) {
     compile_expression(compiler, name);
 
     uint16_t function_idx;
-    if (compile_function(compiler, params, body, "defun", &function_idx)) {
+    if (compile_function(compiler, params, body, "define", &function_idx)) {
       return;
     }
 
