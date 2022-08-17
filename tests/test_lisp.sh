@@ -328,6 +328,8 @@ pos_test "macroexpand" '(if (= x 0) (print x))' "
 
 pos_test "restargs" "(3 5 7)" "(defun f (x . y) (cons x y)) (f 3 5 7)"
 pos_test "restargs" "(3)" "(defun f (x . y) (cons x y)) (f 3)"
+pos_test "restargs" "empty" "(defun f (() . rest) (if (null? rest) 'empty 'not-empty)) (f)"
+pos_test "restargs" "not-empty" "(defun f (() . rest) (if (null? rest) 'empty 'not-empty)) (f 1 2 3)"
 
 neg_test "random args" "(random ())"
 neg_test "random args" "(random 1 2 3)"

@@ -385,17 +385,23 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
 
         hll_obj *param_name = func->param_names;
         hll_obj *param_value = args;
-        for (; param_name->kind == HLL_OBJ_CONS;
-             param_name = hll_unwrap_cdr(param_name),
-             param_value = hll_unwrap_cdr(param_value)) {
-          if (param_value->kind != HLL_OBJ_CONS) {
-            hll_runtime_error(vm, "number of arguments does not match");
-            goto bail;
+        if (param_name->kind == HLL_OBJ_CONS &&
+             hll_unwrap_car(param_name)->kind == HLL_OBJ_SYMB) {
+          for (; param_name->kind == HLL_OBJ_CONS;
+               param_name = hll_unwrap_cdr(param_name),
+               param_value = hll_unwrap_cdr(param_value)) {
+            if (param_value->kind != HLL_OBJ_CONS) {
+              hll_runtime_error(vm, "number of arguments does not match");
+              goto bail;
+            }
+            hll_obj *name = hll_unwrap_car(param_name);
+            assert(name->kind == HLL_OBJ_SYMB);
+            hll_obj *value = hll_unwrap_car(param_value);
+            add_variable(vm, new_env, name, value);
           }
-          hll_obj *name = hll_unwrap_car(param_name);
-          assert(name->kind == HLL_OBJ_SYMB);
-          hll_obj *value = hll_unwrap_car(param_value);
-          add_variable(vm, new_env, name, value);
+        } else if (param_name->kind == HLL_OBJ_CONS &&
+                    hll_unwrap_car(param_name)->kind == HLL_OBJ_NIL) {
+          param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
         }
 
         if (param_name->kind != HLL_OBJ_NIL) {

@@ -538,7 +538,7 @@ static void compiler_error(hll_compiler *compiler, const hll_obj *ast,
   va_end(args);
 
   // TODO: Length, offset
-  //  hll_report_error(compiler->vm, 0, 0, buffer);
+  hll_report_error(compiler->vm, 0, 0, buffer);
 }
 
 #define HLL_ENUMERATE_CAR_CDR                                                  \
@@ -1114,11 +1114,15 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
                                               const hll_obj *car,
                                               hll_obj **param_list,
                                               hll_obj **param_list_tail) {
-  uint16_t symb_idx = add_symbol_and_return_its_index(
-      compiler, hll_unwrap_zsymb(car), hll_unwrap_symb(car)->length);
-  hll_obj *symb = compiler->bytecode->constant_pool[symb_idx];
-  assert(symb != NULL);
-  hll_obj *cons = hll_new_cons(compiler->vm, symb, compiler->vm->nil);
+  const hll_obj *symb = car;
+  if (car->kind != HLL_OBJ_NIL) {
+    uint16_t symb_idx = add_symbol_and_return_its_index(
+        compiler, hll_unwrap_zsymb(car), hll_unwrap_symb(car)->length);
+    symb = compiler->bytecode->constant_pool[symb_idx];
+    assert(symb != NULL);
+  }
+
+  hll_obj *cons = hll_new_cons(compiler->vm, (hll_obj *)symb, compiler->vm->nil);
   if (*param_list == NULL) {
     *param_list = *param_list_tail = cons;
   } else {
@@ -1148,25 +1152,34 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
 
   hll_obj *param_list = NULL;
   hll_obj *param_list_tail = NULL;
-  const hll_obj *obj = params;
-  for (; obj->kind == HLL_OBJ_CONS; obj = hll_unwrap_cdr(obj)) {
-    hll_obj *car = hll_unwrap_car(obj);
-    if (car->kind != HLL_OBJ_SYMB) {
-      compiler_error(compiler, car, "function param name is not a symbol");
-      return NULL;
+  if (params->kind == HLL_OBJ_CONS &&
+      hll_unwrap_car(params)->kind == HLL_OBJ_NIL &&
+      hll_unwrap_cdr(params)->kind == HLL_OBJ_SYMB) {
+    add_symbol_to_function_param_list(&new_compiler, compiler->vm->nil,
+                                      &param_list, &param_list_tail);
+    add_symbol_to_function_param_list(&new_compiler, hll_unwrap_cdr(params),
+                                      &param_list, &param_list_tail);
+  } else {
+    const hll_obj *obj = params;
+    for (; obj->kind == HLL_OBJ_CONS; obj = hll_unwrap_cdr(obj)) {
+      hll_obj *car = hll_unwrap_car(obj);
+      if (car->kind != HLL_OBJ_SYMB) {
+        compiler_error(compiler, car, "function param name is not a symbol");
+        return NULL;
+      }
+
+      add_symbol_to_function_param_list(&new_compiler, car, &param_list,
+                                        &param_list_tail);
     }
 
-    add_symbol_to_function_param_list(&new_compiler, car, &param_list,
-                                      &param_list_tail);
-  }
-
-  if (obj->kind != HLL_OBJ_NIL) {
-    if (obj->kind != HLL_OBJ_SYMB) {
-      compiler_error(compiler, obj, "function param name is not a symbol");
-      return NULL;
+    if (obj->kind != HLL_OBJ_NIL) {
+      if (obj->kind != HLL_OBJ_SYMB) {
+        compiler_error(compiler, obj, "function param name is not a symbol");
+        return NULL;
+      }
+      assert((*param_list_tail).kind == HLL_OBJ_CONS);
+      hll_unwrap_cons(param_list_tail)->cdr = (hll_obj *)obj;
     }
-    assert((*param_list_tail).kind == HLL_OBJ_CONS);
-    hll_unwrap_cons(param_list_tail)->cdr = (hll_obj *)obj;
   }
 
   if (param_list == NULL) {
