@@ -534,14 +534,14 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
 
   goto out;
 bail:
-  hll_dump_bytecode(stderr, initial_bytecode);
-  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
-    hll_obj *test = initial_bytecode->constant_pool[i];
-    fprintf(stderr, "\n\n");
-    if (test->kind == HLL_OBJ_FUNC) {
-      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
-    }
-  }
+//  hll_dump_bytecode(stderr, initial_bytecode);
+//  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
+//    hll_obj *test = initial_bytecode->constant_pool[i];
+//    fprintf(stderr, "\n\n");
+//    if (test->kind == HLL_OBJ_FUNC) {
+//      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
+//    }
+//  }
   return NULL;
 out:
   assert(hll_sb_len(stack));

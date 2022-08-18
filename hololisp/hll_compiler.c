@@ -242,8 +242,8 @@ static void lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt, args);
   va_end(args);
 
-  //  hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length,
-  //  buffer);
+    hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length,
+    buffer);
 }
 
 void hll_lexer_init(hll_lexer *lexer, const char *input, hll_vm *vm) {
@@ -364,8 +364,8 @@ static void reader_error(hll_reader *reader, const char *fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt, args);
   va_end(args);
 
-  //  hll_report_error(reader->vm, reader->lexer->next.offset,
-  //                   reader->lexer->next.length, buffer);
+  hll_report_error(reader->vm, reader->lexer->next.offset,
+                   reader->lexer->next.length, buffer);
 }
 
 static void peek_token(hll_reader *reader) {

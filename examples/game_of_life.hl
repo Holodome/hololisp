@@ -3,7 +3,6 @@
 ;; hololisp version
 ;;
 
-;; Define sizes here so we don't worry about passing them around
 (define *width* 40)
 (define *height* 40)
 
@@ -12,18 +11,13 @@
     (cons (functor (car obj))
           (map functor (cdr obj)))))
 
-; ;; Function similar to python range used to create list of numbers from lo to hi
 (define (range-lo lo hi)
   (unless (<= hi lo)
     (cons lo (range-lo (+ lo 1) hi))))
 
-; ;; Simplified range with only high value, starting from zero
 (define (range hi)
   (range-lo 0 hi))
 
-; ;; Returns new matrix with width and *height* dimension
-
-; ;; Prints board
 (define (print-board board)
   (when board
     (print (map (lambda (it) (if (zero? it) '_ '@)) (car board)))
@@ -60,8 +54,6 @@
     1
     0))
 
-; ;; Run simulation step
-; ;; Return new board after simulation step
 (define (simulate board)
   (map (lambda (y) 
          (map (lambda (x) 

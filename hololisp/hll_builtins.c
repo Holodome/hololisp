@@ -6,10 +6,12 @@
 #include <math.h>
 #include <stdio.h>
 
+#include <unistd.h>
+
 static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
   hll_print(vm, hll_unwrap_car(args), stdout);
   printf("\n");
-  return vm->nil;
+  return hll_unwrap_car(args);
 }
 
 static hll_obj *builtin_add(hll_vm *vm, hll_obj *args) {
@@ -78,7 +80,7 @@ static hll_obj *builtin_num_ne(hll_vm *vm, hll_obj *args) {
       hll_obj *num2 = hll_unwrap_car(obj2);
       //      CHECK_TYPE(num2, HLL_OBJ_INT, "arguments");
 
-      if (num1->as.num == num2->as.num) {
+      if (fabs(num1->as.num - num2->as.num) < 1e-3) {
         return vm->nil;
       }
     }
@@ -104,7 +106,7 @@ static hll_obj *builtin_num_eq(hll_vm *vm, hll_obj *args) {
       hll_obj *num2 = hll_unwrap_car(obj2);
       //      CHECK_TYPE(num2, HLL_OBJ_INT, "arguments");
 
-      if (num1->as.num != num2->as.num) {
+      if (fabs(num1->as.num - num2->as.num) >= 1e-3) {
         return vm->nil;
       }
     }
@@ -472,7 +474,8 @@ static hll_obj *builtin_nthcdr(hll_vm *vm, hll_obj *args) {
     hll_runtime_error(vm, "'nthcdr' first argument must be a number");
     return NULL;
   } else if (HLL_UNLIKELY(num->as.num < 0)) {
-    hll_runtime_error(vm, "'nthcdr' expects non-negative number");
+    hll_runtime_error(vm, "'nthcdr' expects non-negative number (got %F)",
+                      num->as.num);
     return NULL;
   }
 
@@ -491,16 +494,17 @@ static hll_obj *builtin_nthcdr(hll_vm *vm, hll_obj *args) {
 
 static hll_obj *builtin_nth(hll_vm *vm, hll_obj *args) {
   if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
-    hll_runtime_error(vm, "'nthcdr' expects exactly 2 arguments");
+    hll_runtime_error(vm, "'nth' expects exactly 2 arguments");
     return NULL;
   }
 
   hll_obj *num = hll_unwrap_car(args);
   if (HLL_UNLIKELY(num->kind != HLL_OBJ_NUM)) {
-    hll_runtime_error(vm, "'nthcdr' first argument must be a number");
+    hll_runtime_error(vm, "'nth' first argument must be a number");
     return NULL;
   } else if (HLL_UNLIKELY(num->as.num < 0)) {
-    hll_runtime_error(vm, "'nthcdr' expects non-negative number");
+    hll_runtime_error(vm, "'nth' expects non-negative number (got %F)",
+                      num->as.num);
     return NULL;
   }
 
@@ -521,6 +525,16 @@ static hll_obj *builtin_clear(hll_vm *vm, hll_obj *args) {
   (void)args;
   printf("\033[2J");
   return vm->nil;
+}
+
+static hll_obj *builtin_sleep(hll_vm *vm, hll_obj *args) {
+  double num = hll_unwrap_car(args)->as.num;
+  usleep(num * 1000);
+  return vm->nil;
+}
+
+static hll_obj *builtin_length(hll_vm *vm, hll_obj *args) {
+  return hll_new_num(vm, hll_list_length(hll_unwrap_car(args)));
 }
 
 void add_builtins(hll_vm *vm) {
@@ -551,11 +565,34 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "nthcdr", builtin_nthcdr);
   hll_add_binding(vm, "nth", builtin_nth);
   hll_add_binding(vm, "clear", builtin_clear);
+  hll_add_binding(vm, "sleep", builtin_sleep);
+  hll_add_binding(vm, "length", builtin_length);
 
-  hll_interpret(vm, "builtin macros",
-                "(defmacro not (x) (if x () t))\n"
-                "(defmacro when (expr . body)\n"
-                "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
-                "(defmacro unless (expr . body)\n"
-                "  (cons 'if (cons expr (cons () body))))\n");
+
+  hll_interpret(
+      vm, "builtin macros",
+      "(defmacro not (x) (if x () t))                                \n"
+      "(defmacro when (expr . body)                                         \n"
+      "  (cons 'if (cons expr (list (cons 'progn body)))))                  \n"
+      "(defmacro unless (expr . body)                                       \n"
+      "  (cons 'if (cons expr (cons () body))))                             \n"
+      "(define (map fn lis)                                                 \n"
+      "  (when lis                                                          \n"
+      "    (cons (fn (car lis))                                             \n"
+      "          (map fn (cdr lis)))))                                      \n"
+      "(define (any pred lis)                                               \n"
+      "  (when lis                                                          \n"
+      "    (or (pred (car lis))                                             \n"
+      "        (any pred (cdr lis)))))                                      \n"
+      "(define (filter pred lis)                                            \n"
+      "  (when lis                                                          \n"
+      "    (let ((value (pred (car lis))))                                  \n"
+      "      (if value                                                      \n"
+      "          (cons (car lis) (filter pred (cdr lis)))                   \n"
+      "          (filter pred (cdr lis))))))                                \n"
+      "(define (all pred lis)                                               \n"
+      "  (if lis                                                            \n"
+      "      (and (pred (car lis)) (all pred (cdr lis)))                    \n"
+      "      t))                                                            \n"
+      "\n");
 }
