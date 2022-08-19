@@ -7,16 +7,9 @@
 (define WIDTH 40)
 (define HEIGHT 40)
 
-(define (range-lo lo hi)
-  (unless (<= hi lo)
-    (cons lo (range-lo (+ lo 1) hi))))
-
-(define (range hi)
-  (range-lo 0 hi))
-
 (define (print-board board)
   (when board
-    (print (map (lambda (it) (if (= it VISITED) '_ '@)) (car board)))
+    (print (map (lambda (it) (if (= it VISITED) '- '@)) (car board)))
     (print-board (cdr board))))
 
 (define (set-at! board x y value)
@@ -66,19 +59,13 @@
                           (< (cdr pos) HEIGHT)))
     (neighbours-4- last-pos)))
 
-(define (neighbours-8 last-pos)
-  (append (neighbours-4 last-pos)
-    (neighbours-corners last-pos)))
-
 (define (contains where what)
   (when where
-    (or
-      (and
-        (= (caar where) (car what))
-        (= (cdar where) (cdr what)))
+    (or (and (= (caar where) (car what))
+          (= (cdar where) (cdr what)))
       (contains (cdr where) what))))
 
-(define (next-pos- board last-pos)
+(define (next-possible-cells board last-pos)
   (filter (lambda (pos)
             (and
               ; cell itself is empty
@@ -101,13 +88,12 @@
     (neighbours-4 last-pos)))
 
 (define (next-pos board last-pos)
-  (let ((pos (next-pos- board last-pos)))
+  (let ((pos (next-possible-cells board last-pos)))
     (nth (random (length pos)) pos)))
 
 (define (make-path board stack-path)
   (when stack-path
-    (let ((last (car stack-path))
-           (new-pos (next-pos board last)))
+    (let ((new-pos (next-pos board (car stack-path))))
       (if new-pos
         (progn
           (set-at! board (car new-pos) (cdr new-pos) VISITED)

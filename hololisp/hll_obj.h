@@ -19,9 +19,15 @@ typedef enum {
   HLL_OBJ_FUNC,
 } hll_object_kind;
 
+typedef struct {
+  struct hll_obj *car;
+  struct hll_obj *cdr;
+} hll_obj_cons;
+
 typedef struct hll_obj {
   hll_object_kind kind;
   union {
+    hll_obj_cons cons;
     double num;
     void *body;
   } as;
@@ -38,11 +44,6 @@ typedef struct {
   struct hll_obj *vars;
   struct hll_obj *up;
 } hll_obj_env;
-
-typedef struct {
-  struct hll_obj *car;
-  struct hll_obj *cdr;
-} hll_obj_cons;
 
 typedef struct {
   struct hll_obj *(*bind)(struct hll_vm *vm, struct hll_obj *args);
