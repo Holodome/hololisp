@@ -82,6 +82,7 @@ const char *hll_unwrap_zsymb(const struct hll_obj *obj);
 hll_obj_symb *hll_unwrap_symb(const struct hll_obj *obj);
 hll_obj_bind *hll_unwrap_bind(const struct hll_obj *obj);
 hll_obj_func *hll_unwrap_func(const struct hll_obj *obj);
+double hll_unwrap_num(const struct hll_obj *obj);
 
 size_t hll_list_length(const struct hll_obj *obj);
 

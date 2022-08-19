@@ -692,7 +692,7 @@ static uint16_t add_int_constant_and_return_its_index(hll_compiler *compiler,
                                                       double value) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     hll_obj *test = compiler->bytecode->constant_pool[i];
-    if (test->kind == HLL_OBJ_NUM && test->as.num == value) {
+    if (test->kind == HLL_OBJ_NUM && hll_unwrap_num(test) == value) {
       uint16_t narrowed = i;
       assert(i == narrowed);
       return narrowed;
@@ -1465,7 +1465,7 @@ static void compile_eval_expression(hll_compiler *compiler,
   case HLL_OBJ_NUM:
     emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
     emit_u16(compiler->bytecode,
-             add_int_constant_and_return_its_index(compiler, ast->as.num));
+             add_int_constant_and_return_its_index(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
     hll_obj *fn = hll_unwrap_car(ast);
@@ -1501,7 +1501,7 @@ static void compile_expression(hll_compiler *compiler, const hll_obj *ast) {
   case HLL_OBJ_NUM:
     emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
     emit_u16(compiler->bytecode,
-             add_int_constant_and_return_its_index(compiler, ast->as.num));
+             add_int_constant_and_return_its_index(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);

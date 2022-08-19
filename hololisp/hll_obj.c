@@ -206,6 +206,11 @@ hll_obj_func *hll_unwrap_func(const struct hll_obj *obj) {
   return (hll_obj_func *)obj->as.body;
 }
 
+double hll_unwrap_num(const struct hll_obj *obj) {
+    assert(obj->kind == HLL_OBJ_NUM);
+    return obj->as.num;
+}
+
 size_t hll_list_length(const struct hll_obj *obj) {
   size_t length = 0;
   while (obj->kind == HLL_OBJ_CONS) {
@@ -230,7 +235,7 @@ hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src) {
     result = vm->nil;
     break;
   case HLL_OBJ_NUM:
-    result = hll_new_num(vm, src->as.num);
+    result = hll_new_num(vm, hll_unwrap_num(src));
     break;
   case HLL_OBJ_BIND:
     result = hll_new_bind(vm, hll_unwrap_bind(src)->bind);

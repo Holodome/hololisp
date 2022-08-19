@@ -22,7 +22,7 @@ void hll_dump_object(void *file, hll_obj *obj) {
     fprintf(file, "nil");
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, "num(%f)", obj->as.num);
+    fprintf(file, "num(%f)", hll_unwrap_num(obj));
     break;
   case HLL_OBJ_BIND:
     fprintf(file, "bind");

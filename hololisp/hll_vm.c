@@ -182,7 +182,7 @@ void hll_print(hll_vm *vm, hll_obj *obj, void *file) {
     fprintf(file, "()");
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, "%lld", (long long)obj->as.num);
+    fprintf(file, "%lld", (long long)hll_unwrap_num(obj));
     break;
   case HLL_OBJ_TRUE:
     fprintf(file, "t");
