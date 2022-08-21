@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hll_bytecode.h"
+#include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_vm.h"
 
@@ -44,66 +46,80 @@ const char *hll_get_object_kind_str(hll_object_kind kind) {
   return str;
 }
 
-void free_object(struct hll_vm *vm, struct hll_obj *obj) {
+void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
   (void)vm;
   switch (obj->kind) {
   case HLL_OBJ_CONS:
-    free(obj->as.body);
     break;
   case HLL_OBJ_SYMB:
-    free(obj->as.body);
+    hll_free(obj->as.body,
+             sizeof(hll_obj_symb) + hll_unwrap_symb(obj)->length + 1);
     break;
   case HLL_OBJ_BIND:
-    free(obj->as.body);
+    hll_free(obj->as.body, sizeof(hll_obj_bind));
     break;
   case HLL_OBJ_NIL:
     break;
   case HLL_OBJ_NUM:
     break;
   case HLL_OBJ_ENV:
+    hll_free(obj->as.body, sizeof(hll_obj_env));
     break;
   case HLL_OBJ_TRUE:
     break;
   case HLL_OBJ_FUNC:
+    hll_free_bytecode(hll_unwrap_func(obj)->bytecode);
+    hll_free(obj->as.body, sizeof(hll_obj_func));
     break;
   }
 
-  free(obj);
+  hll_free(obj, sizeof(hll_obj));
+}
+
+void register_object(struct hll_vm *vm, struct hll_obj *obj) {
+  hll_sb_push(vm->all_objects, obj);
 }
 
 hll_obj *hll_new_nil(struct hll_vm *vm) {
   (void)vm;
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_NIL;
+
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj *hll_new_true(struct hll_vm *vm) {
   (void)vm;
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_TRUE;
+
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj *hll_new_num(struct hll_vm *vm, double num) {
   (void)vm;
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_NUM;
   obj->as.num = num;
+
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
   (void)vm;
-  hll_obj_symb *body = calloc(1, sizeof(hll_obj_symb) + length + 1);
+  hll_obj_symb *body = hll_alloc(sizeof(hll_obj_symb) + length + 1);
   memcpy(body->symb, symbol, length);
   body->symb[length] = '\0';
   body->length = length;
 
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_SYMB;
   obj->as.body = body;
 
+  register_object(vm, obj);
   return obj;
 }
 
@@ -113,14 +129,12 @@ hll_obj *hll_new_symbolz(struct hll_vm *vm, const char *symbol) {
 
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
   (void)vm;
-  hll_obj_cons *body = calloc(1, sizeof(hll_obj_cons));
-  body->car = car;
-  body->cdr = cdr;
-
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_CONS;
-  obj->as.body = body;
+  obj->as.cons.car = car;
+  obj->as.cons.cdr = cdr;
 
+  register_object(vm, obj);
   return obj;
 }
 
@@ -128,47 +142,50 @@ hll_obj *hll_new_bind(struct hll_vm *vm,
                       struct hll_obj *(*bind)(struct hll_vm *vm,
                                               struct hll_obj *args)) {
   (void)vm;
-  hll_obj_bind *body = calloc(1, sizeof(hll_obj_bind));
+  hll_obj_bind *body = hll_alloc(sizeof(hll_obj_bind));
   body->bind = bind;
 
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_BIND;
   obj->as.body = body;
 
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars) {
   (void)vm;
-  hll_obj_env *body = calloc(1, sizeof(hll_obj_env));
+  hll_obj_env *body = hll_alloc(sizeof(hll_obj_env));
   body->up = up;
   body->vars = vars;
 
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_ENV;
   obj->as.body = body;
 
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
                       struct hll_bytecode *bytecode, const char *name) {
   (void)vm;
-  hll_obj_func *body = calloc(1, sizeof(hll_obj_func));
+  hll_obj_func *body = hll_alloc(sizeof(hll_obj_func));
   body->param_names = params;
   body->bytecode = bytecode;
   body->name = name;
 
-  hll_obj *obj = calloc(1, sizeof(hll_obj));
+  hll_obj *obj = hll_alloc(sizeof(hll_obj));
   obj->kind = HLL_OBJ_FUNC;
   obj->as.body = body;
 
+  register_object(vm, obj);
   return obj;
 }
 
 hll_obj_cons *hll_unwrap_cons(const struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
-  return (hll_obj_cons *)obj->as.body;
+  return (hll_obj_cons *)&obj->as.cons;
 }
 
 const char *hll_unwrap_zsymb(const struct hll_obj *obj) {
@@ -183,12 +200,12 @@ hll_obj_symb *hll_unwrap_symb(const struct hll_obj *obj) {
 
 hll_obj *hll_unwrap_cdr(const struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
-  return ((hll_obj_cons *)obj->as.body)->cdr;
+  return obj->as.cons.cdr;
 }
 
 hll_obj *hll_unwrap_car(const struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
-  return ((hll_obj_cons *)obj->as.body)->car;
+  return obj->as.cons.car;
 }
 
 hll_obj_bind *hll_unwrap_bind(const struct hll_obj *obj) {
@@ -249,7 +266,15 @@ hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src) {
     break;
   case HLL_OBJ_FUNC: {
     hll_obj_func *func = hll_unwrap_func(src);
-    result = hll_new_func(vm, func->param_names, func->bytecode, func->name);
+    hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
+    for (size_t i = 0; i < hll_sb_len(func->bytecode->ops); ++i) {
+      hll_sb_push(bytecode->ops, func->bytecode->ops[i]);
+    }
+    for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
+      hll_sb_push(bytecode->constant_pool, func->bytecode->constant_pool[i]);
+    }
+
+    result = hll_new_func(vm, func->param_names, bytecode, func->name);
     hll_unwrap_func(result)->var_list = vm->nil;
   } break;
   default:

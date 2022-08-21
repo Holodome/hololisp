@@ -145,3 +145,9 @@ size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
 
   return s;
 }
+
+void hll_free_bytecode(hll_bytecode *bytecode) {
+  hll_sb_free(bytecode->ops);
+  hll_sb_free(bytecode->constant_pool);
+  hll_free(bytecode, sizeof(hll_bytecode));
+}

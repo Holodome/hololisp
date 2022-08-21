@@ -22,13 +22,13 @@ hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
 
   hll_obj *ast = hll_read_ast(&reader);
 
-  hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
+  hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
   hll_compiler compiler;
   hll_compiler_init(&compiler, vm, bytecode);
   hll_compile_ast(&compiler, ast);
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
-    free(bytecode);
+    hll_free(bytecode, sizeof(hll_bytecode));
     return NULL;
   }
 
@@ -1113,7 +1113,7 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
                                           const hll_obj *params,
                                           const hll_obj *body,
                                           const char *name) {
-  hll_bytecode *bytecode = calloc(1, sizeof(hll_bytecode));
+  hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
   hll_compiler new_compiler = {0};
   hll_compiler_init(&new_compiler, compiler->vm, bytecode);
   compile_progn(&new_compiler, body);

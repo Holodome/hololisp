@@ -87,7 +87,7 @@ static void add_variable(hll_vm *vm, hll_obj *env, hll_obj *name,
 }
 
 hll_vm *hll_make_vm(hll_config const *config) {
-  hll_vm *vm = calloc(1, sizeof(hll_vm));
+  hll_vm *vm = hll_alloc(sizeof(hll_vm));
 
   if (config == NULL) {
     initialize_default_config(&vm->config);
@@ -106,7 +106,13 @@ hll_vm *hll_make_vm(hll_config const *config) {
   return vm;
 }
 
-void hll_delete_vm(hll_vm *vm) { free(vm); }
+void hll_delete_vm(hll_vm *vm) {
+  for (size_t i = 0; i < hll_sb_len(vm->all_objects); ++i) {
+    hll_free_object(vm, vm->all_objects[i]);
+  }
+  hll_sb_free(vm->all_objects);
+  hll_free(vm, sizeof(hll_vm));
+}
 
 hll_interpret_result hll_interpret(hll_vm *vm, const char *name,
                                    const char *source) {
@@ -118,8 +124,11 @@ hll_interpret_result hll_interpret(hll_vm *vm, const char *name,
     return HLL_RESULT_COMPILE_ERROR;
   }
 
-  return hll_interpret_bytecode(vm, bytecode, true) ? HLL_RESULT_RUNTIME_ERROR
-                                                    : HLL_RESULT_OK;
+  hll_interpret_result result = hll_interpret_bytecode(vm, bytecode, true)
+                                    ? HLL_RESULT_RUNTIME_ERROR
+                                    : HLL_RESULT_OK;
+  hll_free_bytecode(bytecode);
+  return result;
 }
 
 void hll_add_binding(hll_vm *vm, const char *symb_str,
@@ -342,15 +351,6 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
       func->var_list = vm->nil;
       func->env = env;
 
-      for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
-        hll_obj *test = func->bytecode->constant_pool[i];
-        hll_obj *found = NULL;
-        if (test->kind == HLL_OBJ_SYMB &&
-            (found = hll_find_var(vm, env, test)) != NULL) {
-          func->var_list = hll_new_cons(vm, found, func->var_list);
-        }
-      }
-
       hll_sb_push(stack, value);
     } break;
     case HLL_BYTECODE_CALL: {
@@ -525,7 +525,11 @@ bail:
   return NULL;
 out:
   assert(hll_sb_len(stack));
-  return stack[0];
+  hll_obj *result = stack[0];
+  hll_sb_free(stack);
+  hll_sb_free(call_stack);
+
+  return result;
 }
 
 bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,

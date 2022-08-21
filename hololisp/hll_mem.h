@@ -4,6 +4,7 @@
 #ifndef HLL_MEM_H
 #define HLL_MEM_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -28,7 +29,11 @@ typedef struct {
 #define hll_sb_grow(_a, _b)                                                    \
   (*(void **)(&(_a)) = hll_sb_grow_impl((_a), (_b), sizeof(*(_a))))
 
-#define hll_sb_free(_a) (((_a) != NULL) ? free(hll_sb_header(_a)), 0 : 0)
+#define hll_sb_free(_a)                                                        \
+  (((_a) != NULL)                                                              \
+   ? hll_free(hll_sb_header(_a),                                               \
+              hll_sb_capacity(_a) * sizeof(*(_a)) + sizeof(hll_sb_header)),    \
+   0 : 0)
 #define hll_sb_push(_a, _v)                                                    \
   (hll_sb_maybegrow(_a, 1), (_a)[hll_sb_size(_a)++] = (_v))
 #define hll_sb_last(_a) ((_a)[hll_sb_size(_a) - 1])
@@ -37,22 +42,12 @@ typedef struct {
 
 void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride);
 
-#define HLL_MEMORY_ARENA_DEFAULT_BLOCK_SIZE (1 << 20)
-#define HLL_MEMORY_ARENA_ALIGN 16
+#define hll_free(_ptr, _size) (void)hll_realloc(_ptr, _size, 0)
+#define hll_alloc(_size) hll_realloc(NULL, 0, _size)
+void *hll_realloc(void *ptr, size_t old_size, size_t new_size);
 
-typedef struct hll_memory_arena_block {
-  struct hll_memory_arena_block *next;
-  size_t used;
-  size_t size;
-  char *data;
-} hll_memory_arena_block;
-
-typedef struct hll_memory_arena {
-  hll_memory_arena_block *block;
-  size_t min_block_size;
-} hll_memory_arena;
-
-void *hll_memory_arena_alloc(hll_memory_arena *arena, size_t size);
-void hll_memory_arena_clear(hll_memory_arena *arena);
+#ifdef HLL_MEM_CHECK
+size_t hll_mem_check(void);
+#endif
 
 #endif

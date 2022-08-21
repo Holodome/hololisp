@@ -56,7 +56,7 @@ typedef struct {
 } hll_obj_symb;
 
 const char *hll_get_object_kind_str(hll_object_kind kind);
-void free_object(struct hll_vm *vm, struct hll_obj *obj);
+void hll_free_object(struct hll_vm *vm, struct hll_obj *obj);
 
 hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src);
 

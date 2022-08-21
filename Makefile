@@ -13,8 +13,8 @@ LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
 ifneq (,$(DEBUG))
-	CFLAGS=-g -DHLL_DEBUG
-endif 
+	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK
+endif
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
@@ -69,4 +69,4 @@ test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
 
-.PHONY: all test clean
+.PHONY: all test tests clean

@@ -6,6 +6,10 @@
 
 #include "hll_hololisp.h"
 
+#ifdef HLL_MEM_CHECK
+#include "hll_mem.h"
+#endif
+
 typedef enum {
   HLL_MODE_EREPL,
   HLL_MODE_EREPL_NO_TTY,
@@ -217,9 +221,11 @@ static bool execute(hll_options *opts) {
 #endif
 
 int main(int argc, const char **argv) {
+  int result = EXIT_SUCCESS;
   hll_options opts = {0};
   if (parse_cli_args(&opts, argc - 1, argv + 1)) {
-    return EXIT_FAILURE;
+    result = EXIT_FAILURE;
+    goto out;
   }
 
   if (opts.mode == HLL_MODE_EREPL && !HLL_IS_STDIN_A_TTY) {
@@ -227,8 +233,17 @@ int main(int argc, const char **argv) {
   }
 
   if (execute(&opts)) {
-    return EXIT_FAILURE;
+    result = EXIT_FAILURE;
+    goto out;
   }
 
-  return EXIT_SUCCESS;
+out:
+  (void)0;
+#if HLL_MEM_CHECK
+  size_t not_freed = hll_mem_check();
+  if (not_freed) {
+    fprintf(stderr, "Memory check failed: %zu not freed!", not_freed);
+  }
+#endif
+  return result;
 }

@@ -571,7 +571,7 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "length", builtin_length);
 
   hll_interpret(
-      vm, "builtin macros",
+      vm, "builtins",
       "(defmacro not (x) (if x () t))                                \n"
       "(defmacro when (expr . body)                                         \n"
       "  (cons 'if (cons expr (list (cons 'progn body)))))                  \n"
