@@ -207,8 +207,8 @@ hll_obj_func *hll_unwrap_func(const struct hll_obj *obj) {
 }
 
 double hll_unwrap_num(const struct hll_obj *obj) {
-    assert(obj->kind == HLL_OBJ_NUM);
-    return obj->as.num;
+  assert(obj->kind == HLL_OBJ_NUM);
+  return obj->as.num;
 }
 
 size_t hll_list_length(const struct hll_obj *obj) {

@@ -38,6 +38,7 @@ typedef struct {
   struct hll_bytecode *bytecode;
   struct hll_obj *param_names;
   struct hll_obj *var_list;
+  struct hll_obj *env;
 } hll_obj_func;
 
 typedef struct {

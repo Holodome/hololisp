@@ -227,33 +227,10 @@ void hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   hll_report_error(vm, 0, 0, buffer);
 }
 
-// static void dump_stack_trace(hll_vm *vm, hll_bytecode *bytecode, uint8_t *ip,
-//                              hll_obj **stack) {
-//   const char *file_dump_name = "/tmp/hololisp.dump";
-//   FILE *f = fopen(file_dump_name, "w");
-//   assert(f != NULL);
-//
-//   fprintf(f, "program dump:\n");
-//   fprintf(f, "stack:\n");
-//   size_t stack_size = hll_sb_len(stack);
-//   for (size_t i = 0; i < stack_size; ++i) {
-//     fprintf(f, " %zu: ", i);
-//     print_internal(vm, stack[i], f);
-//     fprintf(f, "\n");
-//   }
-//   fprintf(f, "failed instruction byte: %lx\n",
-//           (long)(size_t)(ip - bytecode->ops));
-//   fprintf(f, "whole program disassembly:\n");
-//   hll_dump_bytecode(f, bytecode);
-//
-//   fclose(f);
-//
-//   printf("wrote trace to %s\n", file_dump_name);
-// }
-
 typedef struct {
   const hll_bytecode *bytecode;
   const uint8_t *ip;
+  hll_obj *env;
 } hll_call_frame;
 
 hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
@@ -272,8 +249,8 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
     switch (op) {
     case HLL_BYTECODE_END:
       assert(hll_sb_len(stack) != 0);
+      env = hll_sb_last(call_stack).env;
       (void)hll_sb_pop(call_stack);
-      env = hll_unwrap_env(env)->up;
       break;
     case HLL_BYTECODE_POP:
       assert(hll_sb_len(stack) != 0);
@@ -363,6 +340,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
       hll_obj_func *func = hll_unwrap_func(value);
       assert(func->var_list->kind == HLL_OBJ_NIL);
       func->var_list = vm->nil;
+      func->env = env;
 
       for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
         hll_obj *test = func->bytecode->constant_pool[i];
@@ -381,7 +359,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
       switch (callable->kind) {
       case HLL_OBJ_FUNC: {
         hll_obj_func *func = hll_unwrap_func(callable);
-        hll_obj *new_env = hll_new_env(vm, env, func->var_list);
+        hll_obj *new_env = hll_new_env(vm, func->env, func->var_list);
 
         hll_obj *param_name = func->param_names;
         hll_obj *param_value = args;
@@ -409,11 +387,13 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
           add_variable(vm, new_env, param_name, param_value);
         }
 
-        env = new_env;
         hll_call_frame new_frame = {0};
         new_frame.bytecode = func->bytecode;
         new_frame.ip = func->bytecode->ops;
+        new_frame.env = env;
         hll_sb_push(call_stack, new_frame);
+
+        env = new_env;
       } break;
       case HLL_OBJ_BIND: {
         hll_obj *result = hll_unwrap_bind(callable)->bind(vm, args);
@@ -534,14 +514,14 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env,
 
   goto out;
 bail:
-//  hll_dump_bytecode(stderr, initial_bytecode);
-//  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
-//    hll_obj *test = initial_bytecode->constant_pool[i];
-//    fprintf(stderr, "\n\n");
-//    if (test->kind == HLL_OBJ_FUNC) {
-//      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
-//    }
-//  }
+  //  hll_dump_bytecode(stderr, initial_bytecode);
+  //  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
+  //    hll_obj *test = initial_bytecode->constant_pool[i];
+  //    fprintf(stderr, "\n\n");
+  //    if (test->kind == HLL_OBJ_FUNC) {
+  //      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
+  //    }
+  //  }
   return NULL;
 out:
   assert(hll_sb_len(stack));
@@ -566,30 +546,6 @@ bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
 
 struct hll_obj *hll_expand_macro(hll_vm *vm, const struct hll_obj *macro,
                                  struct hll_obj *args) {
-#if 0
-        hll_obj *new_env = hll_new_env(vm, env, func->var_list);
-
-        hll_obj *param_name = func->param_names;
-        hll_obj *param_value = args;
-        for (; param_name->kind == HLL_OBJ_CONS;
-             param_name = hll_unwrap_cdr(param_name),
-             param_value = hll_unwrap_cdr(param_value)) {
-          if (param_value->kind != HLL_OBJ_CONS) {
-            hll_runtime_error(vm, "number of arguments does not match");
-            goto bail;
-          }
-          hll_obj *name = hll_unwrap_car(param_name);
-          assert(name->kind == HLL_OBJ_SYMB);
-          hll_obj *value = hll_unwrap_car(param_value);
-          add_variable(vm, new_env, name, value);
-        }
-
-        if (param_name->kind != HLL_OBJ_NIL) {
-          assert(param_name->kind == HLL_OBJ_SYMB);
-          add_variable(vm, new_env, param_name, param_value);
-        }
-#endif
-
   hll_obj *env = hll_new_env(vm, vm->global_env, vm->nil);
   hll_obj_func *fun = hll_unwrap_func(macro);
 

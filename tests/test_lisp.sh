@@ -336,6 +336,9 @@ pos_test "random" "()" "(= (random) (random) (random) (random) (random) (random)
 pos_test "random high" "t" "(define (test) (< (random 1024) 1024)) (and (test) (test) (test) (test) (test))"
 pos_test "random high low" "t" "(define (test) (let ((x (random 1024 2048))) (and (< x 2048) (>= x 1024)))) (and (test) (test) (test) (test) (test))"
 
+pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
+neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
+
 #pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
 #                                (if rest
 #                                    (list 'if expr (&& rest))

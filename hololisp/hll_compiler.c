@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "hll_bytecode.h"
-#include "hll_hololisp.h"
 #include "hll_mem.h"
 #include "hll_obj.h"
 #include "hll_util.h"
@@ -242,8 +241,7 @@ static void lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt, args);
   va_end(args);
 
-    hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length,
-    buffer);
+  hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, buffer);
 }
 
 void hll_lexer_init(hll_lexer *lexer, const char *input, hll_vm *vm) {
@@ -1464,8 +1462,8 @@ static void compile_eval_expression(hll_compiler *compiler,
     break;
   case HLL_OBJ_NUM:
     emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
-    emit_u16(compiler->bytecode,
-             add_int_constant_and_return_its_index(compiler, hll_unwrap_num(ast)));
+    emit_u16(compiler->bytecode, add_int_constant_and_return_its_index(
+                                     compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
     hll_obj *fn = hll_unwrap_car(ast);
@@ -1500,8 +1498,8 @@ static void compile_expression(hll_compiler *compiler, const hll_obj *ast) {
     break;
   case HLL_OBJ_NUM:
     emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
-    emit_u16(compiler->bytecode,
-             add_int_constant_and_return_its_index(compiler, hll_unwrap_num(ast)));
+    emit_u16(compiler->bytecode, add_int_constant_and_return_its_index(
+                                     compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
