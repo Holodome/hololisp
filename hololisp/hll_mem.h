@@ -39,6 +39,7 @@ typedef struct {
 #define hll_sb_last(_a) ((_a)[hll_sb_size(_a) - 1])
 #define hll_sb_len(_a) (((_a) != NULL) ? hll_sb_size(_a) : 0)
 #define hll_sb_pop(_a) ((_a)[--hll_sb_size(_a)])
+#define hll_sb_purge(_a) ((_a) ? (hll_sb_size(_a) = 0) : 0)
 
 void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride);
 

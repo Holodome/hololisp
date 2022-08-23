@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "hll_bytecode.h"
@@ -28,7 +27,7 @@ hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
   hll_compile_ast(&compiler, ast);
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
-    hll_free(bytecode, sizeof(hll_bytecode));
+    hll_free_bytecode(bytecode);
     return NULL;
   }
 
@@ -344,9 +343,6 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm) {
   memset(reader, 0, sizeof(hll_reader));
   reader->lexer = lexer;
   reader->vm = vm;
-  reader->nil = vm->nil;
-  reader->true_ = vm->true_;
-  reader->quote_symb = hll_new_symbolz(vm, "quote");
 }
 
 HLL_ATTR(format(printf, 2, 3))
@@ -401,13 +397,13 @@ static hll_obj *read_list(hll_reader *reader) {
   peek_token(reader);
   if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
     eat_token(reader);
-    return reader->nil;
+    return reader->vm->nil;
   }
 
   hll_obj *list_head;
   hll_obj *list_tail;
   list_head = list_tail =
-      hll_new_cons(reader->vm, read_expr(reader), reader->nil);
+      hll_new_cons(reader->vm, read_expr(reader), reader->vm->nil);
 
   // Now enter the loop of parsing other list elements.
   for (;;) {
@@ -433,7 +429,7 @@ static hll_obj *read_list(hll_reader *reader) {
 
     hll_obj *ast = read_expr(reader);
     hll_unwrap_cons(list_tail)->cdr =
-        hll_new_cons(reader->vm, ast, reader->nil);
+        hll_new_cons(reader->vm, ast, reader->vm->nil);
     list_tail = hll_unwrap_cdr(list_tail);
   }
 
@@ -441,7 +437,7 @@ static hll_obj *read_list(hll_reader *reader) {
 }
 
 static hll_obj *read_expr(hll_reader *reader) {
-  hll_obj *ast = reader->nil;
+  hll_obj *ast = reader->vm->nil;
   peek_token(reader);
   switch (reader->lexer->next.kind) {
   case HLL_TOK_EOF:
@@ -454,7 +450,7 @@ static hll_obj *read_expr(hll_reader *reader) {
     eat_token(reader);
     if (reader->lexer->next.length == 1 &&
         reader->lexer->input[reader->lexer->next.offset] == 't') {
-      ast = reader->true_;
+      ast = reader->vm->true_;
       break;
     }
 
@@ -467,9 +463,9 @@ static hll_obj *read_expr(hll_reader *reader) {
     break;
   case HLL_TOK_QUOTE: {
     eat_token(reader);
-    ast =
-        hll_new_cons(reader->vm, reader->quote_symb,
-                     hll_new_cons(reader->vm, read_expr(reader), reader->nil));
+    ast = hll_new_cons(
+        reader->vm, reader->vm->quote_symb,
+        hll_new_cons(reader->vm, read_expr(reader), reader->vm->nil));
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -495,7 +491,7 @@ hll_obj *hll_read_ast(hll_reader *reader) {
     }
 
     hll_obj *ast = read_expr(reader);
-    hll_obj *cons = hll_new_cons(reader->vm, ast, reader->nil);
+    hll_obj *cons = hll_new_cons(reader->vm, ast, reader->vm->nil);
 
     if (list_head == NULL) {
       list_head = list_tail = cons;
@@ -506,7 +502,7 @@ hll_obj *hll_read_ast(hll_reader *reader) {
   }
 
   if (list_head == NULL) {
-    list_head = reader->nil;
+    list_head = reader->vm->nil;
   }
 
   return list_head;
@@ -517,7 +513,6 @@ void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->vm = vm;
   compiler->bytecode = bytecode;
-  compiler->nthcdr_symb = hll_new_symbolz(vm, "nthcdr");
 }
 
 HLL_ATTR(format(printf, 3, 4))
@@ -955,7 +950,7 @@ static void compile_set_location(hll_compiler *compiler,
       break;
     }
     // get the nth function
-    compile_symbol(compiler, compiler->nthcdr_symb);
+    compile_symbol(compiler, compiler->vm->nthcdr_symb);
     emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
     emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     // call nth

@@ -70,10 +70,6 @@ typedef struct {
   // this lexer is associated with reader.
   hll_lexer *lexer;
 
-  struct hll_obj *nil;
-  struct hll_obj *true_;
-  struct hll_obj *quote_symb;
-
   bool should_return_old_token;
 } hll_reader;
 
@@ -84,8 +80,6 @@ typedef struct {
   struct hll_vm *vm;
   bool has_errors;
   struct hll_bytecode *bytecode;
-  struct hll_obj *nthcdr_symb;
-
 } hll_compiler;
 
 void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,

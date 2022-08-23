@@ -1,6 +1,7 @@
 #ifndef HLL_OBJ_H
 #define HLL_OBJ_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -26,6 +27,8 @@ typedef struct {
 
 typedef struct hll_obj {
   hll_object_kind kind;
+  bool is_dark;
+  struct hll_obj *next_gc;
   union {
     hll_obj_cons cons;
     double num;
@@ -86,5 +89,8 @@ hll_obj_func *hll_unwrap_func(const struct hll_obj *obj);
 double hll_unwrap_num(const struct hll_obj *obj);
 
 size_t hll_list_length(const struct hll_obj *obj);
+
+void hll_gray_obj(struct hll_vm *vm, struct hll_obj *obj);
+void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj);
 
 #endif

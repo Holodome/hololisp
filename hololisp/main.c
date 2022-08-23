@@ -139,7 +139,7 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    hll_interpret_result result = hll_interpret(vm, "repl", line);
+    hll_interpret_result result = hll_interpret(vm, "repl", line, true);
     manage_result(result);
   }
 
@@ -150,7 +150,7 @@ static bool execute_repl(bool tty) {
 
 static bool execute_script(const char *filename) {
   if (filename == NULL) {
-    fprintf(stderr, "No filename provided");
+    fprintf(stderr, "No filename provided\n");
     return true;
   }
 
@@ -161,7 +161,8 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, filename, file_contents);
+  hll_interpret_result result =
+      hll_interpret(vm, filename, file_contents, false);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -170,7 +171,7 @@ static bool execute_script(const char *filename) {
 
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, "cli", str);
+  hll_interpret_result result = hll_interpret(vm, "cli", str, true);
   hll_delete_vm(vm);
 
   return manage_result(result);

@@ -595,5 +595,6 @@ void add_builtins(hll_vm *vm) {
       "  (if lis                                                            \n"
       "      (and (pred (car lis)) (all pred (cdr lis)))                    \n"
       "      t))                                                            \n"
-      "\n");
+      "\n",
+      false);
 }

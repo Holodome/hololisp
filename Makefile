@@ -13,7 +13,7 @@ LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
 ifneq (,$(DEBUG))
-	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK
+	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -DHLL_STRESS_GC
 endif
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
