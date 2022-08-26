@@ -5,6 +5,7 @@
 
 #include "hll_mem.h"
 #include "hll_obj.h"
+#include "hll_util.h"
 
 void hll_dump_object(void *file, hll_obj *obj) {
   switch (obj->kind) {
@@ -39,6 +40,9 @@ void hll_dump_object(void *file, hll_obj *obj) {
   case HLL_OBJ_MACRO:
     fprintf(file, "macro %s", hll_unwrap_macro(obj)->name);
     break;
+  default:
+    HLL_UNREACHABLE;
+    break ;
   }
 }
 

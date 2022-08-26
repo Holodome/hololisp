@@ -60,6 +60,7 @@ typedef struct hll_vm {
   // May not be greater than min_heap_size specified in config.
   size_t next_gc;
   struct hll_obj **gray_objs;
+  struct hll_obj **temp_roots;
   uint32_t forbid_gc;
 } hll_vm;
 

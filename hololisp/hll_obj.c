@@ -1,6 +1,7 @@
 #include "hll_obj.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +37,9 @@ const char *hll_get_object_kind_str(hll_object_kind kind) {
   case HLL_OBJ_FUNC:
     str = "func";
     break;
+  case HLL_OBJ_MACRO:
+    str = "macro";
+    break;
   default:
 #if HLL_DEBUG
     HLL_UNREACHABLE;
@@ -47,7 +51,17 @@ const char *hll_get_object_kind_str(hll_object_kind kind) {
 }
 
 void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
-  switch (obj->kind) {
+#if 0
+  fprintf(stderr, "freed object %s ",
+          hll_get_object_kind_str(obj->kind));
+  if (obj->kind == HLL_OBJ_SYMB) {
+    fprintf(stderr, "%s", hll_unwrap_zsymb(obj));
+  }
+  //      hll_dump_object(stderr, to_free);
+  fprintf(stderr, "\n");
+#endif
+  hll_object_kind kind = obj->kind;
+  switch (kind) {
   case HLL_OBJ_NIL:
   case HLL_OBJ_TRUE:
   case HLL_OBJ_NUM:
@@ -71,12 +85,16 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
     hll_free_bytecode(hll_unwrap_macro(obj)->bytecode);
     hll_gc_free(vm, obj->as.body, sizeof(hll_obj_func));
     break;
+  default:
+    HLL_UNREACHABLE;
+    break;
   }
-
+  obj->kind = HLL_OBJ_FREED;
   hll_gc_free(vm, obj, sizeof(hll_obj));
 }
 
 void register_object(struct hll_vm *vm, struct hll_obj *obj) {
+//  fprintf(stderr, "registered object %s\n", hll_get_object_kind_str(obj->kind));
   obj->next_gc = vm->all_objects;
   vm->all_objects = obj;
 }
@@ -354,5 +372,8 @@ void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj) {
       hll_gray_obj(vm, bytecode->constant_pool[i]);
     }
   } break;
+  default:
+    HLL_UNREACHABLE;
+    break;
   }
 }

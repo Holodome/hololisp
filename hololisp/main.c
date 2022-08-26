@@ -243,7 +243,8 @@ out:
 #if HLL_MEM_CHECK
   size_t not_freed = hll_mem_check();
   if (not_freed) {
-    fprintf(stderr, "Memory check failed: %zu not freed!", not_freed);
+    fprintf(stderr, "Memory check failed: %zu not freed!\n", not_freed);
+    result = EXIT_FAILURE;
   }
 #endif
   return result;

@@ -18,7 +18,9 @@ typedef enum {
   HLL_OBJ_ENV = 0x5,
   HLL_OBJ_TRUE = 0x6,
   HLL_OBJ_FUNC = 0x7,
-  HLL_OBJ_MACRO = 0x8
+  HLL_OBJ_MACRO = 0x8,
+
+  HLL_OBJ_FREED = 0x100
 } hll_object_kind;
 
 typedef struct {

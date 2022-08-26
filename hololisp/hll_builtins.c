@@ -569,7 +569,7 @@ void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "clear", builtin_clear);
   hll_add_binding(vm, "sleep", builtin_sleep);
   hll_add_binding(vm, "length", builtin_length);
-
+#if 0
   hll_interpret(
       vm, "builtins",
       "(defmacro not (x) (if x () t))                                \n"
@@ -597,4 +597,5 @@ void add_builtins(hll_vm *vm) {
       "      t))                                                            \n"
       "\n",
       false);
+#endif
 }

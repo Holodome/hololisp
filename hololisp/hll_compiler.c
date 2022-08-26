@@ -19,12 +19,13 @@ hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
   hll_reader reader;
   hll_reader_init(&reader, &lexer, vm);
 
+  ++vm->forbid_gc;
   hll_obj *ast = hll_read_ast(&reader);
-
   hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
   hll_compiler compiler;
   hll_compiler_init(&compiler, vm, vm->env, bytecode);
   hll_compile_ast(&compiler, ast);
+  --vm->forbid_gc;
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
     hll_free_bytecode(bytecode);
@@ -715,7 +716,6 @@ static uint16_t add_symbol_and_return_its_index(hll_compiler *compiler,
   }
 
   hll_obj *symb = hll_new_symbol(compiler->vm, symb_, length);
-
   hll_sb_push(compiler->bytecode->constant_pool, symb);
   size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
   uint16_t narrowed = result;
@@ -762,8 +762,7 @@ static hll_obj *expand_macro(hll_compiler *compiler, hll_obj *macro,
     macro_body = hll_unwrap_cdr(macro_body);
   }
 
-  hll_obj *result = hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
-  return result;
+  return hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
 }
 
 static void compile_function_call(hll_compiler *compiler, hll_obj *list) {
