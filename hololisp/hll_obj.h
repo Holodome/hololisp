@@ -10,14 +10,15 @@
 struct hll_vm;
 
 typedef enum {
+  HLL_OBJ_NUM = 0x0,
   HLL_OBJ_CONS = 0x1,
-  HLL_OBJ_SYMB,
-  HLL_OBJ_NIL,
-  HLL_OBJ_NUM,
-  HLL_OBJ_BIND,
-  HLL_OBJ_ENV,
-  HLL_OBJ_TRUE,
-  HLL_OBJ_FUNC,
+  HLL_OBJ_SYMB = 0x2,
+  HLL_OBJ_NIL = 0x3,
+  HLL_OBJ_BIND = 0x4,
+  HLL_OBJ_ENV = 0x5,
+  HLL_OBJ_TRUE = 0x6,
+  HLL_OBJ_FUNC = 0x7,
+  HLL_OBJ_MACRO = 0x8
 } hll_object_kind;
 
 typedef struct {
@@ -77,6 +78,8 @@ hll_obj *hll_new_bind(struct hll_vm *vm,
                                               struct hll_obj *args));
 hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
                       struct hll_bytecode *bytecode, const char *name);
+hll_obj *hll_new_macro(struct hll_vm *vm, struct hll_obj *params,
+                       struct hll_bytecode *bytecode, const char *name);
 
 hll_obj_cons *hll_unwrap_cons(const struct hll_obj *obj);
 hll_obj *hll_unwrap_cdr(const struct hll_obj *obj);
@@ -86,6 +89,7 @@ const char *hll_unwrap_zsymb(const struct hll_obj *obj);
 hll_obj_symb *hll_unwrap_symb(const struct hll_obj *obj);
 hll_obj_bind *hll_unwrap_bind(const struct hll_obj *obj);
 hll_obj_func *hll_unwrap_func(const struct hll_obj *obj);
+hll_obj_func *hll_unwrap_macro(const struct hll_obj *obj);
 double hll_unwrap_num(const struct hll_obj *obj);
 
 size_t hll_list_length(const struct hll_obj *obj);

@@ -48,6 +48,9 @@ const char *hll_get_object_kind_str(hll_object_kind kind) {
 
 void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
   switch (obj->kind) {
+  case HLL_OBJ_NIL:
+  case HLL_OBJ_TRUE:
+  case HLL_OBJ_NUM:
   case HLL_OBJ_CONS:
     break;
   case HLL_OBJ_SYMB:
@@ -57,16 +60,11 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
   case HLL_OBJ_BIND:
     hll_free(obj->as.body, sizeof(hll_obj_bind));
     break;
-  case HLL_OBJ_NIL:
-    break;
-  case HLL_OBJ_NUM:
-    break;
   case HLL_OBJ_ENV:
     hll_free(obj->as.body, sizeof(hll_obj_env));
     break;
-  case HLL_OBJ_TRUE:
-    break;
   case HLL_OBJ_FUNC:
+  case HLL_OBJ_MACRO:
     hll_free_bytecode(hll_unwrap_func(obj)->bytecode);
     hll_gc_free(vm, obj->as.body, sizeof(hll_obj_func));
     break;
@@ -175,6 +173,21 @@ hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
   return obj;
 }
 
+hll_obj *hll_new_macro(struct hll_vm *vm, struct hll_obj *params,
+                       struct hll_bytecode *bytecode, const char *name) {
+  hll_obj_func *body = hll_gc_alloc(vm, sizeof(hll_obj_func));
+  body->param_names = params;
+  body->bytecode = bytecode;
+  body->name = name;
+
+  hll_obj *obj = hll_gc_alloc(vm, sizeof(hll_obj));
+  obj->kind = HLL_OBJ_FUNC;
+  obj->as.body = body;
+
+  register_object(vm, obj);
+  return obj;
+}
+
 hll_obj_cons *hll_unwrap_cons(const struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_CONS);
   return (hll_obj_cons *)&obj->as.cons;
@@ -212,6 +225,11 @@ hll_obj_env *hll_unwrap_env(const struct hll_obj *obj) {
 
 hll_obj_func *hll_unwrap_func(const struct hll_obj *obj) {
   assert(obj->kind == HLL_OBJ_FUNC);
+  return (hll_obj_func *)obj->as.body;
+}
+
+hll_obj_func *hll_unwrap_macro(const struct hll_obj *obj) {
+  assert(obj->kind == HLL_OBJ_MACRO);
   return (hll_obj_func *)obj->as.body;
 }
 
@@ -319,6 +337,16 @@ void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj) {
     hll_gray_obj(vm, hll_unwrap_func(obj)->env);
     hll_gray_obj(vm, hll_unwrap_func(obj)->var_list);
     hll_bytecode *bytecode = hll_unwrap_func(obj)->bytecode;
+    for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
+      hll_gray_obj(vm, bytecode->constant_pool[i]);
+    }
+  } break;
+  case HLL_OBJ_MACRO: {
+    vm->bytes_allocated += sizeof(hll_obj_func);
+    hll_gray_obj(vm, hll_unwrap_macro(obj)->param_names);
+    hll_gray_obj(vm, hll_unwrap_macro(obj)->env);
+    hll_gray_obj(vm, hll_unwrap_macro(obj)->var_list);
+    hll_bytecode *bytecode = hll_unwrap_macro(obj)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
       hll_gray_obj(vm, bytecode->constant_pool[i]);
     }

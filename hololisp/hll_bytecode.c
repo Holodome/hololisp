@@ -36,6 +36,9 @@ void hll_dump_object(void *file, hll_obj *obj) {
   case HLL_OBJ_FUNC:
     fprintf(file, "func %s", hll_unwrap_func(obj)->name);
     break;
+  case HLL_OBJ_MACRO:
+    fprintf(file, "macro %s", hll_unwrap_macro(obj)->name);
+    break;
   }
 }
 
