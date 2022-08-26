@@ -79,8 +79,7 @@ void hll_report_error(hll_vm *vm, size_t offset, uint32_t len,
   vm->config.error_fn(vm, buffer);
 }
 
-static void add_variable(hll_vm *vm, hll_obj *env, hll_obj *name,
-                         hll_obj *value) {
+void hll_add_variable(hll_vm *vm, hll_obj *env, hll_obj *name, hll_obj *value) {
   assert(name->kind == HLL_OBJ_SYMB);
   hll_unwrap_env(env)->vars = hll_new_cons(vm, hll_new_cons(vm, name, value),
                                            hll_unwrap_env(env)->vars);
@@ -105,8 +104,8 @@ hll_vm *hll_make_vm(hll_config const *config) {
   vm->quote_symb = hll_new_symbolz(vm, "quote");
   vm->nthcdr_symb = hll_new_symbolz(vm, "nthcdr");
   vm->global_env = hll_new_env(vm, vm->nil, vm->nil);
-  vm->macro_list = vm->nil;
-  vm->env = vm->nil;
+  vm->env = vm->global_env;
+
   add_builtins(vm);
   --vm->forbid_gc;
   return vm;
@@ -149,11 +148,11 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
       vm, hll_new_cons(vm, symb, bind), hll_unwrap_env(vm->global_env)->vars);
 }
 
-static hll_obj *hll_find_var(hll_vm *vm, hll_obj *env, hll_obj *car) {
+hll_obj *hll_find_var(hll_vm *vm, hll_obj *env, hll_obj *car) {
   (void)vm;
   assert(car->kind == HLL_OBJ_SYMB && "argument is not a symbol");
   hll_obj *result = NULL;
-
+  const char *name = hll_unwrap_zsymb(car);
   for (; env->kind != HLL_OBJ_NIL && result == NULL;
        env = hll_unwrap_env(env)->up) {
     for (hll_obj *cons = hll_unwrap_env(env)->vars;
@@ -162,8 +161,7 @@ static hll_obj *hll_find_var(hll_vm *vm, hll_obj *env, hll_obj *car) {
       hll_obj *test = hll_unwrap_car(cons);
       assert(hll_unwrap_car(test)->kind == HLL_OBJ_SYMB &&
              "Variable is not a cons of symbol and its value");
-      if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)),
-                 hll_unwrap_zsymb(car)) == 0) {
+      if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)), name) == 0) {
         result = test;
       }
     }
@@ -245,6 +243,7 @@ void hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   hll_report_error(vm, 0, 0, buffer);
 }
 
+#if 0
 static void hll_collect_garbage(hll_vm *vm) {
   fprintf(stderr, "before collection %zu\n", vm->bytes_allocated);
   // Reset allocated bytes count
@@ -302,6 +301,7 @@ static void hll_collect_garbage(hll_vm *vm) {
     vm->next_gc = vm->config.min_heap_size;
   }
 }
+#endif
 
 void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size, size_t new_size) {
   assert(vm->bytes_allocated >= old_size);
@@ -313,7 +313,9 @@ void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size, size_t new_size) {
       && vm->bytes_allocated > vm->next_gc
 #endif
   ) {
+#if 0
     hll_collect_garbage(vm);
+#endif
   }
 
   return hll_realloc(ptr, old_size, new_size);
@@ -328,6 +330,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
   hll_call_frame original_frame = {0};
   original_frame.ip = initial_bytecode->ops;
   original_frame.bytecode = initial_bytecode;
+  original_frame.env = env_;
   hll_sb_push(vm->call_stack, original_frame);
 
   while (hll_sb_len(vm->call_stack)) {
@@ -452,7 +455,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
             hll_obj *name = hll_unwrap_car(param_name);
             assert(name->kind == HLL_OBJ_SYMB);
             hll_obj *value = hll_unwrap_car(param_value);
-            add_variable(vm, new_env, name, value);
+            hll_add_variable(vm, new_env, name, value);
           }
         } else if (param_name->kind == HLL_OBJ_CONS &&
                    hll_unwrap_car(param_name)->kind == HLL_OBJ_NIL) {
@@ -461,7 +464,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
 
         if (param_name->kind != HLL_OBJ_NIL) {
           assert(param_name->kind == HLL_OBJ_SYMB);
-          add_variable(vm, new_env, param_name, param_value);
+          hll_add_variable(vm, new_env, param_name, param_value);
         }
 
         hll_call_frame new_frame = {0};
@@ -519,7 +522,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_obj *value = hll_sb_pop(vm->stack);
       hll_obj *name = hll_sb_last(vm->stack);
-      add_variable(vm, vm->env, name, value);
+      hll_add_variable(vm, vm->env, name, value);
 
     } break;
     case HLL_BYTECODE_PUSHENV: {
@@ -626,10 +629,10 @@ bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
   return false;
 }
 
-struct hll_obj *hll_expand_macro(hll_vm *vm, const struct hll_obj *macro,
+struct hll_obj *hll_expand_macro(hll_vm *vm, struct hll_obj *macro,
                                  struct hll_obj *args) {
   hll_obj *env = hll_new_env(vm, vm->global_env, vm->nil);
-  hll_obj_func *fun = hll_unwrap_func(macro);
+  hll_obj_func *fun = hll_unwrap_macro(macro);
 
   hll_obj *name_slot = fun->param_names;
   hll_obj *value_slot = args;
@@ -643,12 +646,12 @@ struct hll_obj *hll_expand_macro(hll_vm *vm, const struct hll_obj *macro,
     hll_obj *name = hll_unwrap_car(name_slot);
     assert(name->kind == HLL_OBJ_SYMB);
     hll_obj *value = hll_unwrap_car(value_slot);
-    add_variable(vm, env, name, value);
+    hll_add_variable(vm, env, name, value);
   }
 
   if (name_slot->kind != HLL_OBJ_NIL) {
     assert(name_slot->kind == HLL_OBJ_SYMB);
-    add_variable(vm, env, name_slot, value_slot);
+    hll_add_variable(vm, env, name_slot, value_slot);
   }
 
   hll_obj *result = hll_interpret_bytecode_internal(vm, env, fun->bytecode);

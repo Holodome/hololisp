@@ -81,18 +81,18 @@ hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
 hll_obj *hll_new_macro(struct hll_vm *vm, struct hll_obj *params,
                        struct hll_bytecode *bytecode, const char *name);
 
-hll_obj_cons *hll_unwrap_cons(const struct hll_obj *obj);
-hll_obj *hll_unwrap_cdr(const struct hll_obj *obj);
-hll_obj *hll_unwrap_car(const struct hll_obj *obj);
-hll_obj_env *hll_unwrap_env(const struct hll_obj *obj);
-const char *hll_unwrap_zsymb(const struct hll_obj *obj);
-hll_obj_symb *hll_unwrap_symb(const struct hll_obj *obj);
-hll_obj_bind *hll_unwrap_bind(const struct hll_obj *obj);
-hll_obj_func *hll_unwrap_func(const struct hll_obj *obj);
-hll_obj_func *hll_unwrap_macro(const struct hll_obj *obj);
-double hll_unwrap_num(const struct hll_obj *obj);
+hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj);
+hll_obj *hll_unwrap_cdr(struct hll_obj *obj);
+hll_obj *hll_unwrap_car(struct hll_obj *obj);
+hll_obj_env *hll_unwrap_env(struct hll_obj *obj);
+const char *hll_unwrap_zsymb(struct hll_obj *obj);
+hll_obj_symb *hll_unwrap_symb(struct hll_obj *obj);
+hll_obj_bind *hll_unwrap_bind(struct hll_obj *obj);
+hll_obj_func *hll_unwrap_func(struct hll_obj *obj);
+hll_obj_func *hll_unwrap_macro(struct hll_obj *obj);
+double hll_unwrap_num(struct hll_obj *obj);
 
-size_t hll_list_length(const struct hll_obj *obj);
+size_t hll_list_length(struct hll_obj *obj);
 
 void hll_gray_obj(struct hll_vm *vm, struct hll_obj *obj);
 void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj);
