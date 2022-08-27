@@ -132,16 +132,15 @@ hll_interpret_result hll_interpret(hll_vm *vm, const char *name,
   vm->current_filename = name;
   vm->source = source;
 
-  hll_bytecode *bytecode = hll_compile(vm, source);
-  if (bytecode == NULL) {
+  struct hll_obj *compiled = hll_compile(vm, source);
+  if (compiled == NULL) {
     return HLL_RESULT_COMPILE_ERROR;
   }
 
   hll_interpret_result result =
-      hll_interpret_bytecode(vm, bytecode, print_result)
+      hll_interpret_bytecode(vm, compiled, print_result)
           ? HLL_RESULT_RUNTIME_ERROR
           : HLL_RESULT_OK;
-  hll_free_bytecode(bytecode);
   return result;
 }
 
@@ -329,14 +328,17 @@ void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size, size_t new_size) {
 }
 
 hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
-                                         const hll_bytecode *initial_bytecode) {
+                                         struct hll_obj *compiled) {
+  hll_sb_push(vm->temp_roots, compiled);
+  struct hll_bytecode *initial_bytecode;
+  if (compiled->kind == HLL_OBJ_FUNC) {
+    initial_bytecode = hll_unwrap_func(compiled)->bytecode;
+  } else {
+    initial_bytecode = hll_unwrap_macro(compiled)->bytecode;
+  }
   vm->call_stack = NULL;
   vm->stack = NULL;
   vm->env = env_;
-
-  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
-    hll_sb_push(vm->temp_roots, initial_bytecode->constant_pool[i]);
-  }
 
   hll_call_frame original_frame = {0};
   original_frame.ip = initial_bytecode->ops;
@@ -572,7 +574,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         car = hll_unwrap_car(cons);
       }
 
-      hll_sb_pop(vm->temp_roots);// cons
+      hll_sb_pop(vm->temp_roots); // cons
       hll_sb_push(vm->stack, car);
     } break;
     case HLL_BYTECODE_CDR: {
@@ -646,10 +648,10 @@ out:
   return result;
 }
 
-bool hll_interpret_bytecode(hll_vm *vm, const struct hll_bytecode *bytecode,
+bool hll_interpret_bytecode(hll_vm *vm, struct hll_obj *compiled,
                             bool print_result) {
   hll_obj *result =
-      hll_interpret_bytecode_internal(vm, vm->global_env, bytecode);
+      hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
   if (print_result) {
     if (result == NULL) {
       internal_compiler_error(vm, "expected one value to print");
@@ -690,5 +692,5 @@ struct hll_obj *hll_expand_macro(hll_vm *vm, struct hll_obj *macro,
   }
 
   hll_sb_pop(vm->temp_roots); // env
-  return hll_interpret_bytecode_internal(vm, env, fun->bytecode);
+  return hll_interpret_bytecode_internal(vm, env, macro);
 }

@@ -39,7 +39,7 @@ typedef struct hll_obj {
   } as;
 } hll_obj;
 
-typedef struct {
+typedef struct hll_obj_func {
   const char *name;
   struct hll_bytecode *bytecode;
   struct hll_obj *param_names;
@@ -47,16 +47,16 @@ typedef struct {
   struct hll_obj *env;
 } hll_obj_func;
 
-typedef struct {
+typedef struct hll_obj_env {
   struct hll_obj *vars;
   struct hll_obj *up;
 } hll_obj_env;
 
-typedef struct {
+typedef struct hll_obj_bind {
   struct hll_obj *(*bind)(struct hll_vm *vm, struct hll_obj *args);
 } hll_obj_bind;
 
-typedef struct {
+typedef struct hll_obj_symb {
   size_t length;
   char symb[];
 } hll_obj_symb;

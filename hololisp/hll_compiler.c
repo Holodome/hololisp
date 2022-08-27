@@ -13,7 +13,7 @@
 #include "hll_util.h"
 #include "hll_vm.h"
 
-hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
+struct hll_obj *hll_compile(hll_vm *vm, const char *source) {
   hll_lexer lexer;
   hll_lexer_init(&lexer, source, vm);
   hll_reader reader;
@@ -21,18 +21,16 @@ hll_bytecode *hll_compile(hll_vm *vm, const char *source) {
 
   ++vm->forbid_gc;
   hll_obj *ast = hll_read_ast(&reader);
-  hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
-  hll_compiler compiler;
-  hll_compiler_init(&compiler, vm, vm->env, bytecode);
-  hll_compile_ast(&compiler, ast);
   --vm->forbid_gc;
+  hll_compiler compiler;
+  hll_compiler_init(&compiler, vm, vm->env);
+  struct hll_obj *result = hll_compile_ast(&compiler, ast);
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
-    hll_free_bytecode(bytecode);
     return NULL;
   }
 
-  return bytecode;
+  return result;
 }
 
 typedef enum {
@@ -510,11 +508,11 @@ hll_obj *hll_read_ast(hll_reader *reader) {
 }
 
 void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
-                       struct hll_obj *env, struct hll_bytecode *bytecode) {
+                       struct hll_obj *env) {
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->vm = vm;
   compiler->env = env;
-  compiler->bytecode = bytecode;
+  compiler->bytecode = hll_alloc(sizeof(hll_bytecode));
 }
 
 HLL_ATTR(format(printf, 3, 4))
@@ -1096,15 +1094,16 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 static hll_obj *compile_function_internal(hll_compiler *compiler,
                                           hll_obj *params, hll_obj *body,
                                           const char *name, bool is_macro) {
-  hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
+  (void)name;
   hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env, bytecode);
-  compile_progn(&new_compiler, body);
-  emit_op(new_compiler.bytecode, HLL_BYTECODE_END);
+  hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env);
+  struct hll_obj *compiled = hll_compile_ast(&new_compiler, body);
   if (new_compiler.has_errors) {
     compiler->has_errors = true;
     return NULL;
   }
+
+  hll_sb_push(compiler->vm->temp_roots, compiled);
 
   hll_obj *param_list = NULL;
   hll_obj *param_list_tail = NULL;
@@ -1147,10 +1146,20 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
 
   hll_obj *func;
   if (!is_macro) {
-    func = hll_new_func(compiler->vm, param_list, bytecode, name);
+    func = compiled;
+    hll_unwrap_func(func)->param_names = param_list;
   } else {
-    func = hll_new_macro(compiler->vm, param_list, bytecode, name);
+    func = compiled;
+    func->kind = HLL_OBJ_MACRO;
+#if 0
+    struct hll_obj_func *unwrapped = hll_unwrap_func(compiled);
+    func = hll_new_macro(compiler->vm, unwrapped->param_names,
+                         unwrapped->bytecode, unwrapped->name);
+#endif
+    hll_unwrap_macro(func)->param_names = param_list;
   }
+
+  hll_sb_pop(compiler->vm->temp_roots); // compiled
   return func;
 }
 
@@ -1516,7 +1525,12 @@ static void compile_expression(hll_compiler *compiler, hll_obj *ast) {
   }
 }
 
-void hll_compile_ast(hll_compiler *compiler, hll_obj *ast) {
+struct hll_obj *hll_compile_ast(hll_compiler *compiler, hll_obj *ast) {
+  struct hll_obj *result = hll_new_func(compiler->vm, compiler->vm->nil,
+                                        compiler->bytecode, "bytecode");
+  hll_sb_push(compiler->vm->temp_roots, result);
   compile_progn(compiler, ast);
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
+  hll_sb_pop(compiler->vm->temp_roots);
+  return result;
 }

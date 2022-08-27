@@ -94,7 +94,8 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
 }
 
 void register_object(struct hll_vm *vm, struct hll_obj *obj) {
-//  fprintf(stderr, "registered object %s\n", hll_get_object_kind_str(obj->kind));
+  //  fprintf(stderr, "registered object %s\n",
+  //  hll_get_object_kind_str(obj->kind));
   obj->next_gc = vm->all_objects;
   vm->all_objects = obj;
 }
@@ -295,6 +296,19 @@ hll_obj *hll_copy_obj(struct hll_vm *vm, struct hll_obj *src) {
   case HLL_OBJ_TRUE:
     result = vm->true_;
     break;
+  case HLL_OBJ_MACRO: {
+    hll_obj_func *func = hll_unwrap_macro(src);
+    hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));
+    for (size_t i = 0; i < hll_sb_len(func->bytecode->ops); ++i) {
+      hll_sb_push(bytecode->ops, func->bytecode->ops[i]);
+    }
+    for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
+      hll_sb_push(bytecode->constant_pool, func->bytecode->constant_pool[i]);
+    }
+
+    result = hll_new_macro(vm, func->param_names, bytecode, func->name);
+    hll_unwrap_macro(result)->var_list = vm->nil;
+  } break;
   case HLL_OBJ_FUNC: {
     hll_obj_func *func = hll_unwrap_func(src);
     hll_bytecode *bytecode = hll_alloc(sizeof(hll_bytecode));

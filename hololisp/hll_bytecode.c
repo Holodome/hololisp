@@ -42,7 +42,7 @@ void hll_dump_object(void *file, hll_obj *obj) {
     break;
   default:
     HLL_UNREACHABLE;
-    break ;
+    break;
   }
 }
 
