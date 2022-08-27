@@ -292,7 +292,6 @@ static void hll_collect_garbage(hll_vm *vm) {
     if (!(*obj_ptr)->is_dark) {
       hll_obj *to_free = *obj_ptr;
       *obj_ptr = to_free->next_gc;
-      fprintf(stderr, "collected\n");
       hll_free_object(vm, to_free);
     } else {
       (*obj_ptr)->is_dark = false;
@@ -310,7 +309,7 @@ static void hll_collect_garbage(hll_vm *vm) {
 #endif
 
 void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size, size_t new_size) {
-  assert(vm->bytes_allocated >= old_size);
+  // assert(vm->bytes_allocated >= old_size);
   vm->bytes_allocated -= old_size;
   vm->bytes_allocated += new_size;
 
@@ -344,6 +343,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
   original_frame.ip = initial_bytecode->ops;
   original_frame.bytecode = initial_bytecode;
   original_frame.env = env_;
+  assert(env_);
   hll_sb_push(vm->call_stack, original_frame);
 
   while (hll_sb_len(vm->call_stack)) {
@@ -352,6 +352,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
     case HLL_BYTECODE_END:
       assert(hll_sb_len(vm->stack) != 0);
       vm->env = hll_sb_last(vm->call_stack).env;
+      assert(vm->env);
       (void)hll_sb_pop(vm->call_stack);
       break;
     case HLL_BYTECODE_POP:
@@ -557,6 +558,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
       break;
     case HLL_BYTECODE_POPENV:
       vm->env = hll_unwrap_env(vm->env)->up;
+      assert(vm->env);
       assert(vm->env->kind == HLL_OBJ_ENV);
       break;
     case HLL_BYTECODE_CAR: {
@@ -642,6 +644,8 @@ out:
   hll_obj *result = vm->stack[0];
   hll_sb_free(vm->stack);
   hll_sb_free(vm->call_stack);
+  vm->call_stack = NULL;
+  vm->stack = NULL;
 
   hll_sb_pop(vm->temp_roots);
 

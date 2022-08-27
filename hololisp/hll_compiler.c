@@ -21,10 +21,10 @@ struct hll_obj *hll_compile(hll_vm *vm, const char *source) {
 
   ++vm->forbid_gc;
   hll_obj *ast = hll_read_ast(&reader);
-  --vm->forbid_gc;
   hll_compiler compiler;
   hll_compiler_init(&compiler, vm, vm->env);
   struct hll_obj *result = hll_compile_ast(&compiler, ast);
+  --vm->forbid_gc;
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
     return NULL;
@@ -1304,10 +1304,12 @@ static void process_defmacro(hll_compiler *compiler, hll_obj *args) {
 
   hll_obj *macro_expansion =
       compile_function_internal(compiler, params, body, "defmacro", true);
+  hll_sb_push(compiler->vm->temp_roots, macro_expansion);
   if (macro_expansion != NULL) {
     // TODO: Test if macro with same name exists
     hll_add_variable(compiler->vm, compiler->env, name, macro_expansion);
   }
+  hll_sb_pop(compiler->vm->temp_roots);
 }
 
 static void compile_macroexpand(hll_compiler *compiler, hll_obj *args) {

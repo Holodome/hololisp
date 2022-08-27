@@ -89,7 +89,9 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
     HLL_UNREACHABLE;
     break;
   }
+  memset(obj, 0, sizeof(hll_obj));
   obj->kind = HLL_OBJ_FREED;
+
   hll_gc_free(vm, obj, sizeof(hll_obj));
 }
 
@@ -126,6 +128,8 @@ hll_obj *hll_new_num(struct hll_vm *vm, double num) {
 }
 
 hll_obj *hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
+  assert(symbol);
+
   hll_obj_symb *body = hll_gc_alloc(vm, sizeof(hll_obj_symb) + length + 1);
   memcpy(body->symb, symbol, length);
   body->symb[length] = '\0';
@@ -144,6 +148,7 @@ hll_obj *hll_new_symbolz(struct hll_vm *vm, const char *symbol) {
 }
 
 hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
+  assert(car && cdr);
   hll_obj *obj = hll_gc_alloc(vm, sizeof(hll_obj));
   obj->kind = HLL_OBJ_CONS;
   obj->as.cons.car = car;
@@ -156,6 +161,7 @@ hll_obj *hll_new_cons(struct hll_vm *vm, hll_obj *car, hll_obj *cdr) {
 hll_obj *hll_new_bind(struct hll_vm *vm,
                       struct hll_obj *(*bind)(struct hll_vm *vm,
                                               struct hll_obj *args)) {
+  assert(bind);
   hll_obj_bind *body = hll_gc_alloc(vm, sizeof(hll_obj_bind));
   body->bind = bind;
 
@@ -168,6 +174,7 @@ hll_obj *hll_new_bind(struct hll_vm *vm,
 }
 
 hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars) {
+  assert(up && vars);
   hll_obj_env *body = hll_gc_alloc(vm, sizeof(hll_obj_env));
   body->up = up;
   body->vars = vars;
@@ -182,6 +189,7 @@ hll_obj *hll_new_env(struct hll_vm *vm, hll_obj *up, hll_obj *vars) {
 
 hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
                       struct hll_bytecode *bytecode, const char *name) {
+  assert(params && bytecode && name);
   hll_obj_func *body = hll_gc_alloc(vm, sizeof(hll_obj_func));
   body->param_names = params;
   body->bytecode = bytecode;
@@ -197,6 +205,7 @@ hll_obj *hll_new_func(struct hll_vm *vm, struct hll_obj *params,
 
 hll_obj *hll_new_macro(struct hll_vm *vm, struct hll_obj *params,
                        struct hll_bytecode *bytecode, const char *name) {
+  assert(params && bytecode && name);
   hll_obj_func *body = hll_gc_alloc(vm, sizeof(hll_obj_func));
   body->param_names = params;
   body->bytecode = bytecode;

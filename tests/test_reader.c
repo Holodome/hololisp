@@ -1,10 +1,12 @@
 #include "../hololisp/hll_compiler.h"
 #include "../hololisp/hll_obj.h"
+#include "../hololisp/hll_vm.h"
 
 #include "acutest.h"
 
 static void test_reader_reports_eof(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
   hll_lexer lexer;
   hll_lexer_init(&lexer, "", vm);
   hll_reader reader;
@@ -16,6 +18,7 @@ static void test_reader_reports_eof(void) {
 
 static void test_reader_parses_num(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "123", vm);
@@ -33,6 +36,7 @@ static void test_reader_parses_num(void) {
 
 static void test_reader_parses_symbol(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "hello-world", vm);
@@ -49,6 +53,7 @@ static void test_reader_parses_symbol(void) {
 
 static void test_reader_parses_one_element_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(100)", vm);
@@ -66,6 +71,7 @@ static void test_reader_parses_one_element_list(void) {
 
 static void test_reader_parses_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(100 -100 abc)", vm);
@@ -91,6 +97,7 @@ static void test_reader_parses_list(void) {
 
 static void test_reader_parses_nested_lists(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(+ (* 3 2) hello)", vm);
@@ -127,6 +134,7 @@ static void test_reader_parses_nested_lists(void) {
 
 static void test_reader_reports_unclosed_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(", vm);
@@ -140,6 +148,7 @@ static void test_reader_reports_unclosed_list(void) {
 
 static void test_reader_reports_stray_rparen(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, ")", vm);
@@ -153,6 +162,7 @@ static void test_reader_reports_stray_rparen(void) {
 
 static void test_reader_parses_nil(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "()", vm);
@@ -168,6 +178,7 @@ static void test_reader_parses_nil(void) {
 
 static void test_reader_parses_simple_dotted_cons(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(abc . 123)", vm);
@@ -185,6 +196,7 @@ static void test_reader_parses_simple_dotted_cons(void) {
 
 static void test_reader_parses_dotted_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "(a b c . 123)", vm);
@@ -210,6 +222,7 @@ static void test_reader_parses_dotted_list(void) {
 
 static void test_reader_parses_quote(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
+  vm->forbid_gc = 1;
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, "'1", vm);

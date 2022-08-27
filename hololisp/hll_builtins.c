@@ -572,7 +572,7 @@ void add_builtins(hll_vm *vm) {
 #if 1
   hll_interpret(
       vm, "builtins",
-      "(defmacro not (x) (if x () t))                                \n"
+      "(defmacro not (x) (list 'if x () 't))                                \n"
       "(defmacro when (expr . body)                                         \n"
       "  (cons 'if (cons expr (list (cons 'progn body)))))                  \n"
       "(defmacro unless (expr . body)                                       \n"
