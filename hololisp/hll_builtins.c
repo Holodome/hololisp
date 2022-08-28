@@ -433,21 +433,38 @@ static hll_obj *builtin_abs(hll_vm *vm, hll_obj *args) {
 }
 
 static hll_obj *builtin_append(hll_vm *vm, hll_obj *args) {
-  // NOTE: This seems like it can be compiled to bytecode directly
-  if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
-    hll_runtime_error(vm, "'append' expects exactly 2 arguments");
-    return NULL;
+  if (args->kind == HLL_OBJ_NIL) {
+    return args;
   }
 
-  hll_obj *list1 = hll_unwrap_car(args);
-  hll_obj *list2 = hll_unwrap_car(hll_unwrap_cdr(args));
+  (void)vm;
+  hll_obj *list = hll_unwrap_car(args);
+  while (list->kind != HLL_OBJ_CONS && args->kind == HLL_OBJ_CONS) {
+    args = hll_unwrap_cdr(args);
+    list = hll_unwrap_car(args);
+  }
 
-  hll_obj *tail = list1;
-  for (; hll_unwrap_cdr(tail)->kind != HLL_OBJ_NIL; tail = hll_unwrap_cdr(tail))
-    ;
+  if (list->kind == HLL_OBJ_NIL) {
+    return list;
+  }
 
-  hll_unwrap_cons(tail)->cdr = list2;
-  return list1;
+  hll_obj *tail = list;
+  for (hll_obj *slot = hll_unwrap_cdr(args); slot->kind == HLL_OBJ_CONS;
+       slot = hll_unwrap_cdr(slot)) {
+    for (; tail->kind == HLL_OBJ_CONS &&
+           hll_unwrap_cdr(tail)->kind != HLL_OBJ_NIL;
+         tail = hll_unwrap_cdr(tail)) {
+    }
+
+    if (tail->kind == HLL_OBJ_CONS) {
+      hll_unwrap_cons(tail)->cdr = hll_unwrap_car(slot);
+    } else {
+      tail = slot;
+      list = slot;
+    }
+  }
+
+  return list;
 }
 
 static hll_obj *builtin_reverse(hll_vm *vm, hll_obj *args) {

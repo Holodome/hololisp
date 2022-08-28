@@ -249,9 +249,9 @@ neg_test "abs type" "(abs ())"
 pos_test "abs" "1" "(abs -1)"
 pos_test "abs" "1" "(abs 1)"
 
-neg_test "append args" "(append)"
-neg_test "append args" "(append '(a b))"
-neg_test "append args" "(append '(a b) '(c d) ())"
+pos_test "append" "()" "(append)"
+pos_test "append" "(a b)" "(append '(a b))"
+pos_test "append" "(a b c d)" "(append '(a b) '(c d) ())"
 pos_test "append" "(a b c d)" "(append '(a b) '(c d))"
 pos_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
 pos_test "append" "(foo . bar)" "(append '(foo) 'bar)"
@@ -340,10 +340,10 @@ pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
 neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
 pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
-#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
-#                                (if rest
-#                                    (list 'if expr (&& rest))
-#                                    expr))
-#(macroexpand (&& 1 2 3))"
+# pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
+                                # (if rest
+                                 #   (list 'if expr (&& rest))
+                                    #expr))
+# (macroexpand (&& 1 2 3))"
 
 exit $failed
