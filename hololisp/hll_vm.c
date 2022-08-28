@@ -87,7 +87,7 @@ void hll_add_variable(hll_vm *vm, hll_obj *env, hll_obj *name, hll_obj *value) {
   hll_obj *slot = hll_new_cons(vm, name, value);
   hll_sb_push(vm->temp_roots, slot);
   hll_unwrap_env(env)->vars = hll_new_cons(vm, slot, hll_unwrap_env(env)->vars);
-  hll_sb_pop(vm->temp_roots); // slot
+  (void)hll_sb_pop(vm->temp_roots); // slot
 }
 
 hll_vm *hll_make_vm(hll_config const *config) {
@@ -153,8 +153,8 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
 
   hll_add_variable(vm, vm->global_env, symb, bind);
 
-  hll_sb_pop(vm->temp_roots); // bind
-  hll_sb_pop(vm->temp_roots); // symb
+  (void)hll_sb_pop(vm->temp_roots); // bind
+  (void)hll_sb_pop(vm->temp_roots); // symb
 }
 
 hll_obj *hll_find_var(hll_vm *vm, hll_obj *env, hll_obj *car) {
@@ -404,7 +404,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         hll_unwrap_cons(*tailp)->cdr = cons;
         *tailp = cons;
       }
-      hll_sb_pop(vm->temp_roots); // obj
+      (void)hll_sb_pop(vm->temp_roots); // obj
     } break;
     case HLL_BYTECODE_FIND: {
       hll_obj *symb = hll_sb_pop(vm->stack);
@@ -421,7 +421,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
                           hll_unwrap_zsymb(symb));
         goto bail;
       }
-      hll_sb_pop(vm->temp_roots); // symb
+      (void)hll_sb_pop(vm->temp_roots); // symb
       hll_sb_push(vm->stack, found);
     } break;
     case HLL_BYTECODE_MAKEFUN: {
@@ -496,7 +496,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         new_frame.env = vm->env;
         new_frame.func = callable;
         hll_sb_push(vm->call_stack, new_frame);
-        hll_sb_pop(vm->temp_roots); // new_env
+        (void)hll_sb_pop(vm->temp_roots); // new_env
         vm->env = new_env;
       } break;
       case HLL_OBJ_BIND: {
@@ -515,8 +515,8 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         break;
       }
 
-      hll_sb_pop(vm->temp_roots); // args
-      hll_sb_pop(vm->temp_roots); // callable
+      (void)hll_sb_pop(vm->temp_roots); // args
+      (void)hll_sb_pop(vm->temp_roots); // callable
     } break;
     case HLL_BYTECODE_DUP: {
       assert(hll_sb_len(vm->stack) != 0);
@@ -547,7 +547,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
           goto bail;
         }
       }
-      hll_sb_pop(vm->temp_roots);
+      (void)hll_sb_pop(vm->temp_roots);
     } break;
     case HLL_BYTECODE_LET: {
       assert(hll_sb_len(vm->stack) != 0);
@@ -555,7 +555,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
       hll_sb_push(vm->temp_roots, value);
       hll_obj *name = hll_sb_last(vm->stack);
       hll_add_variable(vm, vm->env, name, value);
-      hll_sb_pop(vm->temp_roots); // value
+      (void)hll_sb_pop(vm->temp_roots); // value
     } break;
     case HLL_BYTECODE_PUSHENV:
       vm->env = hll_new_env(vm, vm->env, vm->nil);
@@ -580,7 +580,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         car = hll_unwrap_car(cons);
       }
 
-      hll_sb_pop(vm->temp_roots); // cons
+      (void)hll_sb_pop(vm->temp_roots); // cons
       hll_sb_push(vm->stack, car);
     } break;
     case HLL_BYTECODE_CDR: {
@@ -597,7 +597,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
       } else {
         cdr = hll_unwrap_cdr(cons);
       }
-      hll_sb_pop(vm->temp_roots); // cons
+      (void)hll_sb_pop(vm->temp_roots); // cons
       hll_sb_push(vm->stack, cdr);
     } break;
     case HLL_BYTECODE_SETCAR: {
@@ -610,7 +610,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
                           hll_get_object_kind_str(cons->kind));
         goto bail;
       }
-      hll_sb_pop(vm->temp_roots); // car
+      (void)hll_sb_pop(vm->temp_roots); // car
       hll_unwrap_cons(cons)->car = car;
     } break;
     case HLL_BYTECODE_SETCDR: {
@@ -624,7 +624,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         goto bail;
       }
       hll_unwrap_cons(cons)->cdr = cdr;
-      hll_sb_pop(vm->temp_roots); // cdr
+      (void)hll_sb_pop(vm->temp_roots); // cdr
     } break;
     default:
       internal_compiler_error(vm, "Unknown instruction: %" PRIx8, op);
@@ -651,7 +651,7 @@ out:
   vm->call_stack = NULL;
   vm->stack = NULL;
 
-  hll_sb_pop(vm->temp_roots);
+  (void)hll_sb_pop(vm->temp_roots);
 
   return result;
 }
@@ -685,7 +685,7 @@ struct hll_obj *hll_expand_macro(hll_vm *vm, struct hll_obj *macro,
        value_slot = hll_unwrap_cdr(value_slot)) {
     if (value_slot->kind != HLL_OBJ_CONS) {
       hll_runtime_error(vm, "number of arguments does not match");
-      hll_sb_pop(vm->temp_roots); // env
+      (void)hll_sb_pop(vm->temp_roots); // env
       return NULL;
     }
     hll_obj *name = hll_unwrap_car(name_slot);
@@ -699,6 +699,6 @@ struct hll_obj *hll_expand_macro(hll_vm *vm, struct hll_obj *macro,
     hll_add_variable(vm, env, name_slot, value_slot);
   }
 
-  hll_sb_pop(vm->temp_roots); // env
+  (void)hll_sb_pop(vm->temp_roots); // env
   return hll_interpret_bytecode_internal(vm, env, macro);
 }

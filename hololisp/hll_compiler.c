@@ -1159,7 +1159,7 @@ static hll_obj *compile_function_internal(hll_compiler *compiler,
     hll_unwrap_macro(func)->param_names = param_list;
   }
 
-  hll_sb_pop(compiler->vm->temp_roots); // compiled
+  (void)hll_sb_pop(compiler->vm->temp_roots); // compiled
   return func;
 }
 
@@ -1205,7 +1205,7 @@ static void compile_and(hll_compiler *compiler, hll_obj *args) {
     return;
   }
 
-  size_t last_jump;
+  size_t last_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
   for (hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
@@ -1220,6 +1220,8 @@ static void compile_and(hll_compiler *compiler, hll_obj *args) {
   size_t short_circuit = get_current_op_idx(compiler->bytecode);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   size_t total_out = get_current_op_idx(compiler->bytecode);
+
+  assert(last_jump != 0);
 
   uint8_t *cursor = compiler->bytecode->ops + original_idx;
   while (cursor < compiler->bytecode->ops + total_out) {
@@ -1243,13 +1245,14 @@ static void compile_or(hll_compiler *compiler, hll_obj *args) {
     return;
   }
 
-  size_t previous_jump;
+  size_t previous_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
   for (hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
     hll_obj *item = hll_unwrap_car(arg_slot);
 
     if (arg_slot != args) {
+      assert(previous_jump != 0);
       write_u16_be(compiler->bytecode->ops + previous_jump,
                    get_current_op_idx(compiler->bytecode) - previous_jump - 2);
       emit_op(compiler->bytecode, HLL_BYTECODE_POP);
@@ -1309,7 +1312,7 @@ static void process_defmacro(hll_compiler *compiler, hll_obj *args) {
     // TODO: Test if macro with same name exists
     hll_add_variable(compiler->vm, compiler->env, name, macro_expansion);
   }
-  hll_sb_pop(compiler->vm->temp_roots);
+  (void)hll_sb_pop(compiler->vm->temp_roots);
 }
 
 static void compile_macroexpand(hll_compiler *compiler, hll_obj *args) {
@@ -1533,6 +1536,6 @@ struct hll_obj *hll_compile_ast(hll_compiler *compiler, hll_obj *ast) {
   hll_sb_push(compiler->vm->temp_roots, result);
   compile_progn(compiler, ast);
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
-  hll_sb_pop(compiler->vm->temp_roots);
+  (void)hll_sb_pop(compiler->vm->temp_roots);
   return result;
 }
