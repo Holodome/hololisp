@@ -63,7 +63,7 @@ REPL session looks like this:
 
 ```shell
 $ hololisp
-hololisp> (defvar x 100)
+hololisp> (define x 100)
 x
 hololisp> x
 100

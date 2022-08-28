@@ -1287,23 +1287,26 @@ static void compile_or(hll_compiler *compiler, hll_obj *args) {
 }
 
 static void process_defmacro(hll_compiler *compiler, hll_obj *args) {
-  if (hll_list_length(args) < 3) {
-    compiler_error(compiler, args, "'defmacro' expects at least 3 arguments");
+  if (hll_list_length(args) < 2) {
+    compiler_error(compiler, args, "'defmacro' expects at least 2 arguments");
     return;
   }
 
-  hll_obj *name = hll_unwrap_car(args);
+  hll_obj *control = hll_unwrap_car(args);
+  if (control->kind != HLL_OBJ_CONS) {
+    compiler_error(compiler, control, "'defmacro' first argument must be list of macro name and its parameters");
+    return;
+  }
+
+  hll_obj *name = hll_unwrap_car(control);
   if (name->kind != HLL_OBJ_SYMB) {
     compiler_error(compiler, name, "'defmacro' name should be a symbol");
     return;
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-
-  args = hll_unwrap_cdr(args);
-  hll_obj *params = hll_unwrap_car(args);
-  args = hll_unwrap_cdr(args);
-  hll_obj *body = args;
+  hll_obj *params = hll_unwrap_cdr(control);
+  hll_obj *body = hll_unwrap_cdr(args);
 
   hll_obj *macro_expansion =
       compile_function_internal(compiler, params, body, "defmacro", true);
