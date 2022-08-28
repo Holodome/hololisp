@@ -278,7 +278,9 @@ static void hll_collect_garbage(hll_vm *vm) {
     hll_gray_obj(vm, vm->stack[i]);
   }
   for (size_t i = 0; i < hll_sb_len(vm->call_stack); ++i) {
-    hll_gray_obj(vm, vm->call_stack[i].env);
+    hll_call_frame *f = &vm->call_stack[i];
+    hll_gray_obj(vm, f->env);
+    hll_gray_obj(vm, f->func);
   }
   hll_gray_obj(vm, vm->env);
 
@@ -343,6 +345,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
   original_frame.ip = initial_bytecode->ops;
   original_frame.bytecode = initial_bytecode;
   original_frame.env = env_;
+  original_frame.func = compiled;
   assert(env_);
   hll_sb_push(vm->call_stack, original_frame);
 
@@ -491,6 +494,7 @@ hll_obj *hll_interpret_bytecode_internal(hll_vm *vm, hll_obj *env_,
         new_frame.bytecode = func->bytecode;
         new_frame.ip = func->bytecode->ops;
         new_frame.env = vm->env;
+        new_frame.func = callable;
         hll_sb_push(vm->call_stack, new_frame);
         hll_sb_pop(vm->temp_roots); // new_env
         vm->env = new_env;

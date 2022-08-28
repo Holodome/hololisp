@@ -404,6 +404,70 @@ static void test_compiler_compiles_macro(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
+static void test_compiler_compiles_lambda(void) {
+  const char *source = "((lambda (x) (+ x x x)) 3)";
+  uint8_t function_bytecode[] = {HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x00,
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR, // *
+
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+
+                                 HLL_BYTECODE_POP,
+
+                                 HLL_BYTECODE_CALL,
+                                 HLL_BYTECODE_END};
+
+  uint8_t program_bytecode[] = {HLL_BYTECODE_MAKEFUN,
+                                0x00,
+                                0x00, // function object
+                                HLL_BYTECODE_NIL,
+                                HLL_BYTECODE_NIL,
+                                HLL_BYTECODE_CONST,
+                                0x00,
+                                0x01,
+                                HLL_BYTECODE_APPEND,
+                                HLL_BYTECODE_POP,
+                                HLL_BYTECODE_CALL,
+                                HLL_BYTECODE_END};
+
+  (void)function_bytecode;
+
+  hll_vm *vm = hll_make_vm(NULL);
+
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(program_bytecode, sizeof(program_bytecode), compiled);
+
+  TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
+  hll_obj *func = compiled->constant_pool[0];
+  TEST_ASSERT(func->kind == HLL_OBJ_FUNC);
+
+  hll_bytecode *function_bytecode_compiled = hll_unwrap_func(func)->bytecode;
+  test_bytecode_equals(function_bytecode, sizeof(function_bytecode),
+                       function_bytecode_compiled);
+}
+
 #define TCASE(_name)                                                           \
   { #_name, _name }
 
@@ -418,4 +482,5 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
              TCASE(test_compiler_compiles_macro),
+             TCASE(test_compiler_compiles_lambda),
              {NULL, NULL}};

@@ -16,6 +16,7 @@ typedef struct {
   const struct hll_bytecode *bytecode;
   const uint8_t *ip;
   struct hll_obj *env;
+  struct hll_obj *func;
 } hll_call_frame;
 
 typedef struct hll_vm {
