@@ -1,4 +1,4 @@
-(defmacro (comparator pred pivot)
+(defmacro (compare pred pivot)
   (list 'lambda (list 'it) (list pred 'it pivot)))
 
 (define (qsort lis)
@@ -6,8 +6,8 @@
     (let ((pivot (car lis))
            (lis (cdr lis)))
       (append
-        (qsort (filter (comparator < pivot) lis))
+        (qsort (filter (compare < pivot) lis))
         (list pivot)
-        (qsort (filter (comparator >= pivot) lis))))))
+        (qsort (filter (compare >= pivot) lis))))))
 
 (print (qsort (list 5 6 2 1 4 5 2 6 3 9 1)))

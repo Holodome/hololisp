@@ -81,14 +81,17 @@ $ hololisp -e "(+ 1 2)"
 ## Examples
 
 ```scheme
+(defmacro (compare pred pivot)
+  (list 'lambda (list 'it) (list pred 'it pivot)))
+
 (define (qsort lis)
   (when lis
-    (let ((pivot (car lis))
-           (lis (cdr lis)))
+    (let ((pivot (car lis)) 
+          (lis (cdr lis)))
       (append
-        (qsort (filter (lambda (it) (< it pivot)) lis))
+        (qsort (filter (compare < pivot) lis))
         (list pivot)
-        (qsort (filter (lambda (it) (>= it pivot)) lis))))))
+        (qsort (filter (compare >= pivot) lis))))))
 
 (print (qsort (list 5 6 2 1 4 5 2 6 3 9 1)))
 ; (1 1 2 2 3 4 5 5 6 6 9)
