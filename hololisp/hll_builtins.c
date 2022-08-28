@@ -6,8 +6,12 @@
 #include <math.h>
 #include <stdio.h>
 
-#define _XOPEN_SOURCE 700
-// #define _POSIX_C_SOURCE 200809L
+// 2008 edition of the POSIX standard (IEEE Standard 1003.1-2008)
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE 1
+// For some reason we can obtain realpath definition only with these macros
+#define __USE_XOPEN_EXTENDED
+#define __USE_MISC
 #include <unistd.h>
 
 static hll_obj *builtin_print(hll_vm *vm, hll_obj *args) {
