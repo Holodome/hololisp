@@ -64,7 +64,7 @@ Program can be run in three modes: Interactive REPL traditional to lisp interpre
 To execute script pass its name to the program executable:
 
 ```bash
-hololisp examples/game_of_life.lisp
+hololisp examples/game_of_life.hl
 ```
 
 Usual REPL session looks like this:

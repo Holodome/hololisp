@@ -6,6 +6,10 @@
 
 #include "hll_hololisp.h"
 
+#ifdef HLL_MEM_CHECK
+#include "hll_mem.h"
+#endif
+
 typedef enum {
   HLL_MODE_EREPL,
   HLL_MODE_EREPL_NO_TTY,
@@ -135,7 +139,7 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    hll_interpret_result result = hll_interpret(vm, "repl", line);
+    hll_interpret_result result = hll_interpret(vm, "repl", line, true);
     manage_result(result);
   }
 
@@ -146,7 +150,7 @@ static bool execute_repl(bool tty) {
 
 static bool execute_script(const char *filename) {
   if (filename == NULL) {
-    fprintf(stderr, "No filename provided");
+    fprintf(stderr, "No filename provided\n");
     return true;
   }
 
@@ -157,7 +161,8 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, filename, file_contents);
+  hll_interpret_result result =
+      hll_interpret(vm, filename, file_contents, false);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -166,7 +171,7 @@ static bool execute_script(const char *filename) {
 
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, "cli", str);
+  hll_interpret_result result = hll_interpret(vm, "cli", str, true);
   hll_delete_vm(vm);
 
   return manage_result(result);
@@ -217,9 +222,11 @@ static bool execute(hll_options *opts) {
 #endif
 
 int main(int argc, const char **argv) {
+  int result = EXIT_SUCCESS;
   hll_options opts = {0};
   if (parse_cli_args(&opts, argc - 1, argv + 1)) {
-    return EXIT_FAILURE;
+    result = EXIT_FAILURE;
+    goto out;
   }
 
   if (opts.mode == HLL_MODE_EREPL && !HLL_IS_STDIN_A_TTY) {
@@ -227,8 +234,18 @@ int main(int argc, const char **argv) {
   }
 
   if (execute(&opts)) {
-    return EXIT_FAILURE;
+    result = EXIT_FAILURE;
+    goto out;
   }
 
-  return EXIT_SUCCESS;
+out:
+  (void)0;
+#if HLL_MEM_CHECK
+  size_t not_freed = hll_mem_check();
+  if (not_freed) {
+    fprintf(stderr, "Memory check failed: %zu not freed!\n", not_freed);
+    result = EXIT_FAILURE;
+  }
+#endif
+  return result;
 }

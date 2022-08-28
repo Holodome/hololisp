@@ -5,6 +5,7 @@
 
 #include "hll_mem.h"
 #include "hll_obj.h"
+#include "hll_util.h"
 
 void hll_dump_object(void *file, hll_obj *obj) {
   switch (obj->kind) {
@@ -22,7 +23,7 @@ void hll_dump_object(void *file, hll_obj *obj) {
     fprintf(file, "nil");
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, "num(%f)", obj->as.num);
+    fprintf(file, "num(%f)", hll_unwrap_num(obj));
     break;
   case HLL_OBJ_BIND:
     fprintf(file, "bind");
@@ -35,6 +36,12 @@ void hll_dump_object(void *file, hll_obj *obj) {
     break;
   case HLL_OBJ_FUNC:
     fprintf(file, "func %s", hll_unwrap_func(obj)->name);
+    break;
+  case HLL_OBJ_MACRO:
+    fprintf(file, "macro %s", hll_unwrap_macro(obj)->name);
+    break;
+  default:
+    HLL_UNREACHABLE;
     break;
   }
 }
@@ -144,4 +151,10 @@ size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   }
 
   return s;
+}
+
+void hll_free_bytecode(hll_bytecode *bytecode) {
+  hll_sb_free(bytecode->ops);
+  hll_sb_free(bytecode->constant_pool);
+  hll_free(bytecode, sizeof(hll_bytecode));
 }

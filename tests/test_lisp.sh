@@ -134,19 +134,18 @@ pos_test "list" "(1)" "(list 1)"
 pos_test "list" "()" "(list)"
 pos_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 
-neg_test "setcar args" "(setcar)"
-neg_test "setcar args" "(setcar '(1))"
-pos_test "setcar" "(0 1)" "(setcar '(() 1) 0)"
-neg_test "setcdr args" "(setcdr)"
-neg_test "setcdr args" "(setcdr '(1))"
-pos_test "setcdr" "(1 2)" "(setcdr '(1) '(2))"
+neg_test "setcar! args" "(setcar!)"
+neg_test "setcar! args" "(setcar! '(1))"
+pos_test "setcar!" "(0 1)" "(setcar! '(() 1) 0)"
+neg_test "setcdr! args" "(setcdr!)"
+neg_test "setcdr! args" "(setcdr! '(1))"
+pos_test "setcdr!" "(1 2)" "(setcdr! '(1) '(2))"
 
-neg_test "defun args" "(defun)"
-neg_test "defun args" "(defun x)"
-neg_test "defun name" "(defun 1 () ())"
-neg_test "defun args" "(defun f ())"
-pos_test "defun" "double" "(defun double (x) (+ x x))"
-pos_test "defun & call" "12" "(defun double (x) (+ x x)) (double 6)"
+neg_test "define args" "(define)"
+neg_test "define name" "(define (1) ())"
+neg_test "define args" "(define (1))"
+pos_test "define" "double" "(define (double x) (+ x x))"
+pos_test "define & call" "12" "(define (double x) (+ x x)) (double 6)"
 
 neg_test "let args" "(let)"
 pos_test "let" "t" "(let ((x t)) x)"
@@ -158,7 +157,7 @@ pos_test "progn" "()" "(progn)"
 pos_test "progn" "t" "(progn t)"
 pos_test "progn" "(1 2 3)" "(progn 'a (list 1 2 3))"
 
-fib_source="(defun fib (n) \
+fib_source="(define (fib n) \
 (if (<= n 1) n \
 (+ (fib (- n 1)) (fib (- n 2)))))"
 
@@ -172,14 +171,14 @@ neg_test "lambda wrong param list" "(lambda 1 ())"
 neg_test "lambda wrong param list" "(lambda (1) ())"
 pos_test "lambda" "t" "((lambda () t))"
 pos_test "lambda" "9" "((lambda (x) (+ x x x)) 3)"
-pos_test "lambda" "2" "(defvar x 1)
+pos_test "lambda" "2" "(define x 1)
 ((lambda (x) x) 2)"
 
-pos_test "closure" "3" "(defun call (f) ((lambda (var) (f)) 5))
+pos_test "closure" "3" "(define (call f) ((lambda (var) (f)) 5))
   ((lambda (var) (call (lambda () var))) 3)"
-pos_test "closure" "3" "(defvar x 2) (defvar f (lambda () x)) (set x 3) (f)"
+pos_test "closure" "3" "(define x 2) (define f (lambda () x)) (set! x 3) (f)"
 
-fizzbuzz_source="(defun fizzbuzz (n) \
+fizzbuzz_source="(define (fizzbuzz n) \
 (let ((is-mult-p (lambda (mult) (= (rem n mult) 0)))) \
 (let ((mult-3 (is-mult-p 3)) \
 (mult-5 (is-mult-p 5))) \
@@ -279,18 +278,18 @@ pos_test "not true" "()" "(not t)"
 pos_test "not nil" "t" "(not ())"
 pos_test "not eval" "()" "(not (+ 1 2))"
 
-pos_test "set" "321" "(defvar x 123)
-(set x 321)
+pos_test "set!" "321" "(define x 123)
+(set! x 321)
 x"
-pos_test "set" "(1 100 3)" "
-(defvar x '(1 2 3))
-(defvar c (cdr x))
-(set (car (cdr x)) 100)
+pos_test "set!" "(1 100 3)" "
+(define x '(1 2 3))
+(define c (cdr x))
+(set! (car (cdr x)) 100)
 x"
-pos_test "set" "(1 100 3)" "
-(defvar x '(1 2 3))
-(defvar c (cdr x))
-(set (cadr x) 100)
+pos_test "set!" "(1 100 3)" "
+(define x '(1 2 3))
+(define c (cdr x))
+(set! (cadr x) 100)
 x"
 
 neg_test "nthcdr args" "(nthcdr)"
@@ -315,7 +314,7 @@ pos_test "nth first" "0" "(nth 0 '(0 1 2 3))"
 pos_test "nth second" "1" "(nth 1 '(0 1 2 3))"
 pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
-pos_test "set nth" "(100 2 3)" "(defvar x '(1 2 3)) (set (nth 0 x) 100) x"
+pos_test "set! nth" "(100 2 3)" "(define x '(1 2 3)) (set! (nth 0 x) 100) x"
 
 pos_test "macro" "19" "(defmacro mac1 (a b) (list '+ a (list '* b 3))) (mac1 4 5)"
 pos_test "macro" "7" "(defmacro seven () 7) ((lambda () (seven)))"
@@ -326,15 +325,20 @@ pos_test "macroexpand" '(if (= x 0) (print x))' "
   (defmacro if-zero (x then) (list 'if (list '= x 0) then))
   (macroexpand (if-zero x (print x)))"
 
-pos_test "restargs" "(3 5 7)" "(defun f (x . y) (cons x y)) (f 3 5 7)"
-pos_test "restargs" "(3)" "(defun f (x . y) (cons x y)) (f 3)"
+pos_test "restargs" "(3 5 7)" "(define (f x . y) (cons x y)) (f 3 5 7)"
+pos_test "restargs" "(3)" "(define (f x . y) (cons x y)) (f 3)"
+pos_test "restargs" "empty" "(define (f . rest) (if (null? rest) 'empty 'not-empty)) (f)"
+pos_test "restargs" "not-empty" "(define (f . rest) (if (null? rest) 'empty 'not-empty)) (f 1 2 3)"
 
 neg_test "random args" "(random ())"
 neg_test "random args" "(random 1 2 3)"
 pos_test "random" "()" "(= (random) (random) (random) (random) (random) (random) (random) (random) (random) (random))"
-pos_test "random high" "t" "(defun test () (< (random 1024) 1024)) (and (test) (test) (test) (test) (test))"
-pos_test "random high low" "t" "(defun test () (let ((x (random 1024 2048))) (and (< x 2048) (>= x 1024)))) (and (test) (test) (test) (test) (test))"
+pos_test "random high" "t" "(define (test) (< (random 1024) 1024)) (and (test) (test) (test) (test) (test))"
+pos_test "random high low" "t" "(define (test) (let ((x (random 1024 2048))) (and (< x 2048) (>= x 1024)))) (and (test) (test) (test) (test) (test))"
 
+pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
+neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
+pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
 #pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
 #                                (if rest

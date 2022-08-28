@@ -64,6 +64,6 @@ void hll_delete_vm(struct hll_vm *vm);
 
 // Runs given source as hololisp code. Name is meta information.
 hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
-                                   const char *source);
+                                   const char *source, bool print_result);
 
 #endif

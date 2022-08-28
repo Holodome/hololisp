@@ -28,8 +28,9 @@ static void test_compiler_compiles_integer(void) {
   uint8_t bytecode[] = {HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_addition(void) {
@@ -47,8 +48,9 @@ static void test_compiler_compiles_addition(void) {
       HLL_BYTECODE_CALL, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_complex_arithmetic_operation(void) {
@@ -122,8 +124,9 @@ static void test_compiler_compiles_complex_arithmetic_operation(void) {
   };
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_if(void) {
@@ -146,8 +149,9 @@ static void test_compiler_compiles_if(void) {
                         HLL_BYTECODE_CONST, 0x00, 0x01, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_quote(void) {
@@ -160,12 +164,13 @@ static void test_compiler_compiles_quote(void) {
                         HLL_BYTECODE_POP, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_defun(void) {
-  const char *source = "(defun f (x) (* x 2))";
+  const char *source = "(define (f x) (* x 2))";
   uint8_t function_bytecode[] = {HLL_BYTECODE_CONST,
                                  0x00,
                                  0x00,
@@ -202,11 +207,12 @@ static void test_compiler_compiles_defun(void) {
 
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(program_bytecode, sizeof(program_bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(program_bytecode, sizeof(program_bytecode), compiled);
 
-  TEST_ASSERT(hll_sb_len(result->constant_pool) >= 1);
-  hll_obj *func = result->constant_pool[1];
+  TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
+  hll_obj *func = compiled->constant_pool[1];
   TEST_ASSERT(func->kind == HLL_OBJ_FUNC);
 
   hll_bytecode *function_bytecode_compiled = hll_unwrap_func(func)->bytecode;
@@ -263,8 +269,9 @@ static void test_compiler_compiles_let(void) {
   };
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_let_with_body(void) {
@@ -344,12 +351,13 @@ static void test_compiler_compiles_let_with_body(void) {
   };
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_setf_symbol(void) {
-  const char *source = "(defvar x) (set x t)";
+  const char *source = "(define x) (set! x t)";
   uint8_t bytecode[] = {// defvar x
                         HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL,
                         HLL_BYTECODE_LET, HLL_BYTECODE_POP,
@@ -359,12 +367,13 @@ static void test_compiler_compiles_setf_symbol(void) {
                         HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_setf_cdr(void) {
-  const char *source = "(defvar x '(1)) (set (cdr x) '(2))";
+  const char *source = "(define x '(1)) (set! (cdr x) '(2))";
   uint8_t bytecode[] = {
       // defvar x
       HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_NIL, HLL_BYTECODE_NIL,
@@ -378,8 +387,9 @@ static void test_compiler_compiles_setf_cdr(void) {
       HLL_BYTECODE_SETCDR, HLL_BYTECODE_END};
   hll_vm *vm = hll_make_vm(NULL);
 
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
 static void test_compiler_compiles_macro(void) {
@@ -389,8 +399,73 @@ static void test_compiler_compiles_macro(void) {
       HLL_BYTECODE_END};
 
   hll_vm *vm = hll_make_vm(NULL);
-  hll_bytecode *result = hll_compile(vm, source);
-  test_bytecode_equals(bytecode, sizeof(bytecode), result);
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
+}
+
+static void test_compiler_compiles_lambda(void) {
+  const char *source = "((lambda (x) (+ x x x)) 3)";
+  uint8_t function_bytecode[] = {HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x00,
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR, // *
+
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_NIL,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+                                 HLL_BYTECODE_CONST,
+                                 0x00,
+                                 0x01, // x
+                                 HLL_BYTECODE_FIND,
+                                 HLL_BYTECODE_CDR,
+                                 HLL_BYTECODE_APPEND,
+
+                                 HLL_BYTECODE_POP,
+
+                                 HLL_BYTECODE_CALL,
+                                 HLL_BYTECODE_END};
+
+  uint8_t program_bytecode[] = {HLL_BYTECODE_MAKEFUN,
+                                0x00,
+                                0x00, // function object
+                                HLL_BYTECODE_NIL,
+                                HLL_BYTECODE_NIL,
+                                HLL_BYTECODE_CONST,
+                                0x00,
+                                0x01,
+                                HLL_BYTECODE_APPEND,
+                                HLL_BYTECODE_POP,
+                                HLL_BYTECODE_CALL,
+                                HLL_BYTECODE_END};
+
+  (void)function_bytecode;
+
+  hll_vm *vm = hll_make_vm(NULL);
+
+  struct hll_obj *result = hll_compile(vm, source);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(program_bytecode, sizeof(program_bytecode), compiled);
+
+  TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
+  hll_obj *func = compiled->constant_pool[0];
+  TEST_ASSERT(func->kind == HLL_OBJ_FUNC);
+
+  hll_bytecode *function_bytecode_compiled = hll_unwrap_func(func)->bytecode;
+  test_bytecode_equals(function_bytecode, sizeof(function_bytecode),
+                       function_bytecode_compiled);
 }
 
 #define TCASE(_name)                                                           \
@@ -407,4 +482,5 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
              TCASE(test_compiler_compiles_macro),
+             TCASE(test_compiler_compiles_lambda),
              {NULL, NULL}};
