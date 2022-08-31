@@ -2,7 +2,7 @@
 #include "acutest.h"
 
 static void test_lexer_parses_simple_symbol(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "hello", NULL);
   hll_lexer_next(&lexer);
 
@@ -18,7 +18,7 @@ static void test_lexer_parses_simple_symbol(void) {
 }
 
 static void test_lexer_parses_number(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "123", NULL);
   hll_lexer_next(&lexer);
 
@@ -35,7 +35,7 @@ static void test_lexer_parses_number(void) {
 }
 
 static void test_lexer_parse_basic_syntax_multiple_tokens(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(cons -6 +7) (wha-te!ver . '-)", NULL);
 
   hll_lexer_next(&lexer);
@@ -108,7 +108,7 @@ static void test_lexer_parse_basic_syntax_multiple_tokens(void) {
 }
 
 static void test_lexer_skips_whitespace_symbols(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, " \f\n\r\t\vhello", NULL);
   hll_lexer_next(&lexer);
 
@@ -121,7 +121,7 @@ static void test_lexer_skips_whitespace_symbols(void) {
 }
 
 static void test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "+ - +- -+", NULL);
   hll_lexer_next(&lexer);
 
@@ -148,7 +148,7 @@ static void test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
 static void test_lexer_parses_comments(void) {
   const char *data = "hello ; this is comment\n"
                      "world ; this is comment too";
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, data, NULL);
 
   hll_lexer_next(&lexer);
@@ -177,7 +177,7 @@ static void test_lexer_parses_comments(void) {
 }
 
 static void test_lexer_parses_dot(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, ".123 . 123.", NULL);
 
   hll_lexer_next(&lexer);
@@ -200,7 +200,7 @@ static void test_lexer_parses_dot(void) {
 }
 
 static void test_lexer_parses_lparen(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(abc ( bca(", NULL);
 
   hll_lexer_next(&lexer);
@@ -231,7 +231,7 @@ static void test_lexer_parses_lparen(void) {
 }
 
 static void test_lexer_parses_rparen(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, ")abc ) bca)", NULL);
 
   hll_lexer_next(&lexer);
@@ -262,7 +262,7 @@ static void test_lexer_parses_rparen(void) {
 }
 
 static void test_lexer_reports_symbol_consisting_of_only_dots(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "...", NULL);
 
   hll_lexer_next(&lexer);
@@ -275,7 +275,7 @@ static void test_lexer_reports_symbol_consisting_of_only_dots(void) {
 }
 
 static void test_lexer_parses_quote(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "'abc", NULL);
 
   hll_lexer_next(&lexer);
@@ -292,7 +292,7 @@ static void test_lexer_parses_quote(void) {
 }
 
 static void test_lexer_reports_too_big_integer(void) {
-  hll_lexer lexer;
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, "11111111111111111111111111111111111111111111111111",
                  NULL);
 

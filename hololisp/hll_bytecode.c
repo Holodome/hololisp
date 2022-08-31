@@ -7,17 +7,17 @@
 #include "hll_obj.h"
 #include "hll_util.h"
 
-void hll_dump_object(void *file, hll_obj *obj) {
+void hll_dump_object(void *file, struct hll_obj *obj) {
   switch (obj->kind) {
   case HLL_OBJ_CONS:
     fprintf(file, "cons(");
-    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->car);
+    hll_dump_object(file, ((struct hll_obj_cons *)obj->as.body)->car);
     fprintf(file, ", ");
-    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->cdr);
+    hll_dump_object(file, ((struct hll_obj_cons *)obj->as.body)->cdr);
     fprintf(file, ")");
     break;
   case HLL_OBJ_SYMB:
-    fprintf(file, "symb(%s)", ((hll_obj_symb *)obj->as.body)->symb);
+    fprintf(file, "symb(%s)", ((struct hll_obj_symb *)obj->as.body)->symb);
     break;
   case HLL_OBJ_NIL:
     fprintf(file, "nil");
@@ -46,14 +46,14 @@ void hll_dump_object(void *file, hll_obj *obj) {
   }
 }
 
-void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
+void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
   uint8_t *instruction = bytecode->ops;
   if (instruction == NULL) {
     fprintf(file, "(null)\n");
     return;
   }
 
-  hll_bytecode_op op;
+  enum hll_bytecode_op op;
   size_t counter = 0;
   while ((op = *instruction++) != HLL_BYTECODE_END) {
     fprintf(file, "%4llX:#%-4llX ", (long long unsigned)counter,
@@ -143,7 +143,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
           (long long unsigned)(instruction - bytecode->ops - 1));
 }
 
-size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
+size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op) {
   size_t s = 0;
   if (op == HLL_BYTECODE_CONST || op == HLL_BYTECODE_MAKEFUN ||
       op == HLL_BYTECODE_JN) {
@@ -153,8 +153,8 @@ size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   return s;
 }
 
-void hll_free_bytecode(hll_bytecode *bytecode) {
+void hll_free_bytecode(struct hll_bytecode *bytecode) {
   hll_sb_free(bytecode->ops);
   hll_sb_free(bytecode->constant_pool);
-  hll_free(bytecode, sizeof(hll_bytecode));
+  hll_free(bytecode, sizeof(struct hll_bytecode));
 }

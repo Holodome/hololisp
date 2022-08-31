@@ -1,3 +1,5 @@
+EMCC = emcc
+
 SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
@@ -69,5 +71,13 @@ test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 
 $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 	mkdir -p $(UNIT_TEST_OUT_DIR)
+
+WASM_TARGET = $(OUT_DIR)/hololisp.wasm
+WASM_SOURCES = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
+
+wasm: $(OUT_DIR) $(WASM_TARGET)
+
+$(WASM_TARGET): $(WASM_SOURCES)
+	$(EMCC) -O2 --no-entry -o $@ $^ 
 
 .PHONY: all test tests clean
