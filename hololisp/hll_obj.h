@@ -128,4 +128,7 @@ void hll_gray_obj(struct hll_vm *vm, struct hll_obj *obj);
 HLL_PUB
 void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj);
 
+HLL_PUB
+enum hll_object_kind hll_get_obj_kind(struct hll_obj *obj);
+
 #endif

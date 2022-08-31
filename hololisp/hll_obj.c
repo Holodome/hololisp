@@ -54,7 +54,7 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
 #if 0
   fprintf(stderr, "freed object %s ",
           hll_get_object_kind_str(obj->kind));
-  if (obj->kind == HLL_OBJ_SYMB) {
+  if (hll_get_obj_kind(obj) == HLL_OBJ_SYMB) {
     fprintf(stderr, "%s", hll_unwrap_zsymb(obj));
   }
   //      hll_dump_object(stderr, to_free);
@@ -224,58 +224,58 @@ struct hll_obj *hll_new_macro(struct hll_vm *vm, struct hll_obj *params,
 }
 
 struct hll_obj_cons *hll_unwrap_cons(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_CONS);
   return (struct hll_obj_cons *)&obj->as.cons;
 }
 
 const char *hll_unwrap_zsymb(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_SYMB);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_SYMB);
   return ((struct hll_obj_symb *)obj->as.body)->symb;
 }
 
 struct hll_obj_symb *hll_unwrap_symb(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_SYMB);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_SYMB);
   return (struct hll_obj_symb *)obj->as.body;
 }
 
 struct hll_obj *hll_unwrap_cdr(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_CONS);
   return obj->as.cons.cdr;
 }
 
 struct hll_obj *hll_unwrap_car(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_CONS);
   return obj->as.cons.car;
 }
 
 struct hll_obj_bind *hll_unwrap_bind(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_BIND);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_BIND);
   return (struct hll_obj_bind *)obj->as.body;
 }
 
 struct hll_obj_env *hll_unwrap_env(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_ENV);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_ENV);
   return (struct hll_obj_env *)obj->as.body;
 }
 
 struct hll_obj_func *hll_unwrap_func(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_FUNC);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_FUNC);
   return (struct hll_obj_func *)obj->as.body;
 }
 
 struct hll_obj_func *hll_unwrap_macro(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_MACRO);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_MACRO);
   return (struct hll_obj_func *)obj->as.body;
 }
 
 double hll_unwrap_num(struct hll_obj *obj) {
-  assert(obj->kind == HLL_OBJ_NUM);
+  assert(hll_get_obj_kind(obj) == HLL_OBJ_NUM);
   return obj->as.num;
 }
 
 size_t hll_list_length(struct hll_obj *obj) {
   size_t length = 0;
-  while (obj->kind == HLL_OBJ_CONS) {
+  while (hll_get_obj_kind(obj) == HLL_OBJ_CONS) {
     ++length;
     obj = hll_unwrap_cdr(obj);
   }
@@ -404,3 +404,5 @@ void hll_blacken_obj(struct hll_vm *vm, struct hll_obj *obj) {
     break;
   }
 }
+
+enum hll_object_kind hll_get_obj_kind(struct hll_obj *obj) { return obj->kind; }

@@ -690,7 +690,8 @@ add_int_constant_and_return_its_index(struct hll_compiler *compiler,
                                       double value) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     struct hll_obj *test = compiler->bytecode->constant_pool[i];
-    if (test->kind == HLL_OBJ_NUM && hll_unwrap_num(test) == value) {
+    if (hll_get_obj_kind(test) == HLL_OBJ_NUM &&
+        hll_unwrap_num(test) == value) {
       uint16_t narrowed = i;
       assert(i == narrowed);
       return narrowed;
@@ -710,7 +711,7 @@ static uint16_t add_symbol_and_return_its_index(struct hll_compiler *compiler,
                                                 size_t length) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     struct hll_obj *test = compiler->bytecode->constant_pool[i];
-    if (test->kind == HLL_OBJ_SYMB &&
+    if (hll_get_obj_kind(test) == HLL_OBJ_SYMB &&
         strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
       uint16_t narrowed = i;
       assert(i == narrowed);
@@ -727,7 +728,7 @@ static uint16_t add_symbol_and_return_its_index(struct hll_compiler *compiler,
 }
 
 static void compile_symbol(struct hll_compiler *compiler, struct hll_obj *ast) {
-  assert(ast->kind == HLL_OBJ_SYMB);
+  assert(hll_get_obj_kind(ast) == HLL_OBJ_SYMB);
   emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
   emit_u16(compiler->bytecode,
            add_symbol_and_return_its_index(compiler, hll_unwrap_zsymb(ast),
@@ -743,9 +744,9 @@ static void compile_function_call_internal(struct hll_compiler *compiler,
                                            struct hll_obj *list) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (struct hll_obj *arg = list; arg->kind != HLL_OBJ_NIL;
+  for (struct hll_obj *arg = list; hll_get_obj_kind(arg) != HLL_OBJ_NIL;
        arg = hll_unwrap_cdr(arg)) {
-    assert(arg->kind == HLL_OBJ_CONS);
+    assert(hll_get_obj_kind(arg) == HLL_OBJ_CONS);
     struct hll_obj *obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
     emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
@@ -757,12 +758,13 @@ static void compile_function_call_internal(struct hll_compiler *compiler,
 static struct hll_obj *expand_macro(struct hll_compiler *compiler,
                                     struct hll_obj *macro,
                                     struct hll_obj *args) {
-  if (macro->kind != HLL_OBJ_SYMB) {
+  if (hll_get_obj_kind(macro) != HLL_OBJ_SYMB) {
     return NULL;
   }
 
   struct hll_obj *macro_body = hll_find_var(compiler->vm, compiler->env, macro);
-  if (macro_body == NULL || hll_unwrap_cdr(macro_body)->kind != HLL_OBJ_MACRO) {
+  if (macro_body == NULL ||
+      hll_get_obj_kind(hll_unwrap_cdr(macro_body)) != HLL_OBJ_MACRO) {
     return NULL;
   } else {
     macro_body = hll_unwrap_cdr(macro_body);
@@ -785,11 +787,11 @@ static void compile_function_call(struct hll_compiler *compiler,
 }
 
 static void compile_quote(struct hll_compiler *compiler, struct hll_obj *args) {
-  if (args->kind != HLL_OBJ_CONS) {
+  if (hll_get_obj_kind(args) != HLL_OBJ_CONS) {
     compiler_error(compiler, args, "'quote' form must have an argument");
     return;
   }
-  if (hll_unwrap_cdr(args)->kind != HLL_OBJ_NIL) {
+  if (hll_get_obj_kind(hll_unwrap_cdr(args)) != HLL_OBJ_NIL) {
     compiler_error(compiler, args,
                    "'quote' form must have exactly one argument");
   }
@@ -797,14 +799,14 @@ static void compile_quote(struct hll_compiler *compiler, struct hll_obj *args) {
 }
 
 static void compile_progn(struct hll_compiler *compiler, struct hll_obj *prog) {
-  if (prog->kind == HLL_OBJ_NIL) {
+  if (hll_get_obj_kind(prog) == HLL_OBJ_NIL) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
   }
 
-  for (; prog->kind == HLL_OBJ_CONS; prog = hll_unwrap_cdr(prog)) {
+  for (; hll_get_obj_kind(prog) == HLL_OBJ_CONS; prog = hll_unwrap_cdr(prog)) {
     compile_eval_expression(compiler, hll_unwrap_car(prog));
-    if (hll_unwrap_cdr(prog)->kind != HLL_OBJ_NIL) {
+    if (hll_get_obj_kind(hll_unwrap_cdr(prog)) != HLL_OBJ_NIL) {
       emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     }
   }
@@ -820,7 +822,7 @@ static void compile_if(struct hll_compiler *compiler, struct hll_obj *args) {
   struct hll_obj *cond = hll_unwrap_car(args);
   compile_eval_expression(compiler, cond);
   struct hll_obj *pos_arm = hll_unwrap_cdr(args);
-  assert(pos_arm->kind == HLL_OBJ_CONS);
+  assert(hll_get_obj_kind(pos_arm) == HLL_OBJ_CONS);
   struct hll_obj *neg_arm = hll_unwrap_cdr(pos_arm);
   pos_arm = hll_unwrap_car(pos_arm);
 
@@ -846,18 +848,18 @@ static void compile_let(struct hll_compiler *compiler, struct hll_obj *args) {
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
-  for (struct hll_obj *let = hll_unwrap_car(args); let->kind != HLL_OBJ_NIL;
-       let = hll_unwrap_cdr(let)) {
+  for (struct hll_obj *let = hll_unwrap_car(args);
+       hll_get_obj_kind(let) != HLL_OBJ_NIL; let = hll_unwrap_cdr(let)) {
     struct hll_obj *pair = hll_unwrap_car(let);
-    assert(pair->kind == HLL_OBJ_CONS);
+    assert(hll_get_obj_kind(pair) == HLL_OBJ_CONS);
     struct hll_obj *name = hll_unwrap_car(pair);
     struct hll_obj *value = hll_unwrap_cdr(pair);
-    if (value->kind == HLL_OBJ_CONS) {
-      assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+    if (hll_get_obj_kind(value) == HLL_OBJ_CONS) {
+      assert(hll_get_obj_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
       value = hll_unwrap_car(value);
     }
 
-    assert(name->kind == HLL_OBJ_SYMB);
+    assert(hll_get_obj_kind(name) == HLL_OBJ_SYMB);
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
@@ -907,11 +909,11 @@ enum hll_location_form {
 
 static enum hll_location_form get_location_form(struct hll_obj *location) {
   enum hll_location_form kind = HLL_LOC_NONE;
-  if (location->kind == HLL_OBJ_SYMB) {
+  if (hll_get_obj_kind(location) == HLL_OBJ_SYMB) {
     kind = HLL_LOC_FORM_SYMB;
-  } else if (location->kind == HLL_OBJ_CONS) {
+  } else if (hll_get_obj_kind(location) == HLL_OBJ_CONS) {
     struct hll_obj *first = hll_unwrap_car(location);
-    if (first->kind == HLL_OBJ_SYMB) {
+    if (hll_get_obj_kind(first) == HLL_OBJ_SYMB) {
       const char *symb = hll_unwrap_zsymb(first);
       if (strcmp(symb, "nth") == 0) {
         kind = HLL_LOC_FORM_NTH;
@@ -1006,8 +1008,8 @@ static void compile_setf(struct hll_compiler *compiler, struct hll_obj *args) {
 
   struct hll_obj *location = hll_unwrap_car(args);
   struct hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  if (hll_get_obj_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_obj_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
@@ -1023,8 +1025,8 @@ static void compile_setcar(struct hll_compiler *compiler,
 
   struct hll_obj *location = hll_unwrap_car(args);
   struct hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  if (hll_get_obj_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_obj_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
@@ -1042,8 +1044,8 @@ static void compile_setcdr(struct hll_compiler *compiler,
 
   struct hll_obj *location = hll_unwrap_car(args);
   struct hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  if (hll_get_obj_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_obj_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
@@ -1055,9 +1057,9 @@ static void compile_setcdr(struct hll_compiler *compiler,
 static void compile_list(struct hll_compiler *compiler, struct hll_obj *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (struct hll_obj *arg = args; arg->kind != HLL_OBJ_NIL;
+  for (struct hll_obj *arg = args; hll_get_obj_kind(arg) != HLL_OBJ_NIL;
        arg = hll_unwrap_cdr(arg)) {
-    assert(arg->kind == HLL_OBJ_CONS);
+    assert(hll_get_obj_kind(arg) == HLL_OBJ_CONS);
     struct hll_obj *obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
     emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
@@ -1086,7 +1088,7 @@ static void add_symbol_to_function_param_list(
     struct hll_compiler *compiler, struct hll_obj *car,
     struct hll_obj **param_list, struct hll_obj **param_list_tail) {
   struct hll_obj *symb = car;
-  if (car->kind != HLL_OBJ_NIL) {
+  if (hll_get_obj_kind(car) != HLL_OBJ_NIL) {
     uint16_t symb_idx = add_symbol_and_return_its_index(
         compiler, hll_unwrap_zsymb(car), hll_unwrap_symb(car)->length);
     symb = compiler->bytecode->constant_pool[symb_idx];
@@ -1121,21 +1123,22 @@ static struct hll_obj *compile_function_internal(struct hll_compiler *compiler,
 
   struct hll_obj *param_list = NULL;
   struct hll_obj *param_list_tail = NULL;
-  if (params->kind == HLL_OBJ_SYMB) {
+  if (hll_get_obj_kind(params) == HLL_OBJ_SYMB) {
     add_symbol_to_function_param_list(&new_compiler, compiler->vm->nil,
                                       &param_list, &param_list_tail);
     add_symbol_to_function_param_list(&new_compiler, params, &param_list,
                                       &param_list_tail);
   } else {
-    if (params->kind != HLL_OBJ_NIL && params->kind != HLL_OBJ_CONS) {
+    if (hll_get_obj_kind(params) != HLL_OBJ_NIL &&
+        hll_get_obj_kind(params) != HLL_OBJ_CONS) {
       compiler_error(compiler, params, "param list must be a list");
       return NULL;
     }
 
     struct hll_obj *obj = params;
-    for (; obj->kind == HLL_OBJ_CONS; obj = hll_unwrap_cdr(obj)) {
+    for (; hll_get_obj_kind(obj) == HLL_OBJ_CONS; obj = hll_unwrap_cdr(obj)) {
       struct hll_obj *car = hll_unwrap_car(obj);
-      if (car->kind != HLL_OBJ_SYMB) {
+      if (hll_get_obj_kind(car) != HLL_OBJ_SYMB) {
         compiler_error(compiler, car, "function param name is not a symbol");
         return NULL;
       }
@@ -1144,12 +1147,12 @@ static struct hll_obj *compile_function_internal(struct hll_compiler *compiler,
                                         &param_list_tail);
     }
 
-    if (obj->kind != HLL_OBJ_NIL) {
-      if (obj->kind != HLL_OBJ_SYMB) {
+    if (hll_get_obj_kind(obj) != HLL_OBJ_NIL) {
+      if (hll_get_obj_kind(obj) != HLL_OBJ_SYMB) {
         compiler_error(compiler, obj, "function param name is not a symbol");
         return NULL;
       }
-      assert((*param_list_tail).kind == HLL_OBJ_CONS);
+      assert(hll_get_obj_kind(param_list_tail) == HLL_OBJ_CONS);
       hll_unwrap_cons(param_list_tail)->cdr = (struct hll_obj *)obj;
     }
   }
@@ -1164,7 +1167,8 @@ static struct hll_obj *compile_function_internal(struct hll_compiler *compiler,
     hll_unwrap_func(func)->param_names = param_list;
   } else {
     func = compiled;
-    func->kind = HLL_OBJ_MACRO;
+    // TODO: Remove ub
+    *(enum hll_object_kind *)func = HLL_OBJ_MACRO;
 #if 0
     struct hll_obj_func *unwrapped = hll_unwrap_func(compiled);
     func = hll_new_macro(compiler->vm, unwrapped->param_names,
@@ -1223,11 +1227,12 @@ static void compile_and(struct hll_compiler *compiler, struct hll_obj *args) {
 
   size_t last_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
-  for (struct hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
+  for (struct hll_obj *arg_slot = args;
+       hll_get_obj_kind(arg_slot) == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
     struct hll_obj *item = hll_unwrap_car(arg_slot);
     compile_eval_expression(compiler, item);
-    if (hll_unwrap_cdr(arg_slot)->kind != HLL_OBJ_CONS) {
+    if (hll_get_obj_kind(hll_unwrap_cdr(arg_slot)) != HLL_OBJ_CONS) {
       emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     }
     emit_op(compiler->bytecode, HLL_BYTECODE_JN);
@@ -1263,7 +1268,8 @@ static void compile_or(struct hll_compiler *compiler, struct hll_obj *args) {
 
   size_t previous_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
-  for (struct hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
+  for (struct hll_obj *arg_slot = args;
+       hll_get_obj_kind(arg_slot) == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
     struct hll_obj *item = hll_unwrap_car(arg_slot);
 
@@ -1278,7 +1284,7 @@ static void compile_or(struct hll_compiler *compiler, struct hll_obj *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_DUP);
     emit_op(compiler->bytecode, HLL_BYTECODE_JN); // jump to next
     previous_jump = emit_u16(compiler->bytecode, 0);
-    if (hll_unwrap_cdr(arg_slot)->kind != HLL_OBJ_NIL) {
+    if (hll_get_obj_kind(hll_unwrap_cdr(arg_slot)) != HLL_OBJ_NIL) {
       emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
       emit_op(compiler->bytecode, HLL_BYTECODE_JN);
       emit_u16(compiler->bytecode, 0);
@@ -1310,7 +1316,7 @@ static void process_defmacro(struct hll_compiler *compiler,
   }
 
   struct hll_obj *control = hll_unwrap_car(args);
-  if (control->kind != HLL_OBJ_CONS) {
+  if (hll_get_obj_kind(control) != HLL_OBJ_CONS) {
     compiler_error(compiler, control,
                    "'defmacro' first argument must be list of macro name and "
                    "its parameters");
@@ -1318,7 +1324,7 @@ static void process_defmacro(struct hll_compiler *compiler,
   }
 
   struct hll_obj *name = hll_unwrap_car(control);
-  if (name->kind != HLL_OBJ_SYMB) {
+  if (hll_get_obj_kind(name) != HLL_OBJ_SYMB) {
     compiler_error(compiler, name, "'defmacro' name should be a symbol");
     return;
   }
@@ -1369,9 +1375,9 @@ static void compile_define(struct hll_compiler *compiler,
   struct hll_obj *decide = hll_unwrap_car(args);
   struct hll_obj *rest = hll_unwrap_cdr(args);
 
-  if (decide->kind == HLL_OBJ_CONS) {
+  if (hll_get_obj_kind(decide) == HLL_OBJ_CONS) {
     struct hll_obj *name = hll_unwrap_car(decide);
-    if (name->kind != HLL_OBJ_SYMB) {
+    if (hll_get_obj_kind(name) != HLL_OBJ_SYMB) {
       compiler_error(compiler, name, "'define' name should be a symbol");
       return;
     }
@@ -1389,10 +1395,10 @@ static void compile_define(struct hll_compiler *compiler,
     emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
     emit_u16(compiler->bytecode, function_idx);
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
-  } else if (decide->kind == HLL_OBJ_SYMB) {
+  } else if (hll_get_obj_kind(decide) == HLL_OBJ_SYMB) {
     struct hll_obj *value = rest;
-    if (value->kind == HLL_OBJ_CONS) {
-      assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+    if (hll_get_obj_kind(value) == HLL_OBJ_CONS) {
+      assert(hll_get_obj_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
       value = hll_unwrap_car(value);
     }
 
@@ -1410,7 +1416,7 @@ static void compile_define(struct hll_compiler *compiler,
 static void compile_form(struct hll_compiler *compiler, struct hll_obj *args,
                          enum hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
-    assert(args->kind == HLL_OBJ_CONS);
+    assert(hll_get_obj_kind(args) == HLL_OBJ_CONS);
     args = hll_unwrap_cdr(args);
   }
 
@@ -1477,7 +1483,7 @@ static void compile_form(struct hll_compiler *compiler, struct hll_obj *args,
 
 static void compile_eval_expression(struct hll_compiler *compiler,
                                     struct hll_obj *ast) {
-  switch (ast->kind) {
+  switch (hll_get_obj_kind(ast)) {
   case HLL_OBJ_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     break;
@@ -1492,7 +1498,7 @@ static void compile_eval_expression(struct hll_compiler *compiler,
   case HLL_OBJ_CONS: {
     struct hll_obj *fn = hll_unwrap_car(ast);
     enum hll_form_kind kind = HLL_FORM_REGULAR;
-    if (fn->kind == HLL_OBJ_SYMB) {
+    if (hll_get_obj_kind(fn) == HLL_OBJ_SYMB) {
       kind = get_form_kind(hll_unwrap_zsymb(fn));
     }
 
@@ -1514,7 +1520,7 @@ static void compile_eval_expression(struct hll_compiler *compiler,
 // After it one value is located on top of the stack.
 static void compile_expression(struct hll_compiler *compiler,
                                struct hll_obj *ast) {
-  switch (ast->kind) {
+  switch (hll_get_obj_kind(ast)) {
   case HLL_OBJ_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     break;
@@ -1531,13 +1537,14 @@ static void compile_expression(struct hll_compiler *compiler,
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
 
     struct hll_obj *obj = ast;
-    while (obj->kind != HLL_OBJ_NIL) {
-      assert(obj->kind == HLL_OBJ_CONS);
+    while (hll_get_obj_kind(obj) != HLL_OBJ_NIL) {
+      assert(hll_get_obj_kind(obj) == HLL_OBJ_CONS);
       compile_expression(compiler, hll_unwrap_car(obj));
       emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
 
       struct hll_obj *cdr = hll_unwrap_cdr(obj);
-      if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
+      if (hll_get_obj_kind(cdr) != HLL_OBJ_NIL &&
+          hll_get_obj_kind(cdr) != HLL_OBJ_CONS) {
         compile_expression(compiler, cdr);
         emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
         break;

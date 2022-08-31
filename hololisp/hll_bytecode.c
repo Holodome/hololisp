@@ -8,7 +8,7 @@
 #include "hll_util.h"
 
 void hll_dump_object(void *file, struct hll_obj *obj) {
-  switch (obj->kind) {
+  switch (hll_get_obj_kind(obj)) {
   case HLL_OBJ_CONS:
     fprintf(file, "cons(");
     hll_dump_object(file, ((struct hll_obj_cons *)obj->as.body)->car);

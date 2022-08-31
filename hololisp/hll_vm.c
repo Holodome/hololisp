@@ -84,7 +84,7 @@ void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
 
 void hll_add_variable(struct hll_vm *vm, struct hll_obj *env,
                       struct hll_obj *name, struct hll_obj *value) {
-  assert(name->kind == HLL_OBJ_SYMB);
+  assert(hll_get_obj_kind(name) == HLL_OBJ_SYMB);
   struct hll_obj *slot = hll_new_cons(vm, name, value);
   hll_sb_push(vm->temp_roots, slot);
   hll_unwrap_env(env)->vars = hll_new_cons(vm, slot, hll_unwrap_env(env)->vars);
@@ -162,16 +162,16 @@ void hll_add_binding(struct hll_vm *vm, const char *symb_str,
 struct hll_obj *hll_find_var(struct hll_vm *vm, struct hll_obj *env,
                              struct hll_obj *car) {
   (void)vm;
-  assert(car->kind == HLL_OBJ_SYMB && "argument is not a symbol");
+  assert(hll_get_obj_kind(car) == HLL_OBJ_SYMB && "argument is not a symbol");
   struct hll_obj *result = NULL;
   const char *name = hll_unwrap_zsymb(car);
-  for (; env->kind != HLL_OBJ_NIL && result == NULL;
+  for (; hll_get_obj_kind(env) != HLL_OBJ_NIL && result == NULL;
        env = hll_unwrap_env(env)->up) {
     for (struct hll_obj *cons = hll_unwrap_env(env)->vars;
-         cons->kind != HLL_OBJ_NIL && result == NULL;
+         hll_get_obj_kind(cons) != HLL_OBJ_NIL && result == NULL;
          cons = hll_unwrap_cdr(cons)) {
       struct hll_obj *test = hll_unwrap_car(cons);
-      assert(hll_unwrap_car(test)->kind == HLL_OBJ_SYMB &&
+      assert(hll_get_obj_kind(hll_unwrap_car(test)) == HLL_OBJ_SYMB &&
              "Variable is not a cons of symbol and its value");
       if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)), name) == 0) {
         result = test;
@@ -183,19 +183,20 @@ struct hll_obj *hll_find_var(struct hll_vm *vm, struct hll_obj *env,
 }
 
 void hll_print(struct hll_vm *vm, struct hll_obj *obj, void *file) {
-  switch (obj->kind) {
+  switch (hll_get_obj_kind(obj)) {
   case HLL_OBJ_CONS:
     fprintf(file, "(");
-    while (obj->kind != HLL_OBJ_NIL) {
-      assert(obj->kind == HLL_OBJ_CONS);
+    while (hll_get_obj_kind(obj) != HLL_OBJ_NIL) {
+      assert(hll_get_obj_kind(obj) == HLL_OBJ_CONS);
       hll_print(vm, hll_unwrap_car(obj), file);
 
       struct hll_obj *cdr = hll_unwrap_cdr(obj);
-      if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
+      if (hll_get_obj_kind(cdr) != HLL_OBJ_NIL &&
+          hll_get_obj_kind(cdr) != HLL_OBJ_CONS) {
         fprintf(file, " . ");
         hll_print(vm, cdr, file);
         break;
-      } else if (cdr->kind != HLL_OBJ_NIL) {
+      } else if (hll_get_obj_kind(cdr) != HLL_OBJ_NIL) {
         fprintf(file, " ");
       }
 
@@ -337,7 +338,7 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
                                                 struct hll_obj *compiled) {
   hll_sb_push(vm->temp_roots, compiled);
   struct hll_bytecode *initial_bytecode;
-  if (compiled->kind == HLL_OBJ_FUNC) {
+  if (hll_get_obj_kind(compiled) == HLL_OBJ_FUNC) {
     initial_bytecode = hll_unwrap_func(compiled)->bytecode;
   } else {
     initial_bytecode = hll_unwrap_macro(compiled)->bytecode;
@@ -398,13 +399,13 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       hll_sb_push(vm->temp_roots, obj);
 
       struct hll_obj *cons = hll_new_cons(vm, obj, vm->nil);
-      if ((*headp)->kind == HLL_OBJ_NIL) {
+      if (hll_get_obj_kind(*headp) == HLL_OBJ_NIL) {
         *headp = *tailp = cons;
       } else {
-        if (HLL_UNLIKELY((*tailp)->kind != HLL_OBJ_CONS)) {
+        if (HLL_UNLIKELY(hll_get_obj_kind(*tailp) != HLL_OBJ_CONS)) {
           hll_runtime_error(vm,
                             "tail operand of APPEND is not a cons (found %s)",
-                            hll_get_object_kind_str((*tailp)->kind));
+                            hll_get_object_kind_str(hll_get_obj_kind(*tailp)));
           goto bail;
         }
         hll_unwrap_cons(*tailp)->cdr = cons;
@@ -415,9 +416,9 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
     case HLL_BYTECODE_FIND: {
       struct hll_obj *symb = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, symb);
-      if (HLL_UNLIKELY(symb->kind != HLL_OBJ_SYMB)) {
+      if (HLL_UNLIKELY(hll_get_obj_kind(symb) != HLL_OBJ_SYMB)) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
-                          hll_get_object_kind_str(symb->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(symb)));
         goto bail;
       }
 
@@ -445,16 +446,16 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
 
       struct hll_obj *value =
           hll_sb_last(vm->call_stack).bytecode->constant_pool[idx];
-      if (HLL_UNLIKELY(value->kind != HLL_OBJ_FUNC)) {
-        internal_compiler_error(vm,
-                                "specified object is not a function (got %s)",
-                                hll_get_object_kind_str(value->kind));
+      if (HLL_UNLIKELY(hll_get_obj_kind(value) != HLL_OBJ_FUNC)) {
+        internal_compiler_error(
+            vm, "specified object is not a function (got %s)",
+            hll_get_object_kind_str(hll_get_obj_kind(value)));
         goto bail;
       }
       // Copy the function
       value = hll_copy_obj(vm, value);
       struct hll_obj_func *func = hll_unwrap_func(value);
-      assert(func->var_list->kind == HLL_OBJ_NIL);
+      assert(hll_get_obj_kind(func->var_list) == HLL_OBJ_NIL);
       func->var_list = vm->nil;
       func->env = vm->env;
 
@@ -466,34 +467,35 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       struct hll_obj *callable = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, callable);
 
-      switch (callable->kind) {
+      switch (hll_get_obj_kind(callable)) {
       case HLL_OBJ_FUNC: {
         struct hll_obj_func *func = hll_unwrap_func(callable);
         struct hll_obj *new_env = hll_new_env(vm, func->env, func->var_list);
         hll_sb_push(vm->temp_roots, new_env);
         struct hll_obj *param_name = func->param_names;
         struct hll_obj *param_value = args;
-        if (param_name->kind == HLL_OBJ_CONS &&
-            hll_unwrap_car(param_name)->kind == HLL_OBJ_SYMB) {
-          for (; param_name->kind == HLL_OBJ_CONS;
+        if (hll_get_obj_kind(param_name) == HLL_OBJ_CONS &&
+            hll_get_obj_kind(hll_unwrap_car(param_name)) == HLL_OBJ_SYMB) {
+          for (; hll_get_obj_kind(param_name) == HLL_OBJ_CONS;
                param_name = hll_unwrap_cdr(param_name),
                param_value = hll_unwrap_cdr(param_value)) {
-            if (param_value->kind != HLL_OBJ_CONS) {
+            if (hll_get_obj_kind(param_value) != HLL_OBJ_CONS) {
               hll_runtime_error(vm, "number of arguments does not match");
               goto bail;
             }
             struct hll_obj *name = hll_unwrap_car(param_name);
-            assert(name->kind == HLL_OBJ_SYMB);
+            assert(hll_get_obj_kind(name) == HLL_OBJ_SYMB);
             struct hll_obj *value = hll_unwrap_car(param_value);
             hll_add_variable(vm, new_env, name, value);
           }
-        } else if (param_name->kind == HLL_OBJ_CONS &&
-                   hll_unwrap_car(param_name)->kind == HLL_OBJ_NIL) {
+        } else if (hll_get_obj_kind(param_name) == HLL_OBJ_CONS &&
+                   hll_get_obj_kind(hll_unwrap_car(param_name)) ==
+                       HLL_OBJ_NIL) {
           param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
         }
 
-        if (param_name->kind != HLL_OBJ_NIL) {
-          assert(param_name->kind == HLL_OBJ_SYMB);
+        if (hll_get_obj_kind(param_name) != HLL_OBJ_NIL) {
+          assert(hll_get_obj_kind(param_name) == HLL_OBJ_SYMB);
           hll_add_variable(vm, new_env, param_name, param_value);
         }
 
@@ -517,7 +519,7 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       } break;
       default:
         hll_runtime_error(vm, "object is not callable (got %s)",
-                          hll_get_object_kind_str(callable->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(callable)));
         goto bail;
         break;
       }
@@ -538,7 +540,7 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       assert(hll_sb_len(vm->stack) != 0);
       struct hll_obj *cond = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cond);
-      if (cond->kind == HLL_OBJ_NIL) {
+      if (hll_get_obj_kind(cond) == HLL_OBJ_NIL) {
         hll_sb_last(vm->call_stack).ip += offset;
         if (HLL_UNLIKELY(
                 hll_sb_last(vm->call_stack).ip >
@@ -570,18 +572,18 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
     case HLL_BYTECODE_POPENV:
       vm->env = hll_unwrap_env(vm->env)->up;
       assert(vm->env);
-      assert(vm->env->kind == HLL_OBJ_ENV);
+      assert(hll_get_obj_kind(vm->env) == HLL_OBJ_ENV);
       break;
     case HLL_BYTECODE_CAR: {
       assert(hll_sb_len(vm->stack) != 0);
       struct hll_obj *cons = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cons);
       struct hll_obj *car;
-      if (cons->kind == HLL_OBJ_NIL) {
+      if (hll_get_obj_kind(cons) == HLL_OBJ_NIL) {
         car = vm->nil;
-      } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+      } else if (HLL_UNLIKELY(hll_get_obj_kind(cons) != HLL_OBJ_CONS)) {
         hll_runtime_error(vm, "CAR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(cons->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(cons)));
         goto bail;
       } else {
         car = hll_unwrap_car(cons);
@@ -595,11 +597,11 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       struct hll_obj *cons = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cons);
       struct hll_obj *cdr;
-      if (cons->kind == HLL_OBJ_NIL) {
+      if (hll_get_obj_kind(cons) == HLL_OBJ_NIL) {
         cdr = vm->nil;
-      } else if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+      } else if (HLL_UNLIKELY(hll_get_obj_kind(cons) != HLL_OBJ_CONS)) {
         hll_runtime_error(vm, "CDR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(cons->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(cons)));
         goto bail;
       } else {
         cdr = hll_unwrap_cdr(cons);
@@ -612,9 +614,9 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       struct hll_obj *car = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, car);
       struct hll_obj *cons = hll_sb_last(vm->stack);
-      if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+      if (HLL_UNLIKELY(hll_get_obj_kind(cons) != HLL_OBJ_CONS)) {
         hll_runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(cons->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(cons)));
         goto bail;
       }
       (void)hll_sb_pop(vm->temp_roots); // car
@@ -625,9 +627,9 @@ struct hll_obj *hll_interpret_bytecode_internal(struct hll_vm *vm,
       struct hll_obj *cdr = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cdr);
       struct hll_obj *cons = hll_sb_last(vm->stack);
-      if (HLL_UNLIKELY(cons->kind != HLL_OBJ_CONS)) {
+      if (HLL_UNLIKELY(hll_get_obj_kind(cons) != HLL_OBJ_CONS)) {
         hll_runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(cons->kind));
+                          hll_get_object_kind_str(hll_get_obj_kind(cons)));
         goto bail;
       }
       hll_unwrap_cons(cons)->cdr = cdr;
@@ -645,7 +647,7 @@ bail:
   //  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
   //    hll_obj *test = initial_bytecode->constant_pool[i];
   //    fprintf(stderr, "\n\n");
-  //    if (test->kind == HLL_OBJ_FUNC) {
+  //    if (hll_get_obj_kind(test) == HLL_OBJ_FUNC) {
   //      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
   //    }
   //  }
@@ -687,22 +689,22 @@ struct hll_obj *hll_expand_macro(struct hll_vm *vm, struct hll_obj *macro,
   struct hll_obj_func *fun = hll_unwrap_macro(macro);
   struct hll_obj *name_slot = fun->param_names;
   struct hll_obj *value_slot = args;
-  for (; name_slot->kind == HLL_OBJ_CONS;
+  for (; hll_get_obj_kind(name_slot) == HLL_OBJ_CONS;
        name_slot = hll_unwrap_cdr(name_slot),
        value_slot = hll_unwrap_cdr(value_slot)) {
-    if (value_slot->kind != HLL_OBJ_CONS) {
+    if (hll_get_obj_kind(value_slot) != HLL_OBJ_CONS) {
       hll_runtime_error(vm, "number of arguments does not match");
       (void)hll_sb_pop(vm->temp_roots); // env
       return NULL;
     }
     struct hll_obj *name = hll_unwrap_car(name_slot);
-    assert(name->kind == HLL_OBJ_SYMB);
+    assert(hll_get_obj_kind(name) == HLL_OBJ_SYMB);
     struct hll_obj *value = hll_unwrap_car(value_slot);
     hll_add_variable(vm, env, name, value);
   }
 
-  if (name_slot->kind != HLL_OBJ_NIL) {
-    assert(name_slot->kind == HLL_OBJ_SYMB);
+  if (hll_get_obj_kind(name_slot) != HLL_OBJ_NIL) {
+    assert(hll_get_obj_kind(name_slot) == HLL_OBJ_SYMB);
     hll_add_variable(vm, env, name_slot, value_slot);
   }
 
