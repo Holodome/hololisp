@@ -2,6 +2,11 @@
   const default_code = ";; You can edit this code!\n" +
       ";; Click here and start typing\n" +
       "(print 'hello-world)";
+
+  import { vm } from "../hll_vm";
+
+  console.log(vm);
+  vm.interpret("(print 'playground)");
 </script>
 
 <div class="lined-playground">

@@ -78,6 +78,7 @@ WASM_SOURCES = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
 wasm: $(OUT_DIR) $(WASM_TARGET)
 
 $(WASM_TARGET): $(WASM_SOURCES)
-	$(EMCC) -O2 --no-entry -o $@ $^ 
+	$(EMCC) -Os --no-entry -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -o $(OUT_DIR)/hololisp.js $^
+
 
 .PHONY: all test tests clean

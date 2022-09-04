@@ -27,17 +27,17 @@
           1)))
 
 (define (neighbour-positions x y)
-  (list (list (- x 1) (- y 1))
-        (list (- x 1) y)
-        (list (- x 1) (+ y 1))
-        (list x (- y 1))
-        (list x (+ y 1))
-        (list (+ x 1) (- y 1))
-        (list (+ x 1) y)
-        (list (+ x 1) (+ y 1))))
+  (list (cons (- x 1) (- y 1))
+        (cons (- x 1) y)
+        (cons (- x 1) (+ y 1))
+        (cons x (- y 1))
+        (cons x (+ y 1))
+        (cons (+ x 1) (- y 1))
+        (cons (+ x 1) y)
+        (cons (+ x 1) (+ y 1))))
 
 (define (neighbours board x y)
-  (acount (alive-at? board (car it) (cadr it))
+  (acount (alive-at? board (car it) (cdr it))
           (neighbour-positions x y)))
 
 (define (should-be-alive? board x y)
@@ -64,11 +64,11 @@
   (run (simulate board)))
 
 (define (create-row width)
-  (unless (<= width 0)
+  (unless (negative? width)
     (cons (random 2) (create-row (- width 1)))))
 
 (define (create-board width height)
-  (unless (<= height 0)
+  (unless (negative? height)
     (cons (create-row width) (create-board width (- height 1)))))
 
 (run (create-board *width* *height*))
