@@ -340,6 +340,12 @@ pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
 neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
 pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
+pos_test "map" "(2 4 6 8)" "(map (lambda (it) (* 2 it)) (list 1 2 3 4))"
+pos_test "amap" "(2 4 6 8)" "(amap (* 2 it) (list 1 2 3 4))"
+
+pos_test "reduce sum" "17" "(reduce (lambda (a b) (+ a b)) (list 1 3 5 6 2))"
+pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6 2))"
+
 # pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
                                 # (if rest
                                  #   (list 'if expr (&& rest))

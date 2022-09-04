@@ -6,11 +6,6 @@
 (define *width* 40)
 (define *height* 40)
 
-(define (map functor obj)
-  (when obj
-    (cons (functor (car obj))
-          (map functor (cdr obj)))))
-
 (define (range-lo lo hi)
   (unless (<= hi lo)
     (cons lo (range-lo (+ lo 1) hi))))
@@ -20,10 +15,10 @@
 
 (define (print-board board)
   (when board
-    (print (map (lambda (it) (if (zero? it) '_ '@)) (car board)))
+    (print (amap (if (zero? it) '_ '@) (car board)))
     (print-board (cdr board))))
 
-(define (alive-at board x y)
+(define (alive-at? board x y)
   (and (>= x 0)
        (< x *width*)
        (>= y 0)
@@ -31,26 +26,28 @@
        (= (nth x (nth y board))
           1)))
 
-(define (neighbours board x y)
-  (let ((at (lambda (x y) 
-              (if (alive-at board x y) 1 0))))
-      (+ (at (- x 1) (- y 1))
-         (at (- x 1) y)
-         (at (- x 1) (+ y 1))
-         (at x (- y 1))
-         (at x (+ y 1))
-         (at (+ x 1) (- y 1))
-         (at (+ x 1) y)
-         (at (+ x 1) (+ y 1)))))
+(define (neighbour-positions x y)
+  (list (list (- x 1) (- y 1))
+        (list (- x 1) y)
+        (list (- x 1) (+ y 1))
+        (list x (- y 1))
+        (list x (+ y 1))
+        (list (+ x 1) (- y 1))
+        (list (+ x 1) y)
+        (list (+ x 1) (+ y 1))))
 
-(define (should-be-alive board x y)
+(define (neighbours board x y)
+  (acount (alive-at? board (car it) (cadr it))
+          (neighbour-positions x y)))
+
+(define (should-be-alive? board x y)
   (let ((c (neighbours board x y)))
-    (if (alive-at board x y)
+    (if (alive-at? board x y)
       (or (= c 2) (= c 3))
       (= c 3))))
 
 (define (next-state board x y)
-  (if (should-be-alive board x y)
+  (if (should-be-alive? board x y)
     1
     0))
 

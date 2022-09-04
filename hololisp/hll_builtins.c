@@ -598,7 +598,6 @@ void add_builtins(struct hll_vm *vm) {
   hll_add_binding(vm, "clear", builtin_clear);
   hll_add_binding(vm, "sleep", builtin_sleep);
   hll_add_binding(vm, "length", builtin_length);
-#if 1
   hll_interpret(
       vm, "builtins",
       "(defmacro (not x) (list 'if x () 't))                                \n"
@@ -624,7 +623,46 @@ void add_builtins(struct hll_vm *vm) {
       "  (if lis                                                            \n"
       "      (and (pred (car lis)) (all pred (cdr lis)))                    \n"
       "      t))                                                            \n"
-      "\n",
+      "(defmacro (not x) (list 'if x () 't))                                \n"
+      "(defmacro (when expr . body)                                         \n"
+      "  (cons 'if (cons expr (list (cons 'progn body)))))                  \n"
+      "(defmacro (unless expr . body)                                       \n"
+      "  (cons 'if (cons expr (cons () body))))                             \n"
+      "(define (map fn lis)                                                 \n"
+      "  (when lis                                                          \n"
+      "    (cons (fn (car lis))                                             \n"
+      "          (map fn (cdr lis)))))                                      \n"
+      "(define (any pred lis)                                               \n"
+      "  (when lis                                                          \n"
+      "    (or (pred (car lis))                                             \n"
+      "        (any pred (cdr lis)))))                                      \n"
+      "(define (filter pred lis)                                            \n"
+      "  (when lis                                                          \n"
+      "    (let ((value (pred (car lis))))                                  \n"
+      "      (if value                                                      \n"
+      "          (cons (car lis) (filter pred (cdr lis)))                   \n"
+      "          (filter pred (cdr lis))))))                                \n"
+      "(define (all pred lis)                                               \n"
+      "  (if lis                                                            \n"
+      "      (and (pred (car lis)) (all pred (cdr lis)))                    \n"
+      "      t))                                                            \n"
+      "(define (reduce form lis)                                            \n"
+      "  (if (cdr lis)                                                      \n"
+      "      (form (car lis) (reduce form (cdr lis)))                       \n"
+      "      (car lis)))                                                    \n"
+      "(define (repeat n x)                                                 \n"
+      "  (when (positive? n)                                                \n"
+      "    (cons x (repeat (- n 1) x))))                                    \n"
+      "(define (count pred lis)                                             \n"
+      "  (if lis                                                            \n"
+      "      (+ (if (pred (car lis)) 1 0) (count pred (cdr lis)))           \n"
+      "      0))                                                            \n",
       false);
-#endif
+  hll_interpret(
+      vm, "builtins part 2",
+      "(defmacro (amap fn-body lis)                                         \n"
+      "  (list 'map (list 'lambda (list 'it) fn-body) lis))                 \n"
+      "(defmacro (acount fn-body lis)                                       \n"
+      "  (list 'count (list 'lambda (list 'it) fn-body) lis))               \n",
+      false);
 }
