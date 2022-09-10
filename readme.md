@@ -10,7 +10,7 @@
 *hololisp* takes inspiration from popular lisp dialects, primarily [scheme](https://en.wikipedia.org/wiki/Scheme_(programming_language)). It includes bytecode compiler and interpreter, along with tracing garbage collector. 
 
 *hololisp* supports primitive data types:
-* Numbers (internally represented as IEE754 doubles)
+* Numbers (internally represented as IEEE754 doubles)
 * Conses
 * Symbols
 

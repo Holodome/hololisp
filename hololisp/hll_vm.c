@@ -258,7 +258,7 @@ void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
 
 #if 1
 static void hll_collect_garbage(struct hll_vm *vm) {
-//    fprintf(stderr, "before collection %zu\n", vm->bytes_allocated);
+  //    fprintf(stderr, "before collection %zu\n", vm->bytes_allocated);
   // Reset allocated bytes count
   vm->bytes_allocated = 0;
   // These objects have unique instances
@@ -305,7 +305,7 @@ static void hll_collect_garbage(struct hll_vm *vm) {
     }
   }
 
-//    fprintf(stderr, "after collection %zu\n", vm->bytes_allocated);
+  //    fprintf(stderr, "after collection %zu\n", vm->bytes_allocated);
   vm->next_gc = vm->bytes_allocated +
                 ((vm->bytes_allocated * vm->config.heap_grow_percent) / 100);
   if (vm->next_gc < vm->config.min_heap_size) {

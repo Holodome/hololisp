@@ -337,7 +337,7 @@ void hll_lexer_next(struct hll_lexer *lexer) {
     lexer->next.value = value;
   } break;
   default:
-    assert(0);
+    HLL_UNREACHABLE;
   }
 }
 

@@ -137,15 +137,39 @@ footer {
 .editor-playground-code {
     width: 100%;
     height: 100%;
-    white-space: nowrap;
+    /*white-space: nowrap;*/
     background: #1e1e1e;
     border: none;
     outline: none;
-    resize: none;
+    /*resize: none;*/
     color: inherit;
     float: right;
+
+    padding: 5px;
+    box-sizing: border-box;
 }
 
 .editor-output {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+    padding: 0;
+    font-size: 0.8rem;
+    box-sizing: border-box;
+    resize: vertical;
+    margin: 0;
+}
 
+#editor-output-code {
+    width: 100%;
+    height: 100%;
+    /*white-space: nowrap;*/
+    background: #1e1e1e;
+    border: none;
+    outline: none;
+    /*resize: none;*/
+    color: inherit;
+    float: right;
+    padding: 5px;
+    box-sizing: border-box;
 }

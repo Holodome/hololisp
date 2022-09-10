@@ -1,4 +1,5 @@
 EMCC = emcc
+EMRUN = emrun
 
 SRC_DIR = hololisp
 OUT_DIR = build
@@ -13,6 +14,8 @@ endif
 LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror 
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
+
+WASM_FLAGS := -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 
 
 ifneq (,$(DEBUG))
 	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -DHLL_STRESS_GC # -fsanitize=address
@@ -78,7 +81,12 @@ WASM_SOURCES = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
 wasm: $(OUT_DIR) $(WASM_TARGET)
 
 $(WASM_TARGET): $(WASM_SOURCES)
-	$(EMCC) -Os --no-entry -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -o $(OUT_DIR)/hololisp.js $^
+	$(EMCC) -Os --no-entry -sEXPORTED_RUNTIME_METHODS=ccall,cwrap $(WASM_FLAGS) -o $(OUT_DIR)/hololisp.js $^
+
+wasm-test: $(SRCS)
+	$(EMCC) -O0 --preload-file examples --emrun $(WASM_FLAGS) -o $(OUT_DIR)/test.html $^
+	./scripts/replace_arguments_emcc.py
+	EXECUTABLE="emrun --browser firefox build/test.html --" ./tests/test_lisp.sh
 
 
-.PHONY: all test tests clean
+.PHONY: all test tests clean wasm-test

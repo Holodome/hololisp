@@ -89,7 +89,7 @@
 
 (define (next-pos board last-pos)
   (let ((pos (next-possible-cells board last-pos)))
-    (nth (random (length pos)) pos)))
+    (when pos (nth (random (length pos)) pos))))
 
 (define (make-path board stack-path)
   (when stack-path
