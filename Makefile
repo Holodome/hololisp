@@ -18,8 +18,9 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 WASM_FLAGS := -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 
 
 ifneq (,$(DEBUG))
-	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -DHLL_STRESS_GC # -fsanitize=address
-	# LDFLAGS+= -fsanitize=address
+	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -DHLL_STRESS_GC -fsanitize=address
+#	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -fsanitize=address
+	LDFLAGS+= -fsanitize=address
 endif
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)

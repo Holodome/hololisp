@@ -7,23 +7,23 @@
 #include "hll_obj.h"
 #include "hll_util.h"
 
-void hll_dump_object(void *file, struct hll_obj *obj) {
-  switch (hll_get_obj_kind(obj)) {
+void hll_dump_value(void *file, hll_value value) {
+  switch (hll_get_value_kind(value)) {
   case HLL_OBJ_CONS:
     fprintf(file, "cons(");
-    hll_dump_object(file, ((struct hll_obj_cons *)obj->as.body)->car);
+    hll_dump_value(file, hll_unwrap_car(value));
     fprintf(file, ", ");
-    hll_dump_object(file, ((struct hll_obj_cons *)obj->as.body)->cdr);
+    hll_dump_value(file, hll_unwrap_cdr(value));
     fprintf(file, ")");
     break;
   case HLL_OBJ_SYMB:
-    fprintf(file, "symb(%s)", ((struct hll_obj_symb *)obj->as.body)->symb);
+    fprintf(file, "symb(%s)", hll_unwrap_zsymb(value));
     break;
   case HLL_OBJ_NIL:
     fprintf(file, "nil");
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, "num(%f)", hll_unwrap_num(obj));
+    fprintf(file, "num(%f)", hll_unwrap_num(value));
     break;
   case HLL_OBJ_BIND:
     fprintf(file, "bind");
@@ -35,10 +35,10 @@ void hll_dump_object(void *file, struct hll_obj *obj) {
     fprintf(file, "true");
     break;
   case HLL_OBJ_FUNC:
-    fprintf(file, "func %s", hll_unwrap_func(obj)->name);
+    fprintf(file, "func %s", hll_unwrap_func(value)->name);
     break;
   case HLL_OBJ_MACRO:
-    fprintf(file, "macro %s", hll_unwrap_macro(obj)->name);
+    fprintf(file, "macro %s", hll_unwrap_macro(value)->name);
     break;
   default:
     HLL_UNREACHABLE;
@@ -108,7 +108,7 @@ void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
         fprintf(file, "MAKEFUN <err>\n");
       } else {
         fprintf(file, "MAKEFUN %" PRId16 " ", idx);
-        hll_dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_value(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;
@@ -120,7 +120,7 @@ void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
         fprintf(file, "CONST <err>\n");
       } else {
         fprintf(file, "CONST %" PRId16 " ", idx);
-        hll_dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_value(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;

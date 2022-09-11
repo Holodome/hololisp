@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "hll_hololisp.h"
+
 enum hll_bytecode_op {
   // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
@@ -61,7 +63,7 @@ struct hll_bytecode {
   // Bytecode dynamic array
   uint8_t *ops;
   // Constant pool dynamic array
-  struct hll_obj **constant_pool;
+  hll_value *constant_pool;
 };
 
 size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
@@ -69,6 +71,6 @@ size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
 void hll_free_bytecode(struct hll_bytecode *bytecode);
 void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
 
-void hll_dump_object(void *file, struct hll_obj *obj);
+void hll_dump_value(void *file, hll_value value);
 
 #endif

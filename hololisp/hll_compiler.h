@@ -76,19 +76,18 @@ struct hll_reader {
 
 void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
                      struct hll_vm *vm);
-struct hll_obj *hll_read_ast(struct hll_reader *reader);
+hll_value hll_read_ast(struct hll_reader *reader);
 
 struct hll_compiler {
   struct hll_vm *vm;
   bool has_errors;
-  struct hll_obj *env;
+  hll_value env;
   struct hll_bytecode *bytecode;
 };
 
 void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
-                       struct hll_obj *env);
-struct hll_obj *hll_compile_ast(struct hll_compiler *compiler,
-                                struct hll_obj *ast);
+                       hll_value env);
+hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast);
 
 // Compiles hololisp code as a hololisp bytecode.
 // Because internally lisp is represented as a tree of conses (lists),
@@ -97,6 +96,6 @@ struct hll_obj *hll_compile_ast(struct hll_compiler *compiler,
 // tree instead of compiling it to AST it the first place, but lisp is
 // different from other simple languages that it has macro system. Macros
 // operate on AST, thus we have to go through the AST step.
-struct hll_obj *hll_compile(struct hll_vm *vm, const char *source);
+bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled);
 
 #endif

@@ -13,8 +13,8 @@
 struct hll_call_frame {
   const struct hll_bytecode *bytecode;
   const uint8_t *ip;
-  struct hll_obj *env;
-  struct hll_obj *func;
+  hll_value env;
+  hll_value func;
 };
 
 struct hll_vm {
@@ -27,14 +27,12 @@ struct hll_vm {
   // Current parsed source.
   const char *source;
 
-  struct hll_obj *true_;
-  struct hll_obj *nil;
-  struct hll_obj *nthcdr_symb;
-  struct hll_obj *quote_symb;
+  hll_value nthcdr_symb;
+  hll_value quote_symb;
 
   // Global env. It is stored across calls to interpret, allowing defining
   // toplevel functions.
-  struct hll_obj *global_env;
+  hll_value global_env;
 
   uint32_t error_count;
   // We use xorshift64 for random number generation. Because hololisp is
@@ -42,9 +40,9 @@ struct hll_vm {
   uint64_t rng_state;
 
   // Current execution state
-  struct hll_obj **stack;
+  hll_value *stack;
   struct hll_call_frame *call_stack;
-  struct hll_obj *env;
+  hll_value env;
 
   //
   // Garbage collector stuff
@@ -58,8 +56,8 @@ struct hll_vm {
   // If bytes_allocated becomes greater than this value, trigger next gc.
   // May not be greater than min_heap_size specified in config.
   size_t next_gc;
-  struct hll_obj **gray_objs;
-  struct hll_obj **temp_roots;
+  hll_value *gray_objs;
+  hll_value *temp_roots;
   uint32_t forbid_gc;
 };
 
@@ -81,27 +79,25 @@ void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
 
 HLL_PUB
 void hll_add_binding(struct hll_vm *vm, const char *symb,
-                     struct hll_obj *(*bind)(struct hll_vm *vm,
-                                             struct hll_obj *args));
+                     hll_value (*bind)(struct hll_vm *vm, hll_value args));
 
 HLL_PUB
-bool hll_interpret_bytecode(struct hll_vm *vm, struct hll_obj *compiled,
+bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
                             bool print_result);
 
 HLL_PUB
-void hll_add_variable(struct hll_vm *vm, struct hll_obj *env,
-                      struct hll_obj *name, struct hll_obj *value);
+void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
+                      hll_value value);
 
 HLL_PUB
-struct hll_obj *hll_expand_macro(struct hll_vm *vm, struct hll_obj *macro,
-                                 struct hll_obj *args);
+hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args);
 
 HLL_PUB
-void hll_print(struct hll_vm *vm, struct hll_obj *obj, void *file);
+void hll_print(struct hll_vm *vm, hll_value obj, void *file);
 
 HLL_PUB
-struct hll_obj *hll_find_var(struct hll_vm *vm, struct hll_obj *env,
-                             struct hll_obj *car);
+bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
+                  hll_value *found);
 
 HLL_PUB
 void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...);

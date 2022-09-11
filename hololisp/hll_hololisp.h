@@ -21,6 +21,8 @@
 
 struct hll_vm;
 
+typedef uint64_t hll_value;
+
 // Describes function that is used to perform error reporting (it's user
 // part). This means that internally, if any part of language encounters
 // error it will be handled accordingly. This function is responsible for
