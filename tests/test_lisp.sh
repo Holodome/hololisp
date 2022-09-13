@@ -44,9 +44,11 @@ neg_test () {
     echo "ok"
 }
 
-#pos_test comment 5 "
-#    ; 2
-#    5 ; 3"
+pos_test comment 5 "
+    ; 2
+    5 ; 3"
+
+neg_test "invalid token" "фыва"
 
 pos_test integer 1 1
 pos_test integer -1 -1
