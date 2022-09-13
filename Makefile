@@ -1,26 +1,32 @@
-EMCC = emcc
-EMRUN = emrun
-
 SRC_DIR = hololisp
 OUT_DIR = build
 TARGET = $(OUT_DIR)/hololisp
 CFLAGS = -O2
 LDFLAGS = -lm
 
+$(shell mkdir -p $(OUT_DIR))
+
 ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
-endif 
-# To separate CLI-settable parameters from constant. These are constant
-LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror 
+endif
+
+LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
-WASM_FLAGS := -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 
+ifneq (,$(ASAN))
+	CFLAGS += -fsanitize=address
+	LDFLAGS += -fsanitize=address
+endif
+
+ifneq (,$(STRESS_GC))
+	CFLAGS += -DHLL_STRESS_GC
+endif
 
 ifneq (,$(DEBUG))
-	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -DHLL_STRESS_GC -fsanitize=address
-#	CFLAGS+=-g -DHLL_DEBUG -DHLL_MEM_CHECK -fsanitize=address
-	LDFLAGS+= -fsanitize=address
+	CFLAGS += -O0 -g -DHLL_DEBUG -DHLL_MEM_CHECK
+else 
+	CFLAGS += -DNDEBUG
 endif
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
@@ -30,10 +36,7 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.o)
 # Program rules
 #
 
-all: $(OUT_DIR) $(TARGET)
-
-$(OUT_DIR):
-	mkdir -p $(OUT_DIR)
+all: $(TARGET)
 
 -include $(SRCS:$(SRC_DIR)/%.c=$(OUT_DIR)/%.d)
 
@@ -78,6 +81,9 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 
 WASM_TARGET = $(OUT_DIR)/hololisp.wasm
 WASM_SOURCES = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
+WASM_FLAGS = -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1
+EMCC = emcc
+EMRUN = emrun
 
 wasm: $(OUT_DIR) $(WASM_TARGET)
 

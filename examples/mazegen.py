@@ -1,8 +1,8 @@
 import random
 import sys
 sys.setrecursionlimit(1_500_000)
-WIDTH = 40
-HEIGHT = 40
+WIDTH = 10
+HEIGHT = 10
 VISITED = 1
 
 def is_empty(board, x, y):

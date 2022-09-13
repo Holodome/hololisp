@@ -431,3 +431,18 @@ bool hll_is_symb(hll_value value) {
 bool hll_is_list(hll_value value) {
   return hll_is_cons(value) || hll_is_nil(value);
 }
+
+HLL_PUB hll_value hll_car(hll_value lis) {
+  if (hll_is_nil(lis)) {
+    return lis;
+  }
+
+  return hll_unwrap_car(lis);
+}
+HLL_PUB hll_value hll_cdr(hll_value lis) {
+  if (hll_is_nil(lis)) {
+    return lis;
+  }
+
+  return hll_unwrap_cdr(lis);
+}

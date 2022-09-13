@@ -4,8 +4,8 @@
 ;;
 
 (define VISITED 1)
-(define WIDTH 40)
-(define HEIGHT 40)
+(define WIDTH 5)
+(define HEIGHT 5)
 
 (define (print-board board)
   (when board

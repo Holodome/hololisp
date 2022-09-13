@@ -135,4 +135,7 @@ HLL_PUB bool hll_is_cons(hll_value value);
 HLL_PUB bool hll_is_symb(hll_value value);
 HLL_PUB bool hll_is_list(hll_value value);
 
+HLL_PUB hll_value hll_car(hll_value lis);
+HLL_PUB hll_value hll_cdr(hll_value lis);
+
 #endif

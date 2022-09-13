@@ -48,3 +48,16 @@
       (+ (if (pred (car lis)) 1 0) (count pred (cdr lis)))
       0))
 
+(define (semireverse lis n)
+  (define (continue front back n)
+    (if (null? back)
+      front
+      (if (zero? n)
+        (cons (car back) (append front (cdr back)))
+        (continue (cons (car back) front) (cdr back) (- n 1)))))
+  (continue () lis n))
+
+(define (shuffle lis)
+  (when lis
+    (let ((lis-prime (semireverse lis (random (length lis)))))
+      (cons (car lis-prime) (shuffle (cdr lis-prime))))))

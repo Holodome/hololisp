@@ -899,6 +899,7 @@ enum hll_location_form {
   HLL_LOC_NONE,
   HLL_LOC_FORM_SYMB,
   HLL_LOC_FORM_NTH,
+  HLL_LOC_FORM_NTHCDR,
 #define HLL_CAR_CDR(_, _letters) HLL_LOC_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -914,6 +915,8 @@ static enum hll_location_form get_location_form(hll_value location) {
       const char *symb = hll_unwrap_zsymb(first);
       if (strcmp(symb, "nth") == 0) {
         kind = HLL_LOC_FORM_NTH;
+      } else if (strcmp(symb, "nthcdr") == 0) {
+        kind = HLL_LOC_FORM_NTHCDR;
       }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -937,6 +940,20 @@ static void compile_set_location(struct hll_compiler *compiler,
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
     emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    compile_eval_expression(compiler, value);
+    emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    break;
+  case HLL_LOC_FORM_NTHCDR:
+    if (hll_list_length(location) != 3) {
+      compiler_error(compiler, location, "'nthcdr' expects exactly 2 arguments");
+      break;
+    }
+    // get the nth function
+    compile_symbol(compiler, compiler->vm->nthcdr_symb);
+    emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    // call nth
+    compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
@@ -1339,6 +1356,7 @@ static void compile_macroexpand(struct hll_compiler *compiler, hll_value args) {
   hll_value expanded;
   bool ok = expand_macro(compiler, hll_unwrap_car(macro_list),
                          hll_unwrap_cdr(macro_list), &expanded);
+  (void)ok;
   assert(ok);
   compile_expression(compiler, expanded);
 }
@@ -1549,3 +1567,88 @@ hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast) {
   (void)hll_sb_pop(compiler->vm->temp_roots);
   return result;
 }
+#if 0
+
+enum hll_tail_recursive_form_kind {
+  HLL_TAIL_RECURIVE_FORM_OTHER,
+  HLL_TAIL_RECURSIVE_FORM_IF,
+  HLL_TAIL_RECURSIVE_FORM_PROGN,
+  HLL_TAIL_RECURSIVE_FORM_AND,
+  HLL_TAIL_RECURSIVE_FORM_OR,
+  HLL_TAIL_RECURSIVE_FORM_LET,
+};
+
+static enum hll_tail_recursive_form_kind
+get_tail_recursive_form_kind(hll_value form) {
+  assert(hll_is_symb(form));
+  const char *symb = hll_unwrap_zsymb(form);
+
+  enum hll_tail_recursive_form_kind kind = HLL_TAIL_RECURIVE_FORM_OTHER;
+  if (strcmp(symb, "if") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_IF;
+  } else if (strcmp(symb, "progn") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_PROGN;
+  } else if (strcmp(symb, "and") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_AND;
+  } else if (strcmp(symb, "or") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_OR;
+  } else if (strcmp(symb, "let") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_LET;
+  }
+
+  return kind;
+}
+
+static bool is_if_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_and_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_or_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_let_tail_recurive(hll_value form, hll_value name_symb) {}
+
+bool is_progn_tail_recursive(hll_value progn, hll_value name_symb) {
+  assert(hll_is_symb(name_symb));
+  // skip to the last statement
+  for (; hll_is_cons(progn) && !hll_is_nil(hll_unwrap_cdr(progn));
+       progn = hll_unwrap_cdr(progn))
+    ;
+
+  // Now progn has either last element or some bogus value.
+  if (!hll_is_cons(progn) || !hll_is_nil(hll_unwrap_cdr(progn))) {
+    return false;
+  }
+
+  hll_value last = hll_unwrap_car(progn);
+  if (!hll_is_cons(last)) {
+    return false;
+  }
+
+  hll_value form = hll_unwrap_car(last);
+  if (!hll_is_symb(form)) {
+    return false;
+  }
+
+  enum hll_tail_recursive_form_kind kind = get_tail_recursive_form_kind(form);
+  switch (kind) {
+  case HLL_TAIL_RECURIVE_FORM_OTHER: {
+    const char *name = hll_unwrap_zsymb(name_symb);
+    if (strcmp(name, hll_unwrap_zsymb(form)) == 0) {
+      return true;
+    }
+  } break;
+  case HLL_TAIL_RECURSIVE_FORM_IF:
+    return is_if_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_PROGN:
+    return is_progn_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_AND:
+    return is_and_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_OR:
+    return is_or_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_LET:
+    return is_let_tail_recurive(form, name_symb);
+  }
+
+  return false;
+}
+#endif

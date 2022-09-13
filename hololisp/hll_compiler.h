@@ -98,4 +98,5 @@ hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast);
 // operate on AST, thus we have to go through the AST step.
 bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled);
 
+
 #endif
