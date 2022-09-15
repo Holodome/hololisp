@@ -5,14 +5,13 @@
 # User guide
 
 - [Compiling](guide/compiling.md)
-- [Running scripts](guide/run.md)
+- [Running](guide/run.md)
 
 # Language description
 
 - [Design](./spec/design.md)
-- [Features](./spec/features.md)
 - [Syntax](./spec/syntax.md)
-- [Types of values](./spec/values.md)
+- [Values](./spec/values.md)
 
 - [Runtime](./spec/runtime/readme.md)
   - [Bytecode compiler](./spec/runtime/bytecode.md)
@@ -24,8 +23,6 @@
   - [Functional library](./spec/s-expr/functional.md)
   - [Macro system](./spec/s-expr/macros.md)
   - [C FFI](./spec/s-expr/c-ffi.md)
-
-# Developer notes
 
 # Conclusion
 

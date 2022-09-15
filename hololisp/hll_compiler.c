@@ -945,7 +945,8 @@ static void compile_set_location(struct hll_compiler *compiler,
     break;
   case HLL_LOC_FORM_NTHCDR:
     if (hll_list_length(location) != 3) {
-      compiler_error(compiler, location, "'nthcdr' expects exactly 2 arguments");
+      compiler_error(compiler, location,
+                     "'nthcdr' expects exactly 2 arguments");
       break;
     }
     // get the nth function

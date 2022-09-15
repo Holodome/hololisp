@@ -1,4 +1,4 @@
-# Running scripts
+# Running
 
 hololisp interpreter executable can be used in three modes: REPL, executing script files, and executing command strings.
 

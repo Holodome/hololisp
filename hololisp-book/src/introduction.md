@@ -2,7 +2,7 @@
 
 Welcome to the *hololisp book*, a description of a toy programming language hololisp. hololisp is a freestanding lisp dialect, having ideas taken from multiple other popular dialects with core guideline being to keep things simple.
 
-## Who is this language and book for 
+## Who is this language and book are for 
 
 hololisp may be of interest to programming language enthusiasts and students looking for reference system implementation with thorough description.
 
