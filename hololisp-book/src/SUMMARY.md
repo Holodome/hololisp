@@ -4,7 +4,7 @@
 
 # User guide
 
-- [Installation](guide/installation.md)
+- [Compiling](guide/compiling.md)
 - [Running scripts](guide/run.md)
 
 # Language description
