@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-EXECUTABLE=./build/hololisp
+if [ -z "$EXECUTABLE" ]; then
+    EXECUTABLE=./build/hololisp
+fi
 
 failed=0
 
@@ -13,14 +15,14 @@ panic () {
 pos_test () {
     echo -n "Testing $1 ... "
 
-    error=$("$EXECUTABLE" -e "$3" 2>&1 > /dev/null)
+    error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
     if [ -n "$error" ]; then
         echo FAILED
         panic "$error"
         return 
     fi
 
-    result=$("$EXECUTABLE" -e "$3" 2> /dev/null | tail -1)
+    result=$($EXECUTABLE -e "$3" 2> /dev/null | tail -1)
     if [ "$result" != "$2" ]; then
         echo FAILED
         panic "'$2' expected, but got '$result'"
@@ -32,7 +34,7 @@ pos_test () {
 
 neg_test () {
     echo -n "Testing $1 ... "
-     error=$("$EXECUTABLE" -e "$2" 2>&1 > /dev/null)
+     error=$($EXECUTABLE -e "$2" 2>&1 > /dev/null)
     if [ -z "$error" ]; then
         echo FAILED
         panic "$1"
@@ -45,6 +47,8 @@ neg_test () {
 pos_test comment 5 "
     ; 2
     5 ; 3"
+
+neg_test "invalid token" "фыва"
 
 pos_test integer 1 1
 pos_test integer -1 -1
@@ -243,24 +247,30 @@ pos_test "negative?" "()" "(negative? 100)"
 pos_test "negative?" "()" "(negative? 0)"
 pos_test "negative?" "t" "(negative? -100)"
 
+pos_test "even?" "t" "(even? 2)"
+pos_test "even?" "()" "(even? 1)"
+
+pos_test "odd?" "()" "(odd? 2)"
+pos_test "odd?" "t" "(odd? 1)"
+
 neg_test "abs args" "(abs)"
 neg_test "abs args" "(abs 1 2)"
 neg_test "abs type" "(abs ())"
 pos_test "abs" "1" "(abs -1)"
 pos_test "abs" "1" "(abs 1)"
 
-neg_test "append args" "(append)"
-neg_test "append args" "(append '(a b))"
-neg_test "append args" "(append '(a b) '(c d) ())"
+pos_test "append" "()" "(append)"
+pos_test "append" "(a b)" "(append '(a b))"
+pos_test "append" "(a b c d)" "(append '(a b) '(c d) ())"
 pos_test "append" "(a b c d)" "(append '(a b) '(c d))"
 pos_test "append" "(1 (2 (3)) i (j) k)" "(append '(1 (2 (3))) '(i (j) k))"
 pos_test "append" "(foo . bar)" "(append '(foo) 'bar)"
 
-neg_test "reverse args" "(reverse)"
-neg_test "reverse args" "(reverse () ())"
-pos_test "reverse" "()" "(reverse ())"
-pos_test "reverse" "(1)" "(reverse '(1))"
-pos_test "reverse" "(4 3 2 1)" "(reverse '(1 2 3 4))"
+neg_test "reverse args" "(reverse!)"
+neg_test "reverse args" "(reverse! () ())"
+pos_test "reverse" "()" "(reverse! ())"
+pos_test "reverse" "(1)" "(reverse! '(1))"
+pos_test "reverse" "(4 3 2 1)" "(reverse! '(1 2 3 4))"
 
 pos_test "when true" "t" "(when t t)"
 pos_test "when false" "()" "(when () t)"
@@ -316,13 +326,13 @@ pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
 pos_test "set! nth" "(100 2 3)" "(define x '(1 2 3)) (set! (nth 0 x) 100) x"
 
-pos_test "macro" "19" "(defmacro mac1 (a b) (list '+ a (list '* b 3))) (mac1 4 5)"
-pos_test "macro" "7" "(defmacro seven () 7) ((lambda () (seven)))"
-pos_test "macro" "42" "(defmacro if-zero (x then) (list 'if (list '= x 0) then))
+pos_test "macro" "19" "(defmacro (mac1 a b) (list '+ a (list '* b 3))) (mac1 4 5)"
+pos_test "macro" "7" "(defmacro (seven) 7) ((lambda () (seven)))"
+pos_test "macro" "42" "(defmacro (if-zero x then) (list 'if (list '= x 0) then))
   (if-zero 0 42)"
 
 pos_test "macroexpand" '(if (= x 0) (print x))' "
-  (defmacro if-zero (x then) (list 'if (list '= x 0) then))
+  (defmacro (if-zero x then) (list 'if (list '= x 0) then))
   (macroexpand (if-zero x (print x)))"
 
 pos_test "restargs" "(3 5 7)" "(define (f x . y) (cons x y)) (f 3 5 7)"
@@ -340,10 +350,18 @@ pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
 neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
 pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
-#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
-#                                (if rest
+pos_test "map" "(2 4 6 8)" "(map (lambda (it) (* 2 it)) (list 1 2 3 4))"
+pos_test "amap" "(2 4 6 8)" "(amap (* 2 it) (list 1 2 3 4))"
+
+pos_test "reduce sum" "17" "(reduce (lambda (a b) (+ a b)) (list 1 3 5 6 2))"
+pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6 2))"
+
+pos_test "range" "(0 1 2 3 4)" "(range 5)"
+pos_test "range" "(5 6 7 8 9)" "(range 5 10)"
+
+#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro (&& expr . rest)
+#                                 (if rest
 #                                    (list 'if expr (&& rest))
-#                                    expr))
-#(macroexpand (&& 1 2 3))"
+#                                    (list expr))) (macroexpand (&& 1 2 3))"
 
 exit $failed

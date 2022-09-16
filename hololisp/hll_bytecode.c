@@ -1,5 +1,6 @@
 #include "hll_bytecode.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -7,23 +8,23 @@
 #include "hll_obj.h"
 #include "hll_util.h"
 
-void hll_dump_object(void *file, hll_obj *obj) {
-  switch (obj->kind) {
+void hll_dump_value(void *file, hll_value value) {
+  switch (hll_get_value_kind(value)) {
   case HLL_OBJ_CONS:
     fprintf(file, "cons(");
-    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->car);
+    hll_dump_value(file, hll_unwrap_car(value));
     fprintf(file, ", ");
-    hll_dump_object(file, ((hll_obj_cons *)obj->as.body)->cdr);
+    hll_dump_value(file, hll_unwrap_cdr(value));
     fprintf(file, ")");
     break;
   case HLL_OBJ_SYMB:
-    fprintf(file, "symb(%s)", ((hll_obj_symb *)obj->as.body)->symb);
+    fprintf(file, "symb(%s)", hll_unwrap_zsymb(value));
     break;
   case HLL_OBJ_NIL:
     fprintf(file, "nil");
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, "num(%f)", hll_unwrap_num(obj));
+    fprintf(file, "num(%f)", hll_unwrap_num(value));
     break;
   case HLL_OBJ_BIND:
     fprintf(file, "bind");
@@ -35,10 +36,10 @@ void hll_dump_object(void *file, hll_obj *obj) {
     fprintf(file, "true");
     break;
   case HLL_OBJ_FUNC:
-    fprintf(file, "func %s", hll_unwrap_func(obj)->name);
+    fprintf(file, "func");
     break;
   case HLL_OBJ_MACRO:
-    fprintf(file, "macro %s", hll_unwrap_macro(obj)->name);
+    fprintf(file, "macro");
     break;
   default:
     HLL_UNREACHABLE;
@@ -46,14 +47,14 @@ void hll_dump_object(void *file, hll_obj *obj) {
   }
 }
 
-void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
+void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
   uint8_t *instruction = bytecode->ops;
   if (instruction == NULL) {
     fprintf(file, "(null)\n");
     return;
   }
 
-  hll_bytecode_op op;
+  enum hll_bytecode_op op;
   size_t counter = 0;
   while ((op = *instruction++) != HLL_BYTECODE_END) {
     fprintf(file, "%4llX:#%-4llX ", (long long unsigned)counter,
@@ -108,7 +109,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
         fprintf(file, "MAKEFUN <err>\n");
       } else {
         fprintf(file, "MAKEFUN %" PRId16 " ", idx);
-        hll_dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_value(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;
@@ -120,7 +121,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
         fprintf(file, "CONST <err>\n");
       } else {
         fprintf(file, "CONST %" PRId16 " ", idx);
-        hll_dump_object(file, bytecode->constant_pool[idx]);
+        hll_dump_value(file, bytecode->constant_pool[idx]);
         fprintf(file, "\n");
       }
     } break;
@@ -143,7 +144,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
           (long long unsigned)(instruction - bytecode->ops - 1));
 }
 
-size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
+size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op) {
   size_t s = 0;
   if (op == HLL_BYTECODE_CONST || op == HLL_BYTECODE_MAKEFUN ||
       op == HLL_BYTECODE_JN) {
@@ -153,8 +154,22 @@ size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   return s;
 }
 
-void hll_free_bytecode(hll_bytecode *bytecode) {
-  hll_sb_free(bytecode->ops);
-  hll_sb_free(bytecode->constant_pool);
-  hll_free(bytecode, sizeof(hll_bytecode));
+struct hll_bytecode *hll_new_bytecode(void) {
+  return hll_alloc(sizeof(struct hll_bytecode));
+}
+
+void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode) {
+  assert(bytecode->refcount != UINT32_MAX);
+  ++bytecode->refcount;
+}
+
+void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode) {
+  assert(bytecode->refcount != 0);
+  --bytecode->refcount;
+
+  if (bytecode->refcount == 0) {
+    hll_sb_free(bytecode->ops);
+    hll_sb_free(bytecode->constant_pool);
+    hll_free(bytecode, sizeof(struct hll_bytecode));
+  }
 }

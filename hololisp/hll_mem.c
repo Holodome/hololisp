@@ -5,23 +5,23 @@
 
 void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
   if (arr == NULL) {
-    void *result = hll_alloc(sizeof(hll_sb_header) + stride * inc);
+    void *result = hll_alloc(sizeof(struct hll_sb_header) + stride * inc);
     assert(result != NULL);
-    hll_sb_header *header = result;
+    struct hll_sb_header *header = result;
     header->size = 0;
     header->capacity = inc;
     return header + 1;
   }
 
-  hll_sb_header *header = hll_sb_header(arr);
+  struct hll_sb_header *header = hll_sb_header(arr);
   size_t double_current = header->capacity * 2;
   size_t min_needed = header->size + inc;
 
   size_t new_capacity =
       double_current > min_needed ? double_current : min_needed;
-  void *result =
-      hll_realloc(header, sizeof(hll_sb_header) + stride * header->capacity,
-                  sizeof(hll_sb_header) + stride * new_capacity);
+  void *result = hll_realloc(
+      header, sizeof(struct hll_sb_header) + stride * header->capacity,
+      sizeof(struct hll_sb_header) + stride * new_capacity);
   header = result;
   header->capacity = new_capacity;
   return header + 1;

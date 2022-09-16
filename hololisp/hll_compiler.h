@@ -10,7 +10,7 @@
 #include "hll_mem.h"
 
 // Kinds of tokens recognized by lexer.
-typedef enum {
+enum hll_token_kind {
   // End of file
   HLL_TOK_EOF,
   // Integer
@@ -29,21 +29,21 @@ typedef enum {
   HLL_TOK_COMMENT,
   // Unexpected sequence of tokens.
   HLL_TOK_UNEXPECTED
-} hll_token_kind;
+};
 
 // Coupled token definition.
-typedef struct {
-  hll_token_kind kind;
+struct hll_token {
+  enum hll_token_kind kind;
   size_t offset;
   uint32_t length;
   double value;
-} hll_token;
+};
 
 // Lexer is designed in way it is possible to use outside of compiler to allow
 // asy writing of tools like syntax highlighter and code formatter.
 // Thus is does not act as a individual step of translation but as
 // helper for reader.
-typedef struct {
+struct hll_lexer {
   // Used for error reporting. If NULL, no errors are reported
   struct hll_vm *vm;
   // Mark that errors have been encountered during lexing.
@@ -53,14 +53,15 @@ typedef struct {
   // Input start. Used to calculate each token's offset
   const char *input;
   // Next peeked token. Stores results of lexing
-  hll_token next;
-} hll_lexer;
+  struct hll_token next;
+};
 
 // Initializes lexer to given buffer.
-void hll_lexer_init(hll_lexer *lexer, const char *input, struct hll_vm *vm);
-void hll_lexer_next(hll_lexer *lexer);
+void hll_lexer_init(struct hll_lexer *lexer, const char *input,
+                    struct hll_vm *vm);
+void hll_lexer_next(struct hll_lexer *lexer);
 
-typedef struct {
+struct hll_reader {
   // Needed for error reporting.
   struct hll_vm *vm;
   // Mark that errors have been encountered during parsing.
@@ -68,24 +69,25 @@ typedef struct {
   // Lexer used for reading.
   // Reader process all tokens produced by lexer until EOF, so lifetime of
   // this lexer is associated with reader.
-  hll_lexer *lexer;
+  struct hll_lexer *lexer;
 
   bool should_return_old_token;
-} hll_reader;
+};
 
-void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm);
-struct hll_obj *hll_read_ast(hll_reader *reader);
+void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
+                     struct hll_vm *vm);
+hll_value hll_read_ast(struct hll_reader *reader);
 
-typedef struct {
+struct hll_compiler {
   struct hll_vm *vm;
   bool has_errors;
-  struct hll_obj *env;
+  hll_value env;
   struct hll_bytecode *bytecode;
-} hll_compiler;
+};
 
-void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
-                       struct hll_obj *env);
-struct hll_obj *hll_compile_ast(hll_compiler *compiler, struct hll_obj *ast);
+void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
+                       hll_value env);
+hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast);
 
 // Compiles hololisp code as a hololisp bytecode.
 // Because internally lisp is represented as a tree of conses (lists),
@@ -94,6 +96,6 @@ struct hll_obj *hll_compile_ast(hll_compiler *compiler, struct hll_obj *ast);
 // tree instead of compiling it to AST it the first place, but lisp is
 // different from other simple languages that it has macro system. Macros
 // operate on AST, thus we have to go through the AST step.
-struct hll_obj *hll_compile(struct hll_vm *vm, const char *source);
+bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled);
 
 #endif

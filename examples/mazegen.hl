@@ -4,12 +4,12 @@
 ;;
 
 (define VISITED 1)
-(define WIDTH 10)
-(define HEIGHT 10)
+(define WIDTH 40)
+(define HEIGHT 40)
 
 (define (print-board board)
   (when board
-    (print (map (lambda (it) (if (= it VISITED) '- '@)) (car board)))
+    (print (amap (if (= it VISITED) '- '@) (car board)))
     (print-board (cdr board))))
 
 (define (set-at! board x y value)
@@ -21,13 +21,8 @@
 (define (is-empty? board x y)
   (/= (get-at board x y) VISITED))
 
-(define (create-row width)
-  (unless (<= width 0)
-    (cons 0 (create-row (- width 1)))))
-
 (define (create-board width height)
-  (unless (<= height 0)
-    (cons (create-row width) (create-board width (- height 1)))))
+  (amap (amap 0 (range width)) (range height)))
 
 (define (neighbours-4- last-pos)
   (let ((x (car last-pos))
@@ -89,7 +84,7 @@
 
 (define (next-pos board last-pos)
   (let ((pos (next-possible-cells board last-pos)))
-    (nth (random (length pos)) pos)))
+    (when pos (nth (random (length pos)) pos))))
 
 (define (make-path board stack-path)
   (when stack-path

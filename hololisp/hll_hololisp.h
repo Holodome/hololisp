@@ -4,10 +4,24 @@
 #ifndef HLL_HOLOLISP_H
 #define HLL_HOLOLISP_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+// NOTE: Normally emscripten applications are not defining public interface like
+// this because they contain 'main' function that directly references everything
+// needed. In our case we are compiling library 'as is', so we need to mark each
+// function.
+#define HLL_PUB extern EMSCRIPTEN_KEEPALIVE
+#else
+#define HLL_PUB extern
+#endif
+
 struct hll_vm;
+
+typedef uint64_t hll_value;
 
 // Describes function that is used to perform error reporting (it's user
 // part). This means that internally, if any part of language encounters
@@ -19,7 +33,7 @@ typedef void hll_error_fn(struct hll_vm *vm, const char *text);
 
 typedef void hll_write_fn(struct hll_vm *vm, const char *text);
 
-typedef struct hll_config {
+struct hll_config {
   // The callback used when user prints message (printf for example).
   // If this is NULL, nothing shall be printed.
   hll_write_fn *write_fn;
@@ -47,23 +61,26 @@ typedef struct hll_config {
 
   // Any data user wants to be accessed through callback functions.
   void *user_data;
-} hll_config;
+};
 
-typedef enum {
+enum hll_interpret_result {
   HLL_RESULT_OK = 0x0,
   HLL_RESULT_COMPILE_ERROR = 0x1,
   HLL_RESULT_RUNTIME_ERROR = 0x2,
-} hll_interpret_result;
+};
 
 // If config is NULL, uses default config.
 // Config is copied to the VM.
-struct hll_vm *hll_make_vm(const hll_config *config);
+HLL_PUB
+struct hll_vm *hll_make_vm(const struct hll_config *config);
 
 // Deletes VM and frees all its data.
+HLL_PUB
 void hll_delete_vm(struct hll_vm *vm);
 
 // Runs given source as hololisp code. Name is meta information.
-hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
-                                   const char *source, bool print_result);
+HLL_PUB
+enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
+                                        const char *source, bool print_result);
 
 #endif

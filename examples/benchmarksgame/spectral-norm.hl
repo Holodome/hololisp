@@ -1,0 +1,14 @@
+;(define (multiply-at-av n u v) 123)
+
+(define (approximate n)
+  (define u (amap 1 (range 0 n)))
+  (define v (amap 0 (range 0 n)))
+
+;  (map (lambda (it) (multiply-at-av n u v) (multiply-at-v v u)) (range 0 10))
+
+  (reduce (lambda (u v) (print u)) u v)
+  )
+
+(print (map (lambda (a b) (print a b)) (list 1 2 3 4) (list 3 4 5 6)))
+;(print (reduce (lambda (x y) (print x y)) (list 1 2 3 4) (list 3 4 5 6)))
+;(print (approximate 10))

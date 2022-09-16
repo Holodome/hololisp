@@ -3,13 +3,8 @@
 ;; hololisp version
 ;;
 
-(define *width* 40)
-(define *height* 40)
-
-(define (map functor obj)
-  (when obj
-    (cons (functor (car obj))
-          (map functor (cdr obj)))))
+(define *width* 5)
+(define *height* 5)
 
 (define (range-lo lo hi)
   (unless (<= hi lo)
@@ -20,10 +15,10 @@
 
 (define (print-board board)
   (when board
-    (print (map (lambda (it) (if (zero? it) '_ '@)) (car board)))
+    (print (amap (if (zero? it) '_ '@) (car board)))
     (print-board (cdr board))))
 
-(define (alive-at board x y)
+(define (alive-at? board x y)
   (and (>= x 0)
        (< x *width*)
        (>= y 0)
@@ -31,26 +26,28 @@
        (= (nth x (nth y board))
           1)))
 
-(define (neighbours board x y)
-  (let ((at (lambda (x y) 
-              (if (alive-at board x y) 1 0))))
-      (+ (at (- x 1) (- y 1))
-         (at (- x 1) y)
-         (at (- x 1) (+ y 1))
-         (at x (- y 1))
-         (at x (+ y 1))
-         (at (+ x 1) (- y 1))
-         (at (+ x 1) y)
-         (at (+ x 1) (+ y 1)))))
+(define (neighbour-positions x y)
+  (list (cons (- x 1) (- y 1))
+        (cons (- x 1) y)
+        (cons (- x 1) (+ y 1))
+        (cons x (- y 1))
+        (cons x (+ y 1))
+        (cons (+ x 1) (- y 1))
+        (cons (+ x 1) y)
+        (cons (+ x 1) (+ y 1))))
 
-(define (should-be-alive board x y)
+(define (neighbours board x y)
+  (acount (alive-at? board (car it) (cdr it))
+          (neighbour-positions x y)))
+
+(define (should-be-alive? board x y)
   (let ((c (neighbours board x y)))
-    (if (alive-at board x y)
+    (if (alive-at? board x y)
       (or (= c 2) (= c 3))
       (= c 3))))
 
 (define (next-state board x y)
-  (if (should-be-alive board x y)
+  (if (should-be-alive? board x y)
     1
     0))
 
@@ -67,11 +64,11 @@
   (run (simulate board)))
 
 (define (create-row width)
-  (unless (<= width 0)
+  (unless (negative? width)
     (cons (random 2) (create-row (- width 1)))))
 
 (define (create-board width height)
-  (unless (<= height 0)
+  (unless (negative? height)
     (cons (create-row width) (create-board width (- height 1)))))
 
 (run (create-board *width* *height*))

@@ -13,27 +13,29 @@
 #include "hll_util.h"
 #include "hll_vm.h"
 
-struct hll_obj *hll_compile(hll_vm *vm, const char *source) {
-  hll_lexer lexer;
+bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
+  struct hll_lexer lexer;
   hll_lexer_init(&lexer, source, vm);
-  hll_reader reader;
+  struct hll_reader reader;
   hll_reader_init(&reader, &lexer, vm);
 
   ++vm->forbid_gc;
-  hll_obj *ast = hll_read_ast(&reader);
-  hll_compiler compiler;
+  hll_value ast = hll_read_ast(&reader);
+  struct hll_compiler compiler;
   hll_compiler_init(&compiler, vm, vm->env);
-  struct hll_obj *result = hll_compile_ast(&compiler, ast);
+  hll_value result = hll_compile_ast(&compiler, ast);
   --vm->forbid_gc;
 
   if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
-    return NULL;
+    return false;
   }
 
-  return result;
+  *compiled = result;
+
+  return true;
 }
 
-typedef enum {
+enum hll_lexer_equivalence_class {
   HLL_LEX_EQC_OTHER = 0x0, // Anything not handled
   HLL_LEX_EQC_NUMBER,      // 0-9
   HLL_LEX_EQC_LPAREN,      // (
@@ -46,10 +48,11 @@ typedef enum {
   HLL_LEX_EQC_SPACE,
   HLL_LEX_EQC_NEWLINE,
   HLL_LEX_EQC_COMMENT, // ;
-} HLL_lexer_equivalence_class;
+};
 
-static inline HLL_lexer_equivalence_class get_equivalence_class(char symb) {
-  HLL_lexer_equivalence_class eqc = HLL_LEX_EQC_OTHER;
+static inline enum hll_lexer_equivalence_class
+get_equivalence_class(char symb) {
+  enum hll_lexer_equivalence_class eqc = HLL_LEX_EQC_OTHER;
   // clang-format off
     switch (symb) {
     case '(': eqc = HLL_LEX_EQC_LPAREN; break;
@@ -86,7 +89,7 @@ static inline HLL_lexer_equivalence_class get_equivalence_class(char symb) {
   return eqc;
 }
 
-typedef enum {
+enum hll_lexer_state {
   HLL_LEX_START,
   HLL_LEX_COMMENT,
   HLL_LEX_NUMBER,
@@ -105,10 +108,11 @@ typedef enum {
   HLL_LEX_FIN_EOF,
   HLL_LEX_FIN_UNEXPECTED,
   HLL_LEX_FIN_COMMENT,
-} HLL_lexer_state;
+};
 
-static inline HLL_lexer_state get_next_state(HLL_lexer_state state,
-                                             HLL_lexer_equivalence_class eqc) {
+static inline enum hll_lexer_state
+get_next_state(enum hll_lexer_state state,
+               enum hll_lexer_equivalence_class eqc) {
   switch (state) {
   case HLL_LEX_START:
     switch (eqc) {
@@ -227,7 +231,7 @@ static inline HLL_lexer_state get_next_state(HLL_lexer_state state,
 }
 
 HLL_ATTR(format(printf, 2, 3))
-static void lexer_error(hll_lexer *lexer, const char *fmt, ...) {
+static void lexer_error(struct hll_lexer *lexer, const char *fmt, ...) {
   lexer->has_errors = true;
   if (lexer->vm == NULL) {
     return;
@@ -242,25 +246,26 @@ static void lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, buffer);
 }
 
-void hll_lexer_init(hll_lexer *lexer, const char *input, hll_vm *vm) {
-  memset(lexer, 0, sizeof(hll_lexer));
+void hll_lexer_init(struct hll_lexer *lexer, const char *input,
+                    struct hll_vm *vm) {
+  memset(lexer, 0, sizeof(struct hll_lexer));
   lexer->vm = vm;
   lexer->cursor = lexer->input = input;
 }
 
-void hll_lexer_next(hll_lexer *lexer) {
+void hll_lexer_next(struct hll_lexer *lexer) {
   // Pull it from structure so there is better chance in ends up in
   // register.
   const char *cursor = lexer->cursor;
   const char *token_start = cursor;
-  HLL_lexer_state state = HLL_LEX_START;
+  enum hll_lexer_state state = HLL_LEX_START;
   do {
     // Basic state machine-based lexing.
     // It has been decided to use character equivalence classes in hope that
     // lexical grammar stays simple. In cases like C grammar, there are a
     // lot of special cases that are better be handled by per-codepoint
     // lookup.
-    HLL_lexer_equivalence_class eqc = get_equivalence_class(*cursor++);
+    enum hll_lexer_equivalence_class eqc = get_equivalence_class(*cursor++);
     // Decides what state should go next based on current state and new
     // character.
     state = get_next_state(state, eqc);
@@ -334,18 +339,19 @@ void hll_lexer_next(hll_lexer *lexer) {
     lexer->next.value = value;
   } break;
   default:
-    assert(0);
+    HLL_UNREACHABLE;
   }
 }
 
-void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm) {
-  memset(reader, 0, sizeof(hll_reader));
+void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
+                     struct hll_vm *vm) {
+  memset(reader, 0, sizeof(struct hll_reader));
   reader->lexer = lexer;
   reader->vm = vm;
 }
 
 HLL_ATTR(format(printf, 2, 3))
-static void reader_error(hll_reader *reader, const char *fmt, ...) {
+static void reader_error(struct hll_reader *reader, const char *fmt, ...) {
   reader->has_errors = true;
   if (reader->vm == NULL) {
     return;
@@ -361,7 +367,7 @@ static void reader_error(hll_reader *reader, const char *fmt, ...) {
                    reader->lexer->next.length, buffer);
 }
 
-static void peek_token(hll_reader *reader) {
+static void peek_token(struct hll_reader *reader) {
   if (reader->should_return_old_token) {
     return;
   }
@@ -380,13 +386,13 @@ static void peek_token(hll_reader *reader) {
   reader->should_return_old_token = true;
 }
 
-static void eat_token(hll_reader *reader) {
+static void eat_token(struct hll_reader *reader) {
   reader->should_return_old_token = false;
 }
 
-static hll_obj *read_expr(hll_reader *reader);
+static hll_value read_expr(struct hll_reader *reader);
 
-static hll_obj *read_list(hll_reader *reader) {
+static hll_value read_list(struct hll_reader *reader) {
   peek_token(reader);
   assert(reader->lexer->next.kind == HLL_TOK_LPAREN);
   eat_token(reader);
@@ -396,13 +402,13 @@ static hll_obj *read_list(hll_reader *reader) {
   peek_token(reader);
   if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
     eat_token(reader);
-    return reader->vm->nil;
+    return hll_nil();
   }
 
-  hll_obj *list_head;
-  hll_obj *list_tail;
+  hll_value list_head;
+  hll_value list_tail;
   list_head = list_tail =
-      hll_new_cons(reader->vm, read_expr(reader), reader->vm->nil);
+      hll_new_cons(reader->vm, read_expr(reader), hll_nil());
 
   // Now enter the loop of parsing other list elements.
   for (;;) {
@@ -426,30 +432,29 @@ static hll_obj *read_list(hll_reader *reader) {
       return list_head;
     }
 
-    hll_obj *ast = read_expr(reader);
-    hll_unwrap_cons(list_tail)->cdr =
-        hll_new_cons(reader->vm, ast, reader->vm->nil);
+    hll_value ast = read_expr(reader);
+    hll_unwrap_cons(list_tail)->cdr = hll_new_cons(reader->vm, ast, hll_nil());
     list_tail = hll_unwrap_cdr(list_tail);
   }
 
   assert(!"Unreachable");
 }
 
-static hll_obj *read_expr(hll_reader *reader) {
-  hll_obj *ast = reader->vm->nil;
+static hll_value read_expr(struct hll_reader *reader) {
+  hll_value ast = hll_nil();
   peek_token(reader);
   switch (reader->lexer->next.kind) {
   case HLL_TOK_EOF:
     break;
   case HLL_TOK_INT:
     eat_token(reader);
-    ast = hll_new_num(reader->vm, reader->lexer->next.value);
+    ast = hll_num(reader->lexer->next.value);
     break;
   case HLL_TOK_SYMB:
     eat_token(reader);
     if (reader->lexer->next.length == 1 &&
         reader->lexer->input[reader->lexer->next.offset] == 't') {
-      ast = reader->vm->true_;
+      ast = hll_true();
       break;
     }
 
@@ -462,9 +467,8 @@ static hll_obj *read_expr(hll_reader *reader) {
     break;
   case HLL_TOK_QUOTE: {
     eat_token(reader);
-    ast = hll_new_cons(
-        reader->vm, reader->vm->quote_symb,
-        hll_new_cons(reader->vm, read_expr(reader), reader->vm->nil));
+    ast = hll_new_cons(reader->vm, reader->vm->quote_symb,
+                       hll_new_cons(reader->vm, read_expr(reader), hll_nil()));
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -479,9 +483,9 @@ static hll_obj *read_expr(hll_reader *reader) {
   return ast;
 }
 
-hll_obj *hll_read_ast(hll_reader *reader) {
-  hll_obj *list_head = NULL;
-  hll_obj *list_tail = NULL;
+hll_value hll_read_ast(struct hll_reader *reader) {
+  hll_value list_head = hll_nil();
+  hll_value list_tail = hll_nil();
 
   for (;;) {
     peek_token(reader);
@@ -489,10 +493,10 @@ hll_obj *hll_read_ast(hll_reader *reader) {
       break;
     }
 
-    hll_obj *ast = read_expr(reader);
-    hll_obj *cons = hll_new_cons(reader->vm, ast, reader->vm->nil);
+    hll_value ast = read_expr(reader);
+    hll_value cons = hll_new_cons(reader->vm, ast, hll_nil());
 
-    if (list_head == NULL) {
+    if (hll_is_nil(list_head)) {
       list_head = list_tail = cons;
     } else {
       hll_unwrap_cons(list_tail)->cdr = cons;
@@ -500,23 +504,23 @@ hll_obj *hll_read_ast(hll_reader *reader) {
     }
   }
 
-  if (list_head == NULL) {
-    list_head = reader->vm->nil;
+  if (hll_is_nil(list_head)) {
+    list_head = hll_nil();
   }
 
   return list_head;
 }
 
-void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm,
-                       struct hll_obj *env) {
-  memset(compiler, 0, sizeof(hll_compiler));
+void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
+                       hll_value env) {
+  memset(compiler, 0, sizeof(struct hll_compiler));
   compiler->vm = vm;
   compiler->env = env;
-  compiler->bytecode = hll_alloc(sizeof(hll_bytecode));
+  compiler->bytecode = hll_new_bytecode();
 }
 
 HLL_ATTR(format(printf, 3, 4))
-static void compiler_error(hll_compiler *compiler, hll_obj *ast,
+static void compiler_error(struct hll_compiler *compiler, hll_value ast,
                            const char *fmt, ...) {
   (void)ast;
   compiler->has_errors = true;
@@ -574,7 +578,7 @@ static void compiler_error(hll_compiler *compiler, hll_obj *ast,
 // Thus, a number a forms can be easily expressed through already
 // existent bytecode instructions. This is why things like car and cdr appear
 // here.
-typedef enum {
+enum hll_form_kind {
   // Regular form. This means function invocation, either ffi or
   // language-defined
   HLL_FORM_REGULAR,
@@ -610,10 +614,10 @@ typedef enum {
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
-} hll_form_kind;
+};
 
-static hll_form_kind get_form_kind(const char *symb) {
-  hll_form_kind kind = HLL_FORM_REGULAR;
+static enum hll_form_kind get_form_kind(const char *symb) {
+  enum hll_form_kind kind = HLL_FORM_REGULAR;
   if (strcmp(symb, "quote") == 0) {
     kind = HLL_FORM_QUOTE;
   } else if (strcmp(symb, "if") == 0) {
@@ -655,17 +659,17 @@ static hll_form_kind get_form_kind(const char *symb) {
   return kind;
 }
 
-static size_t get_current_op_idx(hll_bytecode *bytecode) {
+static size_t get_current_op_idx(struct hll_bytecode *bytecode) {
   return hll_sb_len(bytecode->ops);
 }
 
-size_t emit_u8(hll_bytecode *bytecode, uint8_t byte) {
+size_t emit_u8(struct hll_bytecode *bytecode, uint8_t byte) {
   size_t idx = get_current_op_idx(bytecode);
   hll_sb_push(bytecode->ops, byte);
   return idx;
 }
 
-size_t emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
+size_t emit_op(struct hll_bytecode *bytecode, enum hll_bytecode_op op) {
   assert(op <= 0xFF);
   return emit_u8(bytecode, op);
 }
@@ -675,45 +679,44 @@ static void write_u16_be(uint8_t *data, uint16_t value) {
   *data = value & 0xFF;
 }
 
-static size_t emit_u16(hll_bytecode *bytecode, uint16_t value) {
+static size_t emit_u16(struct hll_bytecode *bytecode, uint16_t value) {
   size_t idx = emit_u8(bytecode, (value >> 8) & 0xFF);
   emit_u8(bytecode, value & 0xFF);
   return idx;
 }
 
-static uint16_t add_int_constant_and_return_its_index(hll_compiler *compiler,
-                                                      double value) {
+static uint16_t
+add_int_constant_and_return_its_index(struct hll_compiler *compiler,
+                                      double value) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
-    hll_obj *test = compiler->bytecode->constant_pool[i];
-    if (test->kind == HLL_OBJ_NUM && hll_unwrap_num(test) == value) {
+    hll_value test = compiler->bytecode->constant_pool[i];
+    if (hll_is_num(test) && hll_unwrap_num(test) == value) {
       uint16_t narrowed = i;
       assert(i == narrowed);
       return narrowed;
     }
   }
 
-  hll_sb_push(compiler->bytecode->constant_pool,
-              hll_new_num(compiler->vm, value));
+  hll_sb_push(compiler->bytecode->constant_pool, hll_num(value));
   size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
   uint16_t narrowed = result;
   assert(result == narrowed);
   return narrowed;
 }
 
-static uint16_t add_symbol_and_return_its_index(hll_compiler *compiler,
+static uint16_t add_symbol_and_return_its_index(struct hll_compiler *compiler,
                                                 const char *symb_,
                                                 size_t length) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
-    hll_obj *test = compiler->bytecode->constant_pool[i];
-    if (test->kind == HLL_OBJ_SYMB &&
-        strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
+    hll_value test = compiler->bytecode->constant_pool[i];
+    if (hll_is_symb(test) && strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
       uint16_t narrowed = i;
       assert(i == narrowed);
       return narrowed;
     }
   }
 
-  hll_obj *symb = hll_new_symbol(compiler->vm, symb_, length);
+  hll_value symb = hll_new_symbol(compiler->vm, symb_, length);
   hll_sb_push(compiler->bytecode->constant_pool, symb);
   size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
   uint16_t narrowed = result;
@@ -721,25 +724,26 @@ static uint16_t add_symbol_and_return_its_index(hll_compiler *compiler,
   return narrowed;
 }
 
-static void compile_symbol(hll_compiler *compiler, hll_obj *ast) {
-  assert(ast->kind == HLL_OBJ_SYMB);
+static void compile_symbol(struct hll_compiler *compiler, hll_value ast) {
+  assert(hll_get_value_kind(ast) == HLL_OBJ_SYMB);
   emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
   emit_u16(compiler->bytecode,
            add_symbol_and_return_its_index(compiler, hll_unwrap_zsymb(ast),
                                            hll_unwrap_symb(ast)->length));
 }
 
-static void compile_expression(hll_compiler *compiler, hll_obj *ast);
-static void compile_eval_expression(hll_compiler *compiler, hll_obj *ast);
+static void compile_expression(struct hll_compiler *compiler, hll_value ast);
+static void compile_eval_expression(struct hll_compiler *compiler,
+                                    hll_value ast);
 
-static void compile_function_call_internal(hll_compiler *compiler,
-                                           hll_obj *list) {
+static void compile_function_call_internal(struct hll_compiler *compiler,
+                                           hll_value list) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (hll_obj *arg = list; arg->kind != HLL_OBJ_NIL;
+  for (hll_value arg = list; hll_get_value_kind(arg) != HLL_OBJ_NIL;
        arg = hll_unwrap_cdr(arg)) {
-    assert(arg->kind == HLL_OBJ_CONS);
-    hll_obj *obj = hll_unwrap_car(arg);
+    assert(hll_get_value_kind(arg) == HLL_OBJ_CONS);
+    hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
     emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
   }
@@ -747,27 +751,30 @@ static void compile_function_call_internal(hll_compiler *compiler,
   emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
 }
 
-static hll_obj *expand_macro(hll_compiler *compiler, hll_obj *macro,
-                             hll_obj *args) {
-  if (macro->kind != HLL_OBJ_SYMB) {
-    return NULL;
+static bool expand_macro(struct hll_compiler *compiler, hll_value macro,
+                         hll_value args, hll_value *expanded) {
+  if (hll_get_value_kind(macro) != HLL_OBJ_SYMB) {
+    return false;
   }
 
-  hll_obj *macro_body = hll_find_var(compiler->vm, compiler->env, macro);
-  if (macro_body == NULL || hll_unwrap_cdr(macro_body)->kind != HLL_OBJ_MACRO) {
-    return NULL;
+  hll_value macro_body;
+  if (!hll_find_var(compiler->vm, compiler->env, macro, &macro_body) ||
+      hll_get_value_kind(hll_unwrap_cdr(macro_body)) != HLL_OBJ_MACRO) {
+    return false;
   } else {
     macro_body = hll_unwrap_cdr(macro_body);
   }
 
-  return hll_expand_macro(compiler->vm, macro_body, (hll_obj *)args);
+  *expanded = hll_expand_macro(compiler->vm, macro_body, args);
+  return true;
 }
 
-static void compile_function_call(hll_compiler *compiler, hll_obj *list) {
-  hll_obj *fn = hll_unwrap_car(list);
-  hll_obj *args = hll_unwrap_cdr(list);
-  hll_obj *expanded;
-  if ((expanded = expand_macro(compiler, fn, args))) {
+static void compile_function_call(struct hll_compiler *compiler,
+                                  hll_value list) {
+  hll_value fn = hll_unwrap_car(list);
+  hll_value args = hll_unwrap_cdr(list);
+  hll_value expanded;
+  if (expand_macro(compiler, fn, args, &expanded)) {
     compile_eval_expression(compiler, expanded);
     return;
   }
@@ -775,44 +782,45 @@ static void compile_function_call(hll_compiler *compiler, hll_obj *list) {
   compile_function_call_internal(compiler, args);
 }
 
-static void compile_quote(hll_compiler *compiler, hll_obj *args) {
-  if (args->kind != HLL_OBJ_CONS) {
+static void compile_quote(struct hll_compiler *compiler, hll_value args) {
+  if (hll_get_value_kind(args) != HLL_OBJ_CONS) {
     compiler_error(compiler, args, "'quote' form must have an argument");
     return;
   }
-  if (hll_unwrap_cdr(args)->kind != HLL_OBJ_NIL) {
+  if (hll_get_value_kind(hll_unwrap_cdr(args)) != HLL_OBJ_NIL) {
     compiler_error(compiler, args,
                    "'quote' form must have exactly one argument");
   }
   compile_expression(compiler, hll_unwrap_car(args));
 }
 
-static void compile_progn(hll_compiler *compiler, hll_obj *prog) {
-  if (prog->kind == HLL_OBJ_NIL) {
+static void compile_progn(struct hll_compiler *compiler, hll_value prog) {
+  if (hll_get_value_kind(prog) == HLL_OBJ_NIL) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
   }
 
-  for (; prog->kind == HLL_OBJ_CONS; prog = hll_unwrap_cdr(prog)) {
+  for (; hll_get_value_kind(prog) == HLL_OBJ_CONS;
+       prog = hll_unwrap_cdr(prog)) {
     compile_eval_expression(compiler, hll_unwrap_car(prog));
-    if (hll_unwrap_cdr(prog)->kind != HLL_OBJ_NIL) {
+    if (hll_get_value_kind(hll_unwrap_cdr(prog)) != HLL_OBJ_NIL) {
       emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     }
   }
 }
 
-static void compile_if(hll_compiler *compiler, hll_obj *args) {
+static void compile_if(struct hll_compiler *compiler, hll_value args) {
   size_t length = hll_list_length(args);
   if (length < 2) {
     compiler_error(compiler, args, "'if' form expects at least 2 arguments");
     return;
   }
 
-  hll_obj *cond = hll_unwrap_car(args);
+  hll_value cond = hll_unwrap_car(args);
   compile_eval_expression(compiler, cond);
-  hll_obj *pos_arm = hll_unwrap_cdr(args);
-  assert(pos_arm->kind == HLL_OBJ_CONS);
-  hll_obj *neg_arm = hll_unwrap_cdr(pos_arm);
+  hll_value pos_arm = hll_unwrap_cdr(args);
+  assert(hll_get_value_kind(pos_arm) == HLL_OBJ_CONS);
+  hll_value neg_arm = hll_unwrap_cdr(pos_arm);
   pos_arm = hll_unwrap_car(pos_arm);
 
   emit_op(compiler->bytecode, HLL_BYTECODE_JN);
@@ -828,7 +836,7 @@ static void compile_if(hll_compiler *compiler, hll_obj *args) {
                get_current_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
-static void compile_let(hll_compiler *compiler, hll_obj *args) {
+static void compile_let(struct hll_compiler *compiler, hll_value args) {
   size_t length = hll_list_length(args);
   if (length < 1) {
     compiler_error(compiler, args,
@@ -837,18 +845,18 @@ static void compile_let(hll_compiler *compiler, hll_obj *args) {
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
-  for (hll_obj *let = hll_unwrap_car(args); let->kind != HLL_OBJ_NIL;
-       let = hll_unwrap_cdr(let)) {
-    hll_obj *pair = hll_unwrap_car(let);
-    assert(pair->kind == HLL_OBJ_CONS);
-    hll_obj *name = hll_unwrap_car(pair);
-    hll_obj *value = hll_unwrap_cdr(pair);
-    if (value->kind == HLL_OBJ_CONS) {
-      assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  for (hll_value let = hll_unwrap_car(args);
+       hll_get_value_kind(let) != HLL_OBJ_NIL; let = hll_unwrap_cdr(let)) {
+    hll_value pair = hll_unwrap_car(let);
+    assert(hll_get_value_kind(pair) == HLL_OBJ_CONS);
+    hll_value name = hll_unwrap_car(pair);
+    hll_value value = hll_unwrap_cdr(pair);
+    if (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+      assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
       value = hll_unwrap_car(value);
     }
 
-    assert(name->kind == HLL_OBJ_SYMB);
+    assert(hll_get_value_kind(name) == HLL_OBJ_SYMB);
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
@@ -860,7 +868,8 @@ static void compile_let(hll_compiler *compiler, hll_obj *args) {
 }
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
-  static void compile_c##_lower##r(hll_compiler *compiler, hll_obj *args) {    \
+  static void compile_c##_lower##r(struct hll_compiler *compiler,              \
+                                   hll_value args) {                           \
     if (hll_list_length(args) != 1) {                                          \
       compiler_error(compiler, args,                                           \
                      "'c" #_lower "r' expects exactly 1 argument");            \
@@ -886,25 +895,28 @@ static void compile_let(hll_compiler *compiler, hll_obj *args) {
 HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 
-typedef enum {
+enum hll_location_form {
   HLL_LOC_NONE,
   HLL_LOC_FORM_SYMB,
   HLL_LOC_FORM_NTH,
+  HLL_LOC_FORM_NTHCDR,
 #define HLL_CAR_CDR(_, _letters) HLL_LOC_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
-} hll_location_form;
+};
 
-static hll_location_form get_location_form(hll_obj *location) {
-  hll_location_form kind = HLL_LOC_NONE;
-  if (location->kind == HLL_OBJ_SYMB) {
+static enum hll_location_form get_location_form(hll_value location) {
+  enum hll_location_form kind = HLL_LOC_NONE;
+  if (hll_get_value_kind(location) == HLL_OBJ_SYMB) {
     kind = HLL_LOC_FORM_SYMB;
-  } else if (location->kind == HLL_OBJ_CONS) {
-    hll_obj *first = hll_unwrap_car(location);
-    if (first->kind == HLL_OBJ_SYMB) {
+  } else if (hll_get_value_kind(location) == HLL_OBJ_CONS) {
+    hll_value first = hll_unwrap_car(location);
+    if (hll_get_value_kind(first) == HLL_OBJ_SYMB) {
       const char *symb = hll_unwrap_zsymb(first);
       if (strcmp(symb, "nth") == 0) {
         kind = HLL_LOC_FORM_NTH;
+      } else if (strcmp(symb, "nthcdr") == 0) {
+        kind = HLL_LOC_FORM_NTHCDR;
       }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -918,9 +930,9 @@ static hll_location_form get_location_form(hll_obj *location) {
   return kind;
 }
 
-static void compile_set_location(hll_compiler *compiler, hll_obj *location,
-                                 hll_obj *value) {
-  hll_location_form kind = get_location_form(location);
+static void compile_set_location(struct hll_compiler *compiler,
+                                 hll_value location, hll_value value) {
+  enum hll_location_form kind = get_location_form(location);
   switch (kind) {
   case HLL_LOC_NONE:
     compiler_error(compiler, location, "location is not valid");
@@ -928,6 +940,21 @@ static void compile_set_location(hll_compiler *compiler, hll_obj *location,
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
     emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    compile_eval_expression(compiler, value);
+    emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    break;
+  case HLL_LOC_FORM_NTHCDR:
+    if (hll_list_length(location) != 3) {
+      compiler_error(compiler, location,
+                     "'nthcdr' expects exactly 2 arguments");
+      break;
+    }
+    // get the nth function
+    compile_symbol(compiler, compiler->vm->nthcdr_symb);
+    emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    // call nth
+    compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
     emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
     break;
@@ -987,32 +1014,32 @@ static void compile_set_location(hll_compiler *compiler, hll_obj *location,
   }
 }
 
-static void compile_setf(hll_compiler *compiler, hll_obj *args) {
+static void compile_setf(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) < 1) {
     compiler_error(compiler, args, "'set!' expects at least 1 argument");
     return;
   }
 
-  hll_obj *location = hll_unwrap_car(args);
-  hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  hll_value location = hll_unwrap_car(args);
+  hll_value value = hll_unwrap_cdr(args);
+  if (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
   compile_set_location(compiler, location, value);
 }
 
-static void compile_setcar(hll_compiler *compiler, hll_obj *args) {
+static void compile_setcar(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) != 2) {
     compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
-  hll_obj *location = hll_unwrap_car(args);
-  hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  hll_value location = hll_unwrap_car(args);
+  hll_value value = hll_unwrap_cdr(args);
+  if (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
@@ -1021,16 +1048,16 @@ static void compile_setcar(hll_compiler *compiler, hll_obj *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
 }
 
-static void compile_setcdr(hll_compiler *compiler, hll_obj *args) {
+static void compile_setcdr(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) != 2) {
     compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
-  hll_obj *location = hll_unwrap_car(args);
-  hll_obj *value = hll_unwrap_cdr(args);
-  if (value->kind == HLL_OBJ_CONS) {
-    assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  hll_value location = hll_unwrap_car(args);
+  hll_value value = hll_unwrap_cdr(args);
+  if (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
     value = hll_unwrap_car(value);
   }
 
@@ -1039,27 +1066,27 @@ static void compile_setcdr(hll_compiler *compiler, hll_obj *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
 }
 
-static void compile_list(hll_compiler *compiler, hll_obj *args) {
+static void compile_list(struct hll_compiler *compiler, hll_value args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (hll_obj *arg = args; arg->kind != HLL_OBJ_NIL;
+  for (hll_value arg = args; hll_get_value_kind(arg) != HLL_OBJ_NIL;
        arg = hll_unwrap_cdr(arg)) {
-    assert(arg->kind == HLL_OBJ_CONS);
-    hll_obj *obj = hll_unwrap_car(arg);
+    assert(hll_get_value_kind(arg) == HLL_OBJ_CONS);
+    hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
     emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
   }
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
-static void compile_cons(hll_compiler *compiler, hll_obj *args) {
+static void compile_cons(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) != 2) {
     compiler_error(compiler, args, "'cons' expects exactly 2 arguments");
     return;
   }
 
-  hll_obj *car = hll_unwrap_car(args);
-  hll_obj *cdr = hll_unwrap_car(hll_unwrap_cdr(args));
+  hll_value car = hll_unwrap_car(args);
+  hll_value cdr = hll_unwrap_car(hll_unwrap_cdr(args));
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   compile_eval_expression(compiler, car);
@@ -1069,21 +1096,19 @@ static void compile_cons(hll_compiler *compiler, hll_obj *args) {
   emit_op(compiler->bytecode, HLL_BYTECODE_POP);
 }
 
-static void add_symbol_to_function_param_list(hll_compiler *compiler,
-                                              hll_obj *car,
-                                              hll_obj **param_list,
-                                              hll_obj **param_list_tail) {
-  hll_obj *symb = car;
-  if (car->kind != HLL_OBJ_NIL) {
+static void add_symbol_to_function_param_list(struct hll_compiler *compiler,
+                                              hll_value car,
+                                              hll_value *param_list,
+                                              hll_value *param_list_tail) {
+  hll_value symb = car;
+  if (!hll_is_nil(car)) {
     uint16_t symb_idx = add_symbol_and_return_its_index(
         compiler, hll_unwrap_zsymb(car), hll_unwrap_symb(car)->length);
     symb = compiler->bytecode->constant_pool[symb_idx];
-    assert(symb != NULL);
   }
 
-  hll_obj *cons =
-      hll_new_cons(compiler->vm, (hll_obj *)symb, compiler->vm->nil);
-  if (*param_list == NULL) {
+  hll_value cons = hll_new_cons(compiler->vm, (hll_value)symb, hll_nil());
+  if (hll_is_nil(*param_list)) {
     *param_list = *param_list_tail = cons;
   } else {
     hll_unwrap_cons(*param_list_tail)->cdr = cons;
@@ -1091,83 +1116,77 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
   }
 }
 
-static hll_obj *compile_function_internal(hll_compiler *compiler,
-                                          hll_obj *params, hll_obj *body,
-                                          const char *name, bool is_macro) {
+static bool compile_function_internal(struct hll_compiler *compiler,
+                                      hll_value params, hll_value body,
+                                      const char *name, bool is_macro,
+                                      hll_value *compiled_) {
   (void)name;
-  hll_compiler new_compiler = {0};
+  struct hll_compiler new_compiler = {0};
   hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env);
-  struct hll_obj *compiled = hll_compile_ast(&new_compiler, body);
+  hll_value compiled = hll_compile_ast(&new_compiler, body);
   if (new_compiler.has_errors) {
     compiler->has_errors = true;
-    return NULL;
+    return false;
   }
 
   hll_sb_push(compiler->vm->temp_roots, compiled);
 
-  hll_obj *param_list = NULL;
-  hll_obj *param_list_tail = NULL;
-  if (params->kind == HLL_OBJ_SYMB) {
-    add_symbol_to_function_param_list(&new_compiler, compiler->vm->nil,
-                                      &param_list, &param_list_tail);
+  hll_value param_list = hll_nil();
+  hll_value param_list_tail = hll_nil();
+  if (hll_is_symb(params)) {
+    add_symbol_to_function_param_list(&new_compiler, hll_nil(), &param_list,
+                                      &param_list_tail);
     add_symbol_to_function_param_list(&new_compiler, params, &param_list,
                                       &param_list_tail);
   } else {
-    if (params->kind != HLL_OBJ_NIL && params->kind != HLL_OBJ_CONS) {
+    if (!hll_is_list(params)) {
       compiler_error(compiler, params, "param list must be a list");
-      return NULL;
+      return false;
     }
 
-    hll_obj *obj = params;
-    for (; obj->kind == HLL_OBJ_CONS; obj = hll_unwrap_cdr(obj)) {
-      hll_obj *car = hll_unwrap_car(obj);
-      if (car->kind != HLL_OBJ_SYMB) {
+    hll_value obj = params;
+    for (; hll_is_cons(obj); obj = hll_unwrap_cdr(obj)) {
+      hll_value car = hll_unwrap_car(obj);
+      if (!hll_is_symb(car)) {
         compiler_error(compiler, car, "function param name is not a symbol");
-        return NULL;
+        return false;
       }
 
       add_symbol_to_function_param_list(&new_compiler, car, &param_list,
                                         &param_list_tail);
     }
 
-    if (obj->kind != HLL_OBJ_NIL) {
-      if (obj->kind != HLL_OBJ_SYMB) {
+    if (!hll_is_nil(obj)) {
+      if (!hll_is_symb(obj)) {
         compiler_error(compiler, obj, "function param name is not a symbol");
-        return NULL;
+        return false;
       }
-      assert((*param_list_tail).kind == HLL_OBJ_CONS);
-      hll_unwrap_cons(param_list_tail)->cdr = (hll_obj *)obj;
+      assert(hll_get_value_kind(param_list_tail) == HLL_OBJ_CONS);
+      hll_unwrap_cons(param_list_tail)->cdr = (hll_value)obj;
     }
   }
 
-  if (param_list == NULL) {
-    param_list = compiler->vm->nil;
-  }
-
-  hll_obj *func;
+  hll_value func;
   if (!is_macro) {
     func = compiled;
     hll_unwrap_func(func)->param_names = param_list;
   } else {
     func = compiled;
-    func->kind = HLL_OBJ_MACRO;
-#if 0
-    struct hll_obj_func *unwrapped = hll_unwrap_func(compiled);
-    func = hll_new_macro(compiler->vm, unwrapped->param_names,
-                         unwrapped->bytecode, unwrapped->name);
-#endif
+    // TODO: Remove ub
+    ((struct hll_obj *)((char *)hll_unwrap_func(func) - sizeof(struct hll_obj)))
+        ->kind = HLL_OBJ_MACRO;
     hll_unwrap_macro(func)->param_names = param_list;
   }
 
   (void)hll_sb_pop(compiler->vm->temp_roots); // compiled
-  return func;
+  *compiled_ = func;
+  return true;
 }
 
-static bool compile_function(hll_compiler *compiler, hll_obj *params,
-                             hll_obj *body, const char *name, uint16_t *idx) {
-  hll_obj *func =
-      compile_function_internal(compiler, params, body, name, false);
-  if (func == NULL) {
+static bool compile_function(struct hll_compiler *compiler, hll_value params,
+                             hll_value body, const char *name, uint16_t *idx) {
+  hll_value func;
+  if (!compile_function_internal(compiler, params, body, name, false, &func)) {
     return true;
   }
 
@@ -1180,15 +1199,15 @@ static bool compile_function(hll_compiler *compiler, hll_obj *params,
   return false;
 }
 
-static void compile_lambda(hll_compiler *compiler, hll_obj *args) {
+static void compile_lambda(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) < 2) {
     compiler_error(compiler, args, "'lambda' expects at least 2 arguments");
     return;
   }
 
-  hll_obj *params = hll_unwrap_car(args);
+  hll_value params = hll_unwrap_car(args);
   args = hll_unwrap_cdr(args);
-  hll_obj *body = args;
+  hll_value body = args;
 
   uint16_t function_idx;
   if (compile_function(compiler, params, body, "lambda", &function_idx)) {
@@ -1199,7 +1218,7 @@ static void compile_lambda(hll_compiler *compiler, hll_obj *args) {
   emit_u16(compiler->bytecode, function_idx);
 }
 
-static void compile_and(hll_compiler *compiler, hll_obj *args) {
+static void compile_and(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) == 0) {
     emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
     return;
@@ -1207,11 +1226,11 @@ static void compile_and(hll_compiler *compiler, hll_obj *args) {
 
   size_t last_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
-  for (hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
+  for (hll_value arg_slot = args; hll_get_value_kind(arg_slot) == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_obj *item = hll_unwrap_car(arg_slot);
+    hll_value item = hll_unwrap_car(arg_slot);
     compile_eval_expression(compiler, item);
-    if (hll_unwrap_cdr(arg_slot)->kind != HLL_OBJ_CONS) {
+    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_OBJ_CONS) {
       emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     }
     emit_op(compiler->bytecode, HLL_BYTECODE_JN);
@@ -1239,7 +1258,7 @@ static void compile_and(hll_compiler *compiler, hll_obj *args) {
   }
 }
 
-static void compile_or(hll_compiler *compiler, hll_obj *args) {
+static void compile_or(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) == 0) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
@@ -1247,9 +1266,9 @@ static void compile_or(hll_compiler *compiler, hll_obj *args) {
 
   size_t previous_jump = 0;
   size_t original_idx = get_current_op_idx(compiler->bytecode);
-  for (hll_obj *arg_slot = args; arg_slot->kind == HLL_OBJ_CONS;
+  for (hll_value arg_slot = args; hll_get_value_kind(arg_slot) == HLL_OBJ_CONS;
        arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_obj *item = hll_unwrap_car(arg_slot);
+    hll_value item = hll_unwrap_car(arg_slot);
 
     if (arg_slot != args) {
       assert(previous_jump != 0);
@@ -1262,7 +1281,7 @@ static void compile_or(hll_compiler *compiler, hll_obj *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_DUP);
     emit_op(compiler->bytecode, HLL_BYTECODE_JN); // jump to next
     previous_jump = emit_u16(compiler->bytecode, 0);
-    if (hll_unwrap_cdr(arg_slot)->kind != HLL_OBJ_NIL) {
+    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_OBJ_NIL) {
       emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
       emit_op(compiler->bytecode, HLL_BYTECODE_JN);
       emit_u16(compiler->bytecode, 0);
@@ -1286,74 +1305,82 @@ static void compile_or(hll_compiler *compiler, hll_obj *args) {
   }
 }
 
-static void process_defmacro(hll_compiler *compiler, hll_obj *args) {
-  if (hll_list_length(args) < 3) {
-    compiler_error(compiler, args, "'defmacro' expects at least 3 arguments");
+static void process_defmacro(struct hll_compiler *compiler, hll_value args) {
+  if (hll_list_length(args) < 2) {
+    compiler_error(compiler, args, "'defmacro' expects at least 2 arguments");
     return;
   }
 
-  hll_obj *name = hll_unwrap_car(args);
-  if (name->kind != HLL_OBJ_SYMB) {
+  hll_value control = hll_unwrap_car(args);
+  if (hll_get_value_kind(control) != HLL_OBJ_CONS) {
+    compiler_error(compiler, control,
+                   "'defmacro' first argument must be list of macro name and "
+                   "its parameters");
+    return;
+  }
+
+  hll_value name = hll_unwrap_car(control);
+  if (hll_get_value_kind(name) != HLL_OBJ_SYMB) {
     compiler_error(compiler, name, "'defmacro' name should be a symbol");
     return;
   }
 
   emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_value params = hll_unwrap_cdr(control);
+  hll_value body = hll_unwrap_cdr(args);
 
-  args = hll_unwrap_cdr(args);
-  hll_obj *params = hll_unwrap_car(args);
-  args = hll_unwrap_cdr(args);
-  hll_obj *body = args;
-
-  hll_obj *macro_expansion =
-      compile_function_internal(compiler, params, body, "defmacro", true);
-  hll_sb_push(compiler->vm->temp_roots, macro_expansion);
-  if (macro_expansion != NULL) {
+  hll_value macro_expansion;
+  ;
+  if (compile_function_internal(compiler, params, body, "defmacro", true,
+                                &macro_expansion)) {
     // TODO: Test if macro with same name exists
+    hll_sb_push(compiler->vm->temp_roots, macro_expansion);
     hll_add_variable(compiler->vm, compiler->env, name, macro_expansion);
+    (void)hll_sb_pop(compiler->vm->temp_roots);
   }
-  (void)hll_sb_pop(compiler->vm->temp_roots);
 }
 
-static void compile_macroexpand(hll_compiler *compiler, hll_obj *args) {
+static void compile_macroexpand(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) != 1) {
     compiler_error(compiler, args,
                    "'macroexpand' expects exactly one argument");
     return;
   }
 
-  hll_obj *macro_list = hll_unwrap_car(args);
+  hll_value macro_list = hll_unwrap_car(args);
   if (hll_list_length(macro_list) < 1) {
     compiler_error(compiler, macro_list,
                    "'macroexpand' argument is not a list");
     return;
   }
 
-  hll_obj *expanded = expand_macro(compiler, hll_unwrap_car(macro_list),
-                                   hll_unwrap_cdr(macro_list));
-  assert(expanded != NULL);
+  hll_value expanded;
+  bool ok = expand_macro(compiler, hll_unwrap_car(macro_list),
+                         hll_unwrap_cdr(macro_list), &expanded);
+  (void)ok;
+  assert(ok);
   compile_expression(compiler, expanded);
 }
 
-static void compile_define(hll_compiler *compiler, hll_obj *args) {
+static void compile_define(struct hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) == 0) {
     compiler_error(compiler, args,
                    "'define' form expects at least one argument");
     return;
   }
 
-  hll_obj *decide = hll_unwrap_car(args);
-  hll_obj *rest = hll_unwrap_cdr(args);
+  hll_value decide = hll_unwrap_car(args);
+  hll_value rest = hll_unwrap_cdr(args);
 
-  if (decide->kind == HLL_OBJ_CONS) {
-    hll_obj *name = hll_unwrap_car(decide);
-    if (name->kind != HLL_OBJ_SYMB) {
+  if (hll_get_value_kind(decide) == HLL_OBJ_CONS) {
+    hll_value name = hll_unwrap_car(decide);
+    if (hll_get_value_kind(name) != HLL_OBJ_SYMB) {
       compiler_error(compiler, name, "'define' name should be a symbol");
       return;
     }
 
-    hll_obj *params = hll_unwrap_cdr(decide);
-    hll_obj *body = rest;
+    hll_value params = hll_unwrap_cdr(decide);
+    hll_value body = rest;
 
     compile_expression(compiler, name);
 
@@ -1365,10 +1392,10 @@ static void compile_define(hll_compiler *compiler, hll_obj *args) {
     emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
     emit_u16(compiler->bytecode, function_idx);
     emit_op(compiler->bytecode, HLL_BYTECODE_LET);
-  } else if (decide->kind == HLL_OBJ_SYMB) {
-    hll_obj *value = rest;
-    if (value->kind == HLL_OBJ_CONS) {
-      assert(hll_unwrap_cdr(value)->kind == HLL_OBJ_NIL);
+  } else if (hll_get_value_kind(decide) == HLL_OBJ_SYMB) {
+    hll_value value = rest;
+    if (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+      assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_OBJ_NIL);
       value = hll_unwrap_car(value);
     }
 
@@ -1383,10 +1410,10 @@ static void compile_define(hll_compiler *compiler, hll_obj *args) {
   }
 }
 
-static void compile_form(hll_compiler *compiler, hll_obj *args,
-                         hll_form_kind kind) {
+static void compile_form(struct hll_compiler *compiler, hll_value args,
+                         enum hll_form_kind kind) {
   if (kind != HLL_FORM_REGULAR) {
-    assert(args->kind == HLL_OBJ_CONS);
+    assert(hll_get_value_kind(args) == HLL_OBJ_CONS);
     args = hll_unwrap_cdr(args);
   }
 
@@ -1451,8 +1478,9 @@ static void compile_form(hll_compiler *compiler, hll_obj *args,
   }
 }
 
-static void compile_eval_expression(hll_compiler *compiler, hll_obj *ast) {
-  switch (ast->kind) {
+static void compile_eval_expression(struct hll_compiler *compiler,
+                                    hll_value ast) {
+  switch (hll_get_value_kind(ast)) {
   case HLL_OBJ_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     break;
@@ -1465,9 +1493,9 @@ static void compile_eval_expression(hll_compiler *compiler, hll_obj *ast) {
                                      compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
-    hll_obj *fn = hll_unwrap_car(ast);
-    hll_form_kind kind = HLL_FORM_REGULAR;
-    if (fn->kind == HLL_OBJ_SYMB) {
+    hll_value fn = hll_unwrap_car(ast);
+    enum hll_form_kind kind = HLL_FORM_REGULAR;
+    if (hll_get_value_kind(fn) == HLL_OBJ_SYMB) {
       kind = get_form_kind(hll_unwrap_zsymb(fn));
     }
 
@@ -1487,8 +1515,8 @@ static void compile_eval_expression(hll_compiler *compiler, hll_obj *ast) {
 // Compiles expression as getting its value.
 // Does not evaluate it.
 // After it one value is located on top of the stack.
-static void compile_expression(hll_compiler *compiler, hll_obj *ast) {
-  switch (ast->kind) {
+static void compile_expression(struct hll_compiler *compiler, hll_value ast) {
+  switch (hll_get_value_kind(ast)) {
   case HLL_OBJ_NIL:
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     break;
@@ -1504,14 +1532,15 @@ static void compile_expression(hll_compiler *compiler, hll_obj *ast) {
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
 
-    hll_obj *obj = ast;
-    while (obj->kind != HLL_OBJ_NIL) {
-      assert(obj->kind == HLL_OBJ_CONS);
+    hll_value obj = ast;
+    while (hll_get_value_kind(obj) != HLL_OBJ_NIL) {
+      assert(hll_get_value_kind(obj) == HLL_OBJ_CONS);
       compile_expression(compiler, hll_unwrap_car(obj));
       emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
 
-      hll_obj *cdr = hll_unwrap_cdr(obj);
-      if (cdr->kind != HLL_OBJ_NIL && cdr->kind != HLL_OBJ_CONS) {
+      hll_value cdr = hll_unwrap_cdr(obj);
+      if (hll_get_value_kind(cdr) != HLL_OBJ_NIL &&
+          hll_get_value_kind(cdr) != HLL_OBJ_CONS) {
         compile_expression(compiler, cdr);
         emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
         break;
@@ -1530,12 +1559,97 @@ static void compile_expression(hll_compiler *compiler, hll_obj *ast) {
   }
 }
 
-struct hll_obj *hll_compile_ast(hll_compiler *compiler, hll_obj *ast) {
-  struct hll_obj *result = hll_new_func(compiler->vm, compiler->vm->nil,
-                                        compiler->bytecode, "bytecode");
+hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast) {
+  hll_value result = hll_new_func(compiler->vm, hll_nil(), compiler->bytecode);
   hll_sb_push(compiler->vm->temp_roots, result);
   compile_progn(compiler, ast);
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
   (void)hll_sb_pop(compiler->vm->temp_roots);
   return result;
 }
+
+#if 0
+
+enum hll_tail_recursive_form_kind {
+  HLL_TAIL_RECURIVE_FORM_OTHER,
+  HLL_TAIL_RECURSIVE_FORM_IF,
+  HLL_TAIL_RECURSIVE_FORM_PROGN,
+  HLL_TAIL_RECURSIVE_FORM_AND,
+  HLL_TAIL_RECURSIVE_FORM_OR,
+  HLL_TAIL_RECURSIVE_FORM_LET,
+};
+
+static enum hll_tail_recursive_form_kind
+get_tail_recursive_form_kind(hll_value form) {
+  assert(hll_is_symb(form));
+  const char *symb = hll_unwrap_zsymb(form);
+
+  enum hll_tail_recursive_form_kind kind = HLL_TAIL_RECURIVE_FORM_OTHER;
+  if (strcmp(symb, "if") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_IF;
+  } else if (strcmp(symb, "progn") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_PROGN;
+  } else if (strcmp(symb, "and") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_AND;
+  } else if (strcmp(symb, "or") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_OR;
+  } else if (strcmp(symb, "let") == 0) {
+    kind = HLL_TAIL_RECURSIVE_FORM_LET;
+  }
+
+  return kind;
+}
+
+static bool is_if_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_and_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_or_tail_recursive(hll_value form, hll_value name_symb) {}
+
+static bool is_let_tail_recurive(hll_value form, hll_value name_symb) {}
+
+bool is_progn_tail_recursive(hll_value progn, hll_value name_symb) {
+  assert(hll_is_symb(name_symb));
+  // skip to the last statement
+  for (; hll_is_cons(progn) && !hll_is_nil(hll_unwrap_cdr(progn));
+       progn = hll_unwrap_cdr(progn))
+    ;
+
+  // Now progn has either last element or some bogus value.
+  if (!hll_is_cons(progn) || !hll_is_nil(hll_unwrap_cdr(progn))) {
+    return false;
+  }
+
+  hll_value last = hll_unwrap_car(progn);
+  if (!hll_is_cons(last)) {
+    return false;
+  }
+
+  hll_value form = hll_unwrap_car(last);
+  if (!hll_is_symb(form)) {
+    return false;
+  }
+
+  enum hll_tail_recursive_form_kind kind = get_tail_recursive_form_kind(form);
+  switch (kind) {
+  case HLL_TAIL_RECURIVE_FORM_OTHER: {
+    const char *name = hll_unwrap_zsymb(name_symb);
+    if (strcmp(name, hll_unwrap_zsymb(form)) == 0) {
+      return true;
+    }
+  } break;
+  case HLL_TAIL_RECURSIVE_FORM_IF:
+    return is_if_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_PROGN:
+    return is_progn_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_AND:
+    return is_and_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_OR:
+    return is_or_tail_recursive(form, name_symb);
+  case HLL_TAIL_RECURSIVE_FORM_LET:
+    return is_let_tail_recurive(form, name_symb);
+  }
+
+  return false;
+}
+#endif

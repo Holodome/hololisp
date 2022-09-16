@@ -12,13 +12,13 @@
 // This is implementation of type-safe generic vector in C based on
 // std_stretchy_buffer.
 
-typedef struct {
+struct hll_sb_header {
   size_t size;
   size_t capacity;
-} hll_sb_header;
+};
 
 #define hll_sb_header(_a)                                                      \
-  ((hll_sb_header *)((char *)(_a) - sizeof(hll_sb_header)))
+  ((struct hll_sb_header *)((char *)(_a) - sizeof(struct hll_sb_header)))
 #define hll_sb_size(_a) (hll_sb_header(_a)->size)
 #define hll_sb_capacity(_a) (hll_sb_header(_a)->capacity)
 
@@ -31,8 +31,8 @@ typedef struct {
 
 #define hll_sb_free(_a)                                                        \
   (((_a) != NULL)                                                              \
-   ? hll_free(hll_sb_header(_a),                                               \
-              hll_sb_capacity(_a) * sizeof(*(_a)) + sizeof(hll_sb_header)),    \
+   ? hll_free(hll_sb_header(_a), hll_sb_capacity(_a) * sizeof(*(_a)) +         \
+                                     sizeof(struct hll_sb_header)),            \
    0 : 0)
 #define hll_sb_push(_a, _v)                                                    \
   (hll_sb_maybegrow(_a, 1), (_a)[hll_sb_size(_a)++] = (_v))

@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum {
+#include "hll_hololisp.h"
+
+enum hll_bytecode_op {
   // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
   // Pushes nil on stack
@@ -55,20 +57,24 @@ typedef enum {
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
   HLL_BYTECODE_DUP,
-} hll_bytecode_op;
+};
 
-typedef struct hll_bytecode {
+struct hll_bytecode {
+  uint32_t refcount;
+
   // Bytecode dynamic array
   uint8_t *ops;
   // Constant pool dynamic array
-  struct hll_obj **constant_pool;
-} hll_bytecode;
+  hll_value *constant_pool;
+};
 
-size_t hll_get_bytecode_op_body_size(hll_bytecode_op op);
+struct hll_bytecode *hll_new_bytecode(void);
+void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode);
+void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode);
 
-void hll_free_bytecode(hll_bytecode *bytecode);
-void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
+size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
+void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
 
-void hll_dump_object(void *file, struct hll_obj *obj);
+void hll_dump_value(void *file, hll_value value);
 
 #endif
