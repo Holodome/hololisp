@@ -81,11 +81,11 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
     hll_gc_free(vm, obj, sizeof(struct hll_obj) + sizeof(struct hll_obj_env));
     break;
   case HLL_OBJ_FUNC:
-    hll_free_bytecode(((struct hll_obj_func *)obj->as)->bytecode);
+    hll_bytecode_dec_refcount(((struct hll_obj_func *)obj->as)->bytecode);
     hll_gc_free(vm, obj, sizeof(struct hll_obj) + sizeof(struct hll_obj_func));
     break;
   case HLL_OBJ_MACRO:
-    hll_free_bytecode(((struct hll_obj_func *)obj->as)->bytecode);
+    hll_bytecode_dec_refcount(((struct hll_obj_func *)obj->as)->bytecode);
     hll_gc_free(vm, obj, sizeof(struct hll_obj) + sizeof(struct hll_obj_func));
     break;
   default:
@@ -177,7 +177,7 @@ hll_value hll_new_env(struct hll_vm *vm, hll_value up, hll_value vars) {
 }
 
 hll_value hll_new_func(struct hll_vm *vm, hll_value params,
-                       struct hll_bytecode *bytecode, const char *name) {
+                       struct hll_bytecode *bytecode) {
   void *memory =
       hll_gc_alloc(vm, sizeof(struct hll_obj) + sizeof(struct hll_obj_func));
   struct hll_obj *obj = memory;
@@ -185,14 +185,14 @@ hll_value hll_new_func(struct hll_vm *vm, hll_value params,
   struct hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
-  func->name = name;
   register_object(vm, obj);
+  hll_bytecode_inc_refcount(bytecode);
 
   return HLL_NAN_BOX_OBJ(obj);
 }
 
 hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
-                        struct hll_bytecode *bytecode, const char *name) {
+                        struct hll_bytecode *bytecode) {
   void *memory =
       hll_gc_alloc(vm, sizeof(struct hll_obj) + sizeof(struct hll_obj_func));
   struct hll_obj *obj = memory;
@@ -200,8 +200,8 @@ hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
   struct hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
-  func->name = name;
   register_object(vm, obj);
+  hll_bytecode_inc_refcount(bytecode);
 
   return HLL_NAN_BOX_OBJ(obj);
 }
@@ -310,29 +310,13 @@ hll_value hll_copy_obj(struct hll_vm *vm, hll_value src) {
   } break;
   case HLL_OBJ_MACRO: {
     struct hll_obj_func *func = hll_unwrap_macro(src);
-    struct hll_bytecode *bytecode = hll_alloc(sizeof(struct hll_bytecode));
-    for (size_t i = 0; i < hll_sb_len(func->bytecode->ops); ++i) {
-      hll_sb_push(bytecode->ops, func->bytecode->ops[i]);
-    }
-    for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
-      hll_sb_push(bytecode->constant_pool, func->bytecode->constant_pool[i]);
-    }
-
-    result = hll_new_macro(vm, func->param_names, bytecode, func->name);
-    hll_unwrap_macro(result)->var_list = hll_nil();
+    struct hll_bytecode *bytecode = func->bytecode;
+    result = hll_new_macro(vm, func->param_names, bytecode);
   } break;
   case HLL_OBJ_FUNC: {
     struct hll_obj_func *func = hll_unwrap_func(src);
-    struct hll_bytecode *bytecode = hll_alloc(sizeof(struct hll_bytecode));
-    for (size_t i = 0; i < hll_sb_len(func->bytecode->ops); ++i) {
-      hll_sb_push(bytecode->ops, func->bytecode->ops[i]);
-    }
-    for (size_t i = 0; i < hll_sb_len(func->bytecode->constant_pool); ++i) {
-      hll_sb_push(bytecode->constant_pool, func->bytecode->constant_pool[i]);
-    }
-
-    result = hll_new_func(vm, func->param_names, bytecode, func->name);
-    hll_unwrap_func(result)->var_list = hll_nil();
+    struct hll_bytecode *bytecode = func->bytecode;
+    result = hll_new_func(vm, func->param_names, bytecode);
   } break;
   default:
     HLL_UNREACHABLE;
@@ -385,7 +369,6 @@ void hll_blacken_obj(struct hll_vm *vm, hll_value value) {
     vm->bytes_allocated += sizeof(struct hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_func(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_func(value)->env);
-    hll_gray_obj(vm, hll_unwrap_func(value)->var_list);
     struct hll_bytecode *bytecode = hll_unwrap_func(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
       hll_gray_obj(vm, bytecode->constant_pool[i]);
@@ -395,7 +378,6 @@ void hll_blacken_obj(struct hll_vm *vm, hll_value value) {
     vm->bytes_allocated += sizeof(struct hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_macro(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_macro(value)->env);
-    hll_gray_obj(vm, hll_unwrap_macro(value)->var_list);
     struct hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
       hll_gray_obj(vm, bytecode->constant_pool[i]);

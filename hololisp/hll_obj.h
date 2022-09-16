@@ -35,10 +35,9 @@ struct hll_obj_cons {
 };
 
 struct hll_obj_func {
-  const char *name;
   struct hll_bytecode *bytecode;
+  // List if function parameter names
   hll_value param_names;
-  hll_value var_list;
   hll_value env;
 };
 
@@ -86,11 +85,11 @@ hll_value hll_new_bind(struct hll_vm *vm,
                        hll_value (*bind)(struct hll_vm *vm, hll_value args));
 HLL_PUB
 hll_value hll_new_func(struct hll_vm *vm, hll_value params,
-                       struct hll_bytecode *bytecode, const char *name);
+                       struct hll_bytecode *bytecode);
 
 HLL_PUB
 hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
-                        struct hll_bytecode *bytecode, const char *name);
+                        struct hll_bytecode *bytecode);
 
 HLL_PUB
 struct hll_obj_cons *hll_unwrap_cons(hll_value value);

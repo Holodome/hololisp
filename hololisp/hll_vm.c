@@ -437,8 +437,8 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       // Copy the function
       value = hll_copy_obj(vm, value);
       struct hll_obj_func *func = hll_unwrap_func(value);
-      assert(hll_get_value_kind(func->var_list) == HLL_OBJ_NIL);
-      func->var_list = hll_nil();
+//      assert(hll_get_value_kind(func->var_list) == HLL_OBJ_NIL);
+//      func->var_list = hll_nil();
       func->env = vm->env;
 
       hll_sb_push(vm->stack, value);
@@ -452,7 +452,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       switch (hll_get_value_kind(callable)) {
       case HLL_OBJ_FUNC: {
         struct hll_obj_func *func = hll_unwrap_func(callable);
-        hll_value new_env = hll_new_env(vm, func->env, func->var_list);
+        hll_value new_env = hll_new_env(vm, func->env, hll_nil());
         hll_sb_push(vm->temp_roots, new_env);
         hll_value param_name = func->param_names;
         hll_value param_value = args;

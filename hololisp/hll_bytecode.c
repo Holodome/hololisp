@@ -1,5 +1,6 @@
 #include "hll_bytecode.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -35,10 +36,10 @@ void hll_dump_value(void *file, hll_value value) {
     fprintf(file, "true");
     break;
   case HLL_OBJ_FUNC:
-    fprintf(file, "func %s", hll_unwrap_func(value)->name);
+    fprintf(file, "func");
     break;
   case HLL_OBJ_MACRO:
-    fprintf(file, "macro %s", hll_unwrap_macro(value)->name);
+    fprintf(file, "macro");
     break;
   default:
     HLL_UNREACHABLE;
@@ -153,8 +154,22 @@ size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op) {
   return s;
 }
 
-void hll_free_bytecode(struct hll_bytecode *bytecode) {
-  hll_sb_free(bytecode->ops);
-  hll_sb_free(bytecode->constant_pool);
-  hll_free(bytecode, sizeof(struct hll_bytecode));
+struct hll_bytecode *hll_new_bytecode(void) {
+  return hll_alloc(sizeof(struct hll_bytecode));
+}
+
+void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode) {
+  assert(bytecode->refcount != UINT32_MAX);
+  ++bytecode->refcount;
+}
+
+void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode) {
+  assert(bytecode->refcount != 0);
+  --bytecode->refcount;
+
+  if (bytecode->refcount == 0) {
+    hll_sb_free(bytecode->ops);
+    hll_sb_free(bytecode->constant_pool);
+    hll_free(bytecode, sizeof(struct hll_bytecode));
+  }
 }

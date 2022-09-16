@@ -516,7 +516,7 @@ void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
   memset(compiler, 0, sizeof(struct hll_compiler));
   compiler->vm = vm;
   compiler->env = env;
-  compiler->bytecode = hll_alloc(sizeof(struct hll_bytecode));
+  compiler->bytecode = hll_new_bytecode();
 }
 
 HLL_ATTR(format(printf, 3, 4))
@@ -1561,13 +1561,14 @@ static void compile_expression(struct hll_compiler *compiler, hll_value ast) {
 
 hll_value hll_compile_ast(struct hll_compiler *compiler, hll_value ast) {
   hll_value result =
-      hll_new_func(compiler->vm, hll_nil(), compiler->bytecode, "bytecode");
+      hll_new_func(compiler->vm, hll_nil(), compiler->bytecode);
   hll_sb_push(compiler->vm->temp_roots, result);
   compile_progn(compiler, ast);
   emit_op(compiler->bytecode, HLL_BYTECODE_END);
   (void)hll_sb_pop(compiler->vm->temp_roots);
   return result;
 }
+
 #if 0
 
 enum hll_tail_recursive_form_kind {

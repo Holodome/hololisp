@@ -60,15 +60,19 @@ enum hll_bytecode_op {
 };
 
 struct hll_bytecode {
+  uint32_t refcount;
+
   // Bytecode dynamic array
   uint8_t *ops;
   // Constant pool dynamic array
   hll_value *constant_pool;
 };
 
-size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
+struct hll_bytecode *hll_new_bytecode(void);
+void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode);
+void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode);
 
-void hll_free_bytecode(struct hll_bytecode *bytecode);
+size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
 void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
 
 void hll_dump_value(void *file, hll_value value);
