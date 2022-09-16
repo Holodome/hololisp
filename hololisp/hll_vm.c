@@ -227,19 +227,6 @@ void hll_print(struct hll_vm *vm, hll_value value, void *file) {
   }
 }
 
-// Denotes situation that should be impossible in correctly compiled code.
-HLL_ATTR(format(printf, 2, 3))
-static void internal_compiler_error(struct hll_vm *vm, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  char buffer[4096];
-  size_t a = snprintf(buffer, sizeof(buffer), "INTERNAL ERROR: ");
-  vsnprintf(buffer + a, sizeof(buffer) - a, fmt, args);
-  va_end(args);
-  // TODO: Line information
-  hll_report_error(vm, 0, 0, buffer);
-}
-
 HLL_ATTR(format(printf, 2, 3))
 void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
   va_list args;
@@ -358,14 +345,8 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       uint16_t idx = (hll_sb_last(vm->call_stack).ip[0] << 8) |
                      hll_sb_last(vm->call_stack).ip[1];
       hll_sb_last(vm->call_stack).ip += 2;
-      if (HLL_UNLIKELY(idx >= hll_sb_len(hll_sb_last(vm->call_stack)
-                                             .bytecode->constant_pool))) {
-        internal_compiler_error(
-            vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
-            idx,
-            hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
-        goto bail;
-      }
+      assert(idx <
+             hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
       hll_value value =
           hll_sb_last(vm->call_stack).bytecode->constant_pool[idx];
       hll_sb_push(vm->stack, value);
@@ -416,23 +397,12 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       uint16_t idx = (hll_sb_last(vm->call_stack).ip[0] << 8) |
                      hll_sb_last(vm->call_stack).ip[1];
       hll_sb_last(vm->call_stack).ip += 2;
-      if (HLL_UNLIKELY(idx >= hll_sb_len(hll_sb_last(vm->call_stack)
-                                             .bytecode->constant_pool))) {
-        internal_compiler_error(
-            vm, "constant idx %" PRIu16 " is not in allowed range (max is %zu)",
-            idx,
-            hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
-        goto bail;
-      }
+      assert(idx <
+             hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
 
       hll_value value =
           hll_sb_last(vm->call_stack).bytecode->constant_pool[idx];
-      if (HLL_UNLIKELY(hll_get_value_kind(value) != HLL_OBJ_FUNC)) {
-        internal_compiler_error(
-            vm, "specified object is not a function (got %s)",
-            hll_get_object_kind_str(hll_get_value_kind(value)));
-        goto bail;
-      }
+      assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
       // Copy the function
       value = hll_copy_obj(vm, value);
       struct hll_obj_func *func = hll_unwrap_func(value);
@@ -518,19 +488,8 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_sb_push(vm->temp_roots, cond);
       if (hll_get_value_kind(cond) == HLL_OBJ_NIL) {
         hll_sb_last(vm->call_stack).ip += offset;
-        if (HLL_UNLIKELY(
-                hll_sb_last(vm->call_stack).ip >
-                &hll_sb_last(hll_sb_last(vm->call_stack).bytecode->ops))) {
-          internal_compiler_error(
-              vm,
-              "jump is out of bytecode bounds (was %p, "
-              "jump %p, became %p, bound %p)",
-              (void *)(hll_sb_last(vm->call_stack).ip - offset),
-              (void *)(uintptr_t)offset, (void *)hll_sb_last(vm->call_stack).ip,
-              (void *)&hll_sb_last(hll_sb_last(vm->call_stack).bytecode->ops));
-          hll_dump_bytecode(stderr, initial_bytecode);
-          goto bail;
-        }
+        assert(hll_sb_last(vm->call_stack).ip <=
+               &hll_sb_last(hll_sb_last(vm->call_stack).bytecode->ops));
       }
       (void)hll_sb_pop(vm->temp_roots);
     } break;
@@ -612,7 +571,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       (void)hll_sb_pop(vm->temp_roots); // cdr
     } break;
     default:
-      internal_compiler_error(vm, "Unknown instruction: %" PRIx8, op);
+      assert(0);
       break;
     }
   }
