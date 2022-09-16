@@ -52,6 +52,7 @@ struct hll_obj_bind {
 
 struct hll_obj_symb {
   size_t length;
+  uint32_t hash;
   char symb[];
 };
 

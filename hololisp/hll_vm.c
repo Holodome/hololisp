@@ -161,15 +161,14 @@ bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
                   hll_value *found) {
   (void)vm;
   assert(hll_get_value_kind(car) == HLL_OBJ_SYMB && "argument is not a symbol");
-  const char *name = hll_unwrap_zsymb(car);
-  for (; hll_get_value_kind(env) != HLL_OBJ_NIL;
-       env = hll_unwrap_env(env)->up) {
-    for (hll_value cons = hll_unwrap_env(env)->vars;
-         hll_get_value_kind(cons) != HLL_OBJ_NIL; cons = hll_unwrap_cdr(cons)) {
+  struct hll_obj_symb *symb = hll_unwrap_symb(car);
+  for (; !hll_is_nil(env); env = hll_unwrap_env(env)->up) {
+    for (hll_value cons = hll_unwrap_env(env)->vars; !hll_is_nil(cons);
+         cons = hll_unwrap_cdr(cons)) {
       hll_value test = hll_unwrap_car(cons);
       assert(hll_get_value_kind(hll_unwrap_car(test)) == HLL_OBJ_SYMB &&
              "Variable is not a cons of symbol and its value");
-      if (strcmp(hll_unwrap_zsymb(hll_unwrap_car(test)), name) == 0) {
+      if (symb->hash == hll_unwrap_symb(hll_unwrap_car(test))->hash) {
         *found = test;
         return true;
       }
@@ -437,8 +436,6 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       // Copy the function
       value = hll_copy_obj(vm, value);
       struct hll_obj_func *func = hll_unwrap_func(value);
-//      assert(hll_get_value_kind(func->var_list) == HLL_OBJ_NIL);
-//      func->var_list = hll_nil();
       func->env = vm->env;
 
       hll_sb_push(vm->stack, value);
@@ -456,9 +453,9 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
         hll_sb_push(vm->temp_roots, new_env);
         hll_value param_name = func->param_names;
         hll_value param_value = args;
-        if (hll_get_value_kind(param_name) == HLL_OBJ_CONS &&
-            hll_get_value_kind(hll_unwrap_car(param_name)) == HLL_OBJ_SYMB) {
-          for (; hll_get_value_kind(param_name) == HLL_OBJ_CONS;
+        if (hll_is_cons(param_name) &&
+            hll_is_symb(hll_unwrap_car(param_name))) {
+          for (; hll_is_cons(param_name);
                param_name = hll_unwrap_cdr(param_name),
                param_value = hll_unwrap_cdr(param_value)) {
             if (hll_get_value_kind(param_value) != HLL_OBJ_CONS) {
@@ -470,13 +467,12 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
             hll_value value = hll_unwrap_car(param_value);
             hll_add_variable(vm, new_env, name, value);
           }
-        } else if (hll_get_value_kind(param_name) == HLL_OBJ_CONS &&
-                   hll_get_value_kind(hll_unwrap_car(param_name)) ==
-                       HLL_OBJ_NIL) {
+        } else if (hll_is_cons(param_name) &&
+                   hll_is_nil(hll_unwrap_car(param_name))) {
           param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
         }
 
-        if (hll_get_value_kind(param_name) != HLL_OBJ_NIL) {
+        if (!hll_is_nil(param_name)) {
           assert(hll_get_value_kind(param_name) == HLL_OBJ_SYMB);
           hll_add_variable(vm, new_env, param_name, param_value);
         }

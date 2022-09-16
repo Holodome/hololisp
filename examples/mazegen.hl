@@ -4,12 +4,12 @@
 ;;
 
 (define VISITED 1)
-(define WIDTH 5)
-(define HEIGHT 5)
+(define WIDTH 40)
+(define HEIGHT 40)
 
 (define (print-board board)
   (when board
-    (print (map (lambda (it) (if (= it VISITED) '- '@)) (car board)))
+    (print (amap (if (= it VISITED) '- '@) (car board)))
     (print-board (cdr board))))
 
 (define (set-at! board x y value)

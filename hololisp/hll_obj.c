@@ -24,6 +24,16 @@
   ((struct hll_obj *)(uintptr_t)((_value) & ~(HLL_SIGN_BIT | HLL_QNAN)))
 #define HLL_VALUE_KIND(_value) ((uint64_t)(_value) & ~HLL_QNAN)
 
+static uint32_t djb2(const char *src, const char *dst) {
+  uint32_t hash = 5381;
+  do {
+    int c = *src++;
+    hash = ((hash << 5) + hash) + c;
+  } while (src != dst);
+
+  return hash;
+}
+
 const char *hll_get_object_kind_str(hll_object_kind kind) {
   const char *str = NULL;
   switch (kind) {
@@ -126,6 +136,7 @@ hll_value hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
 
   struct hll_obj_symb *symb = (void *)(obj + 1);
   symb->length = length;
+  symb->hash = djb2(symbol, symbol + length);
   memcpy(symb->symb, symbol, length);
 
   register_object(vm, obj);
@@ -395,7 +406,7 @@ hll_object_kind hll_get_value_kind(hll_value value) {
 }
 
 bool hll_is_nil(hll_value value) {
-  return !HLL_IS_OBJ(value) && HLL_VALUE_KIND(value) == HLL_OBJ_NIL;
+  return (uint64_t )value == HLL_NAN_BOX_KIND(HLL_OBJ_NIL);
 }
 
 bool hll_is_num(hll_value value) { return HLL_IS_NUM(value); }
