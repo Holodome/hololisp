@@ -1,3 +1,4 @@
+#include "hll_compiler.h"
 #include "hll_obj.h"
 #include "hll_util.h"
 #include "hll_vm.h"
@@ -278,6 +279,68 @@ static hll_value builtin_random(struct hll_vm *vm, hll_value args) {
   }
 
   return hll_num(result);
+}
+
+static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
+  hll_value low = hll_nil();
+  hll_value high = hll_nil();
+  if (hll_get_value_kind(args) == HLL_OBJ_CONS) {
+    high = hll_car(args);
+    if (!hll_is_num(high)) {
+      hll_runtime_error(vm, "'range' form expects number arguments");
+      return hll_nil();
+    }
+
+    args = hll_cdr(args);
+
+    if (hll_get_value_kind(args) == HLL_OBJ_CONS) {
+      low = hll_car(args);
+      if (!hll_is_num(low)) {
+        hll_runtime_error(vm, "'range' form expects number arguments");
+        return hll_nil();
+      }
+      args = hll_cdr(args);
+
+      if (hll_get_value_kind(args) != HLL_OBJ_NIL) {
+        hll_runtime_error(vm, "'range' form expects at most 2 arguments");
+        return hll_nil();
+      }
+    }
+  } else {
+    hll_runtime_error(vm, "'range' form expects at least single argument");
+    return hll_nil();
+  }
+
+  hll_value list_head = hll_nil();
+  hll_value list_tail = hll_nil();
+  if (hll_is_nil(low)) { // 0-high int
+    uint64_t upper = floor(hll_unwrap_num(high));
+    for (uint64_t i = 0; i < upper; ++i) {
+      hll_value n = hll_num(i);
+      hll_value cons = hll_new_cons(vm, n, hll_nil());
+      if (hll_is_nil(list_head)) {
+        list_head = list_tail = cons;
+      } else {
+        hll_unwrap_cons(list_tail)->cdr = cons;
+        list_tail = cons;
+      }
+    }
+  } else {
+    uint64_t lower = floor(hll_unwrap_num(high));
+    uint64_t upper = floor(hll_unwrap_num(low));
+    for (uint64_t i = lower; i < upper; ++i) {
+      hll_value n = hll_num(i);
+      hll_value cons = hll_new_cons(vm, n, hll_nil());
+      if (hll_is_nil(list_head)) {
+        list_head = list_tail = cons;
+      } else {
+        hll_unwrap_cons(list_tail)->cdr = cons;
+        list_tail = cons;
+      }
+    }
+  }
+
+  return list_head;
 }
 
 static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
@@ -643,6 +706,23 @@ static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
+static hll_value builtin_eval(struct hll_vm *vm, hll_value args) {
+  (void)args;
+  char buffer[4096];
+  if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+    hll_runtime_error(vm, "Failed to input string");
+    return hll_nil();
+  }
+
+  hll_value compiled;
+  if (!hll_compile(vm, buffer, &compiled)) {
+    hll_runtime_error(vm, "failed to compile eval");
+    return hll_nil();
+  }
+
+  return hll_interpret_bytecode_internal(vm, vm->env, compiled);
+}
+
 void add_builtins(struct hll_vm *vm) {
   hll_add_binding(vm, "print", builtin_print);
   hll_add_binding(vm, "+", builtin_add);
@@ -675,6 +755,9 @@ void add_builtins(struct hll_vm *vm) {
   hll_add_binding(vm, "clear", builtin_clear);
   hll_add_binding(vm, "sleep", builtin_sleep);
   hll_add_binding(vm, "length", builtin_length);
+  hll_add_binding(vm, "range", builtin_range);
+  hll_add_binding(vm, "eval", builtin_eval);
+
   hll_add_binding(vm, "eq?", builtin_eq);
 #if 1
   hll_interpret(vm, "builtins",
@@ -759,9 +842,6 @@ void add_builtins(struct hll_vm *vm) {
                 "    (when lis\n"
                 "      (append (car lis) (cat (cdr lis)))))\n"
                 "  (cat (map func lis)))\n"
-                "(define (range lo hi)\n"
-                "  (unless (<= hi lo)\n"
-                "    (cons lo (range (+ lo 1) hi))))\n"
                 "(define (map fn lis)\n"
                 "  (when lis\n"
                 "    (cons (fn (car lis))\n"

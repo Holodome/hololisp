@@ -486,7 +486,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cond = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cond);
-      if (hll_get_value_kind(cond) == HLL_OBJ_NIL) {
+      if (hll_is_nil(cond)) {
         current_call_frame->ip += offset;
         assert(current_call_frame->ip <=
                &hll_sb_last(current_call_frame->bytecode->ops));

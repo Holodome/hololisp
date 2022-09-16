@@ -356,10 +356,12 @@ pos_test "amap" "(2 4 6 8)" "(amap (* 2 it) (list 1 2 3 4))"
 pos_test "reduce sum" "17" "(reduce (lambda (a b) (+ a b)) (list 1 3 5 6 2))"
 pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6 2))"
 
-# pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro && (expr . rest)
-                                # (if rest
-                                 #   (list 'if expr (&& rest))
-                                    #expr))
-# (macroexpand (&& 1 2 3))"
+pos_test "range" "(0 1 2 3 4)" "(range 5)"
+pos_test "range" "(5 6 7 8 9)" "(range 5 10)"
+
+#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro (&& expr . rest)
+#                                 (if rest
+#                                    (list 'if expr (&& rest))
+#                                    (list expr))) (macroexpand (&& 1 2 3))"
 
 exit $failed

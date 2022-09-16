@@ -102,4 +102,7 @@ bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
 HLL_PUB
 void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...);
 
+hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
+                                          hll_value compiled);
+
 #endif
