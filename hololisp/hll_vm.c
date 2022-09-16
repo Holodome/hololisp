@@ -314,22 +314,26 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
   vm->stack = NULL;
   vm->env = env_;
 
-  struct hll_call_frame original_frame = {0};
-  original_frame.ip = initial_bytecode->ops;
-  original_frame.bytecode = initial_bytecode;
-  original_frame.env = env_;
-  original_frame.func = compiled;
-  assert(env_);
-  hll_sb_push(vm->call_stack, original_frame);
+  {
+    struct hll_call_frame original_frame = {0};
+    original_frame.ip = initial_bytecode->ops;
+    original_frame.bytecode = initial_bytecode;
+    original_frame.env = env_;
+    original_frame.func = compiled;
+    assert(env_);
+    hll_sb_push(vm->call_stack, original_frame);
+  }
+  struct hll_call_frame *current_call_frame = vm->call_stack;
 
   while (hll_sb_len(vm->call_stack)) {
-    uint8_t op = *hll_sb_last(vm->call_stack).ip++;
+    uint8_t op = *current_call_frame->ip++;
     switch (op) {
     case HLL_BYTECODE_END:
       assert(hll_sb_len(vm->stack) != 0);
-      vm->env = hll_sb_last(vm->call_stack).env;
+      vm->env = current_call_frame->env;
       assert(vm->env);
       (void)hll_sb_pop(vm->call_stack);
+      current_call_frame = &hll_sb_last(vm->call_stack);
       break;
     case HLL_BYTECODE_POP:
       assert(hll_sb_len(vm->stack) != 0);
@@ -342,13 +346,11 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_sb_push(vm->stack, hll_true());
       break;
     case HLL_BYTECODE_CONST: {
-      uint16_t idx = (hll_sb_last(vm->call_stack).ip[0] << 8) |
-                     hll_sb_last(vm->call_stack).ip[1];
-      hll_sb_last(vm->call_stack).ip += 2;
-      assert(idx <
-             hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
-      hll_value value =
-          hll_sb_last(vm->call_stack).bytecode->constant_pool[idx];
+      uint16_t idx =
+          (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
+      current_call_frame->ip += 2;
+      assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
+      hll_value value = current_call_frame->bytecode->constant_pool[idx];
       hll_sb_push(vm->stack, value);
     } break;
     case HLL_BYTECODE_APPEND: {
@@ -360,7 +362,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_sb_push(vm->temp_roots, obj);
 
       hll_value cons = hll_new_cons(vm, obj, hll_nil());
-      if (hll_get_value_kind(*headp) == HLL_OBJ_NIL) {
+      if (hll_is_nil(*headp)) {
         *headp = *tailp = cons;
       } else {
         if (HLL_UNLIKELY(hll_get_value_kind(*tailp) != HLL_OBJ_CONS)) {
@@ -394,16 +396,13 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_sb_push(vm->stack, found);
     } break;
     case HLL_BYTECODE_MAKEFUN: {
-      uint16_t idx = (hll_sb_last(vm->call_stack).ip[0] << 8) |
-                     hll_sb_last(vm->call_stack).ip[1];
-      hll_sb_last(vm->call_stack).ip += 2;
-      assert(idx <
-             hll_sb_len(hll_sb_last(vm->call_stack).bytecode->constant_pool));
+      uint16_t idx =
+          (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
+      current_call_frame->ip += 2;
+      assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
 
-      hll_value value =
-          hll_sb_last(vm->call_stack).bytecode->constant_pool[idx];
+      hll_value value = current_call_frame->bytecode->constant_pool[idx];
       assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
-      // Copy the function
       value = hll_copy_obj(vm, value);
       struct hll_obj_func *func = hll_unwrap_func(value);
       func->env = vm->env;
@@ -433,7 +432,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
               goto bail;
             }
             hll_value name = hll_unwrap_car(param_name);
-            assert(hll_get_value_kind(name) == HLL_OBJ_SYMB);
+            assert(hll_is_symb(name));
             hll_value value = hll_unwrap_car(param_value);
             hll_add_variable(vm, new_env, name, value);
           }
@@ -443,7 +442,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
         }
 
         if (!hll_is_nil(param_name)) {
-          assert(hll_get_value_kind(param_name) == HLL_OBJ_SYMB);
+          assert(hll_is_symb(param_name));
           hll_add_variable(vm, new_env, param_name, param_value);
         }
 
@@ -453,6 +452,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
         new_frame.env = vm->env;
         new_frame.func = callable;
         hll_sb_push(vm->call_stack, new_frame);
+        current_call_frame = &hll_sb_last(vm->call_stack);
         (void)hll_sb_pop(vm->temp_roots); // new_env
         vm->env = new_env;
       } break;
@@ -479,17 +479,17 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_sb_push(vm->stack, last);
     } break;
     case HLL_BYTECODE_JN: {
-      int16_t offset = (hll_sb_last(vm->call_stack).ip[0] << 8) |
-                       hll_sb_last(vm->call_stack).ip[1];
-      hll_sb_last(vm->call_stack).ip += 2;
+      int16_t offset =
+          (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
+      current_call_frame->ip += 2;
 
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cond = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cond);
       if (hll_get_value_kind(cond) == HLL_OBJ_NIL) {
-        hll_sb_last(vm->call_stack).ip += offset;
-        assert(hll_sb_last(vm->call_stack).ip <=
-               &hll_sb_last(hll_sb_last(vm->call_stack).bytecode->ops));
+        current_call_frame->ip += offset;
+        assert(current_call_frame->ip <=
+               &hll_sb_last(current_call_frame->bytecode->ops));
       }
       (void)hll_sb_pop(vm->temp_roots);
     } break;
@@ -513,17 +513,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cons);
-      hll_value car;
-      if (hll_get_value_kind(cons) == HLL_OBJ_NIL) {
-        car = hll_nil();
-      } else if (HLL_UNLIKELY(hll_get_value_kind(cons) != HLL_OBJ_CONS)) {
-        hll_runtime_error(vm, "CAR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(hll_get_value_kind(cons)));
-        goto bail;
-      } else {
-        car = hll_unwrap_car(cons);
-      }
-
+      hll_value car = hll_car(cons);
       (void)hll_sb_pop(vm->temp_roots); // cons
       hll_sb_push(vm->stack, car);
     } break;
@@ -531,16 +521,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cons);
-      hll_value cdr;
-      if (hll_get_value_kind(cons) == HLL_OBJ_NIL) {
-        cdr = hll_nil();
-      } else if (HLL_UNLIKELY(hll_get_value_kind(cons) != HLL_OBJ_CONS)) {
-        hll_runtime_error(vm, "CDR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(hll_get_value_kind(cons)));
-        goto bail;
-      } else {
-        cdr = hll_unwrap_cdr(cons);
-      }
+      hll_value cdr = hll_cdr(cons);
       (void)hll_sb_pop(vm->temp_roots); // cons
       hll_sb_push(vm->stack, cdr);
     } break;
@@ -549,11 +530,6 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_value car = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, car);
       hll_value cons = hll_sb_last(vm->stack);
-      if (HLL_UNLIKELY(hll_get_value_kind(cons) != HLL_OBJ_CONS)) {
-        hll_runtime_error(vm, "cons SETCAR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(hll_get_value_kind(cons)));
-        goto bail;
-      }
       (void)hll_sb_pop(vm->temp_roots); // car
       hll_unwrap_cons(cons)->car = car;
     } break;
@@ -562,11 +538,6 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       hll_value cdr = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, cdr);
       hll_value cons = hll_sb_last(vm->stack);
-      if (HLL_UNLIKELY(hll_get_value_kind(cons) != HLL_OBJ_CONS)) {
-        hll_runtime_error(vm, "cons SETCDR operand is not a cons (found %s)",
-                          hll_get_object_kind_str(hll_get_value_kind(cons)));
-        goto bail;
-      }
       hll_unwrap_cons(cons)->cdr = cdr;
       (void)hll_sb_pop(vm->temp_roots); // cdr
     } break;

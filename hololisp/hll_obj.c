@@ -406,7 +406,7 @@ hll_object_kind hll_get_value_kind(hll_value value) {
 }
 
 bool hll_is_nil(hll_value value) {
-  return (uint64_t )value == HLL_NAN_BOX_KIND(HLL_OBJ_NIL);
+  return (uint64_t)value == HLL_NAN_BOX_KIND(HLL_OBJ_NIL);
 }
 
 bool hll_is_num(hll_value value) { return HLL_IS_NUM(value); }
