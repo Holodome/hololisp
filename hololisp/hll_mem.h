@@ -45,9 +45,15 @@ void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride);
 
 #define hll_free(_ptr, _size) (void)hll_realloc(_ptr, _size, 0)
 #define hll_alloc(_size) hll_realloc(NULL, 0, _size)
+
+// realloc that hololisp uses for all memory allocations internally.
+// If new_size is 0, behaves as 'free'.
+// If old_size is 0, behaves as 'calloc'
+// Otherwise behaves as 'realloc'
 void *hll_realloc(void *ptr, size_t old_size, size_t new_size);
 
 #ifdef HLL_MEM_CHECK
+// Retturns number of bytes allocated but not freed.
 size_t hll_mem_check(void);
 #endif
 

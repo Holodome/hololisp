@@ -19,20 +19,23 @@
 #define HLL_PUB extern
 #endif
 
+// Instance of hololisp virtual machine. Virtual machine stores state
+// of execution hololisp code in a single session, e.g. REPL session.
 struct hll_vm;
 
+// Type of 'value' in language. By 'value' we understand minimal unit of
+// language that interpreter can operate on. 'values' can be, for example,
+// numbers, conses, symbols.
 typedef uint64_t hll_value;
 
-// Describes function that is used to perform error reporting (it's user
-// part). This means that internally, if any part of language encounters
-// error it will be handled accordingly. This function is responsible for
-// providing output to user.
-// We use function pointer here to allow simple silencing of errors
-// (setting function to NULL), as well as to provide configurability options.
+// This function is responsible for providing error output to user.
 typedef void hll_error_fn(struct hll_vm *vm, const char *text);
 
+// Function that is used in 'print' statements.
 typedef void hll_write_fn(struct hll_vm *vm, const char *text);
 
+// Stores configuration of vm runtime.
+// Config cannot be changed after virtual machine creation.
 struct hll_config {
   // The callback used when user prints message (printf for example).
   // If this is NULL, nothing shall be printed.
@@ -63,24 +66,38 @@ struct hll_config {
   void *user_data;
 };
 
+// Result of calling hll_interpret.
+// Contains minimal information about source of error.
 enum hll_interpret_result {
   HLL_RESULT_OK = 0x0,
   HLL_RESULT_COMPILE_ERROR = 0x1,
   HLL_RESULT_RUNTIME_ERROR = 0x2,
 };
 
+typedef uint32_t hll_interpret_flags;
+enum {
+  // Print result of execution. This may be needed depending on context:
+  // for example, when execution REPL result print is needed, while when
+  // executing files this is unwanted.
+  HLL_INTERPRET_PRINT_RESULT = 0x1,
+  // Generate debug information. By default, hololisp executes with minimal
+  // debug information, making it very hard to debug errors. When this flag
+  // is set, hololisp is able to provide more meaningful both compiler and
+  // interpreter errors.
+  HLL_INTERPRET_DEBUG = 0x2
+};
+
 // If config is NULL, uses default config.
 // Config is copied to the VM.
-HLL_PUB
-struct hll_vm *hll_make_vm(const struct hll_config *config);
+HLL_PUB struct hll_vm *hll_make_vm(const struct hll_config *config);
 
 // Deletes VM and frees all its data.
-HLL_PUB
-void hll_delete_vm(struct hll_vm *vm);
+HLL_PUB void hll_delete_vm(struct hll_vm *vm);
 
 // Runs given source as hololisp code. Name is meta information.
-HLL_PUB
-enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
-                                        const char *source, bool print_result);
+HLL_PUB enum hll_interpret_result hll_interpret(struct hll_vm *vm,
+                                                const char *name,
+                                                const char *source,
+                                                hll_interpret_flags flags);
 
 #endif

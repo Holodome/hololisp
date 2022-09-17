@@ -76,5 +76,10 @@ size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
 void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
 
 void hll_dump_value(void *file, hll_value value);
+size_t hll_bytecode_op_idx(struct hll_bytecode *bytecode);
+size_t hll_bytecode_emit_u8(struct hll_bytecode *bytecode, uint8_t byte);
+size_t hll_bytecode_emit_u16(struct hll_bytecode *bytecode, uint16_t value);
+size_t hll_bytecode_emit_op(struct hll_bytecode *bytecode,
+                            enum hll_bytecode_op op);
 
 #endif

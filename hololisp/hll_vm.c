@@ -129,7 +129,8 @@ void hll_delete_vm(struct hll_vm *vm) {
 }
 
 enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
-                                        const char *source, bool print_result) {
+                                        const char *source,
+                                        hll_interpret_flags flags) {
   vm->current_filename = name;
   vm->source = source;
 
@@ -138,6 +139,7 @@ enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
     return HLL_RESULT_COMPILE_ERROR;
   }
 
+  bool print_result = (flags & HLL_INTERPRET_PRINT_RESULT) != 0;
   enum hll_interpret_result result =
       hll_interpret_bytecode(vm, compiled, print_result)
           ? HLL_RESULT_RUNTIME_ERROR
@@ -229,8 +231,8 @@ void hll_print(struct hll_vm *vm, hll_value value, void *file) {
   }
 }
 
-HLL_ATTR(format(printf, 2, 3))
-void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
+__attribute__((format(printf, 2, 3))) void
+hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char buffer[4096];
@@ -279,7 +281,6 @@ static void hll_collect_garbage(struct hll_vm *vm) {
     }
   }
 
-  //    fprintf(stderr, "after collection %zu\n", vm->bytes_allocated);
   vm->next_gc = vm->bytes_allocated +
                 ((vm->bytes_allocated * vm->config.heap_grow_percent) / 100);
   if (vm->next_gc < vm->config.min_heap_size) {

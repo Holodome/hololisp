@@ -173,3 +173,25 @@ void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode) {
     hll_free(bytecode, sizeof(struct hll_bytecode));
   }
 }
+
+size_t hll_bytecode_op_idx(struct hll_bytecode *bytecode) {
+  return hll_sb_len(bytecode->ops);
+}
+
+size_t hll_bytecode_emit_u8(struct hll_bytecode *bytecode, uint8_t byte) {
+  size_t idx = hll_bytecode_op_idx(bytecode);
+  hll_sb_push(bytecode->ops, byte);
+  return idx;
+}
+
+size_t hll_bytecode_emit_u16(struct hll_bytecode *bytecode, uint16_t value) {
+  size_t idx = hll_bytecode_emit_u8(bytecode, (value >> 8) & 0xFF);
+  hll_bytecode_emit_u8(bytecode, value & 0xFF);
+  return idx;
+}
+
+size_t hll_bytecode_emit_op(struct hll_bytecode *bytecode,
+                            enum hll_bytecode_op op) {
+  assert(op <= 0xFF);
+  return hll_bytecode_emit_u8(bytecode, op);
+}
