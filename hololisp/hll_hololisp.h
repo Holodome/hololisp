@@ -94,9 +94,8 @@ HLL_PUB struct hll_vm *hll_make_vm(const struct hll_config *config);
 // Deletes VM and frees all its data.
 HLL_PUB void hll_delete_vm(struct hll_vm *vm);
 
-// Runs given source as hololisp code. Name is meta information.
+// Runs given source as hololisp code.
 HLL_PUB enum hll_interpret_result hll_interpret(struct hll_vm *vm,
-                                                const char *name,
                                                 const char *source,
                                                 hll_interpret_flags flags);
 

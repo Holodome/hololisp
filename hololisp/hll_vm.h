@@ -20,13 +20,6 @@ struct hll_call_frame {
 struct hll_vm {
   struct hll_config config;
 
-  // Stores name of current file being executed. Files are executed atomically,
-  // so it can be reused across different compile stages to provide source
-  // information.
-  const char *current_filename;
-  // Current parsed source.
-  const char *source;
-
   hll_value nthcdr_symb;
   hll_value quote_symb;
 

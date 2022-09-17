@@ -38,6 +38,7 @@ static void initialize_default_config(struct hll_config *config) {
   config->user_data = NULL;
 }
 
+#if 0
 typedef struct {
   uint32_t line;
   uint32_t column;
@@ -62,9 +63,11 @@ static hll_source_loc get_source_loc(const char *source, size_t offset) {
 
   return loc;
 }
+#endif
 
 void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
                       const char *msg) {
+  (void)offset;
   (void)len; // TODO: use in reporting parts of source code.
   ++vm->error_count;
   if (vm->config.error_fn == NULL) {
@@ -72,14 +75,7 @@ void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
   }
 
   char buffer[4096];
-  const char *filename = vm->current_filename;
-  hll_source_loc loc = get_source_loc(vm->source, offset);
-  if (filename != NULL) {
-    snprintf(buffer, sizeof(buffer), "%s:%u:%u: %s\n", filename, loc.line,
-             loc.column, msg);
-  } else {
-    snprintf(buffer, sizeof(buffer), "%u:%u: %s\n", loc.line, loc.column, msg);
-  }
+  snprintf(buffer, sizeof(buffer), "%s\n", msg);
 
   vm->config.error_fn(vm, buffer);
 }
@@ -128,12 +124,8 @@ void hll_delete_vm(struct hll_vm *vm) {
   hll_free(vm, sizeof(struct hll_vm));
 }
 
-enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *name,
-                                        const char *source,
+enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *source,
                                         hll_interpret_flags flags) {
-  vm->current_filename = name;
-  vm->source = source;
-
   hll_value compiled;
   if (!hll_compile(vm, source, &compiled)) {
     return HLL_RESULT_COMPILE_ERROR;

@@ -760,7 +760,7 @@ void add_builtins(struct hll_vm *vm) {
 
   hll_add_binding(vm, "eq?", builtin_eq);
 #if 1
-  hll_interpret(vm, "builtins",
+  hll_interpret(vm,
                 "(defmacro (not x) (list 'if x () 't))\n"
                 "(defmacro (when expr . body)\n"
                 "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
@@ -803,8 +803,8 @@ void add_builtins(struct hll_vm *vm) {
                 "  (if lis\n"
                 "      (and (pred (car lis)) (all pred (cdr lis)))\n"
                 "      t))\n",
-                false);
-  hll_interpret(vm, "builtins part 2",
+                0);
+  hll_interpret(vm,
 
                 "(define (any pred lis)\n"
                 "  (when lis\n"
@@ -846,6 +846,6 @@ void add_builtins(struct hll_vm *vm) {
                 "  (when lis\n"
                 "    (cons (fn (car lis))\n"
                 "          (map fn (cdr lis)))))\n",
-                false);
+                0);
 #endif
 }

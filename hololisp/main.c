@@ -139,7 +139,8 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    enum hll_interpret_result result = hll_interpret(vm, "repl", line, true);
+    enum hll_interpret_result result =
+        hll_interpret(vm, line, HLL_INTERPRET_PRINT_RESULT);
     manage_result(result);
   }
 
@@ -161,8 +162,7 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  enum hll_interpret_result result =
-      hll_interpret(vm, filename, file_contents, false);
+  enum hll_interpret_result result = hll_interpret(vm, file_contents, 0);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -171,7 +171,8 @@ static bool execute_script(const char *filename) {
 
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  enum hll_interpret_result result = hll_interpret(vm, "cli", str, true);
+  enum hll_interpret_result result =
+      hll_interpret(vm, str, HLL_INTERPRET_PRINT_RESULT);
   hll_delete_vm(vm);
 
   return manage_result(result);
