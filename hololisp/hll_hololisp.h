@@ -92,11 +92,11 @@ enum {
 HLL_PUB struct hll_vm *hll_make_vm(const struct hll_config *config);
 
 // Deletes VM and frees all its data.
-HLL_PUB void hll_delete_vm(struct hll_vm *vm);
+HLL_PUB void hll_delete_vm(struct hll_vm *vm) __attribute__((nonnull));
 
 // Runs given source as hololisp code.
-HLL_PUB enum hll_interpret_result hll_interpret(struct hll_vm *vm,
-                                                const char *source,
-                                                hll_interpret_flags flags);
+HLL_PUB enum hll_interpret_result
+hll_interpret(struct hll_vm *vm, const char *source, hll_interpret_flags flags)
+    __attribute__((nonnull));
 
 #endif

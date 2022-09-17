@@ -7,6 +7,8 @@
 
 #include "hll_hololisp.h"
 
+#define HLL_MAX_SYMB_LENGTH 128
+
 typedef uint8_t hll_object_kind;
 enum {
   // Singleton values

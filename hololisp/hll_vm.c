@@ -174,51 +174,53 @@ bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
   return false;
 }
 
-void hll_print(struct hll_vm *vm, hll_value value, void *file) {
+void hll_print_value(struct hll_vm *vm, hll_value value) {
   switch (hll_get_value_kind(value)) {
   case HLL_OBJ_CONS:
-    fprintf(file, "(");
-    while (hll_get_value_kind(value) != HLL_OBJ_NIL) {
-      assert(hll_get_value_kind(value) == HLL_OBJ_CONS);
-      hll_print(vm, hll_unwrap_car(value), file);
+    hll_print(vm, "(");
+    while (hll_is_cons(value)) {
+      hll_print_value(vm, hll_unwrap_car(value));
 
       hll_value cdr = hll_unwrap_cdr(value);
-      if (hll_get_value_kind(cdr) != HLL_OBJ_NIL &&
-          hll_get_value_kind(cdr) != HLL_OBJ_CONS) {
-        fprintf(file, " . ");
-        hll_print(vm, cdr, file);
+      if (!hll_is_list(cdr)) {
+        hll_print(vm, " . ");
+        hll_print_value(vm, cdr);
         break;
       } else if (hll_get_value_kind(cdr) != HLL_OBJ_NIL) {
-        fprintf(file, " ");
+        hll_print(vm, " ");
       }
 
       value = cdr;
     }
-    fprintf(file, ")");
+    hll_print(vm, ")");
     break;
-  case HLL_OBJ_SYMB:
-    fprintf(file, "%s", hll_unwrap_zsymb(value));
-    break;
+  case HLL_OBJ_SYMB: {
+    char buffer[HLL_MAX_SYMB_LENGTH + 1];
+    snprintf(buffer, sizeof(buffer), "%s", hll_unwrap_zsymb(value));
+    hll_print(vm, buffer);
+  } break;
   case HLL_OBJ_NIL:
-    fprintf(file, "()");
+    hll_print(vm, "()");
     break;
-  case HLL_OBJ_NUM:
-    fprintf(file, "%lld", (long long)hll_unwrap_num(value));
-    break;
+  case HLL_OBJ_NUM: {
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "%lld", (long long)hll_unwrap_num(value));
+    hll_print(vm, buffer);
+  } break;
   case HLL_OBJ_TRUE:
-    fprintf(file, "t");
+    hll_print(vm, "t");
     break;
   case HLL_OBJ_BIND:
-    fprintf(file, "bind");
+    hll_print(vm, "bind");
     break;
   case HLL_OBJ_ENV:
-    fprintf(file, "env");
+    hll_print(vm, "env");
     break;
   case HLL_OBJ_FUNC:
-    fprintf(file, "func");
+    hll_print(vm, "func");
     break;
   default:
-    assert(!"Not implemented");
+    HLL_UNREACHABLE;
     break;
   }
 }
@@ -571,11 +573,7 @@ bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
   hll_value result =
       hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
   if (print_result) {
-    //    if (result == NULL) {
-    //      internal_compiler_error(vm, "expected one value to print");
-    //      return true;
-    //    }
-    hll_print(vm, result, stdout);
+    hll_print_value(vm, result);
     printf("\n");
   }
 
@@ -610,4 +608,11 @@ hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args) {
 
   (void)hll_sb_pop(vm->temp_roots); // env
   return hll_interpret_bytecode_internal(vm, env, macro);
+}
+
+void hll_print(struct hll_vm *vm, const char *str)
+{
+  if (vm->config.write_fn) {
+    vm->config.write_fn(vm, str);
+  }
 }

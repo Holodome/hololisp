@@ -85,8 +85,7 @@ void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
 HLL_PUB
 hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args);
 
-HLL_PUB
-void hll_print(struct hll_vm *vm, hll_value obj, void *file);
+HLL_PUB void hll_print_value(struct hll_vm *vm, hll_value obj);
 
 HLL_PUB
 bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
@@ -97,5 +96,7 @@ void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...);
 
 hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
                                           hll_value compiled);
+
+void hll_print(struct hll_vm *vm, const char *str);
 
 #endif

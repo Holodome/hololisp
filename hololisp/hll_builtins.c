@@ -17,12 +17,12 @@
 
 static hll_value builtin_print(struct hll_vm *vm, hll_value args) {
   for (; hll_is_cons(args); args = hll_cdr(args)) {
-    hll_print(vm, hll_car(args), stdout);
+    hll_print_value(vm, hll_car(args));
     if (hll_is_cons(hll_cdr(args))) {
-      printf(" ");
+      hll_print(vm, " ");
     }
   }
-  printf("\n");
+  hll_print(vm, "\n");
   return hll_car(args);
 }
 
