@@ -65,9 +65,7 @@ const char *hll_get_object_kind_str(hll_object_kind kind) {
     str = "macro";
     break;
   default:
-#if HLL_DEBUG
     HLL_UNREACHABLE;
-#endif
     break;
   }
 
@@ -104,20 +102,13 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
   }
 }
 
-void register_object(struct hll_vm *vm, struct hll_obj *obj) {
+void register_gc_obj(struct hll_vm *vm, struct hll_obj *obj) {
   obj->next_gc = vm->all_objects;
   vm->all_objects = obj;
 }
 
-hll_value hll_nil(void) {
-  hll_value value = HLL_NAN_BOX_KIND(HLL_OBJ_NIL);
-  return value;
-}
-
-hll_value hll_true(void) {
-  hll_value value = HLL_NAN_BOX_KIND(HLL_OBJ_TRUE);
-  return value;
-}
+hll_value hll_nil(void) { return HLL_NAN_BOX_KIND(HLL_OBJ_NIL); }
+hll_value hll_true(void) { return HLL_NAN_BOX_KIND(HLL_OBJ_TRUE); }
 
 hll_value hll_num(double num) {
   hll_value value;
@@ -142,8 +133,8 @@ hll_value hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
   symb->length = length;
   symb->hash = djb2(symbol, symbol + length);
   memcpy(symb->symb, symbol, length);
+  register_gc_obj(vm, obj);
 
-  register_object(vm, obj);
   return HLL_NAN_BOX_OBJ(obj);
 }
 
@@ -159,7 +150,7 @@ hll_value hll_new_cons(struct hll_vm *vm, hll_value car, hll_value cdr) {
   struct hll_obj_cons *cons = (void *)(obj + 1);
   cons->car = car;
   cons->cdr = cdr;
-  register_object(vm, obj);
+  register_gc_obj(vm, obj);
 
   return HLL_NAN_BOX_OBJ(obj);
 }
@@ -173,7 +164,7 @@ hll_value hll_new_bind(struct hll_vm *vm,
   obj->kind = HLL_OBJ_BIND;
   struct hll_obj_bind *binding = (void *)(obj + 1);
   binding->bind = bind;
-  register_object(vm, obj);
+  register_gc_obj(vm, obj);
 
   return HLL_NAN_BOX_OBJ(obj);
 }
@@ -186,7 +177,7 @@ hll_value hll_new_env(struct hll_vm *vm, hll_value up, hll_value vars) {
   struct hll_obj_env *env = (void *)(obj + 1);
   env->up = up;
   env->vars = vars;
-  register_object(vm, obj);
+  register_gc_obj(vm, obj);
 
   return HLL_NAN_BOX_OBJ(obj);
 }
@@ -200,7 +191,7 @@ hll_value hll_new_func(struct hll_vm *vm, hll_value params,
   struct hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
-  register_object(vm, obj);
+  register_gc_obj(vm, obj);
   hll_bytecode_inc_refcount(bytecode);
 
   return HLL_NAN_BOX_OBJ(obj);
@@ -215,7 +206,7 @@ hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
   struct hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
-  register_object(vm, obj);
+  register_gc_obj(vm, obj);
   hll_bytecode_inc_refcount(bytecode);
 
   return HLL_NAN_BOX_OBJ(obj);
@@ -293,52 +284,12 @@ double hll_unwrap_num(hll_value value) {
 
 size_t hll_list_length(hll_value value) {
   size_t length = 0;
-  while (hll_get_value_kind(value) == HLL_OBJ_CONS) {
+  while (hll_is_cons(value)) {
     ++length;
     value = hll_unwrap_cdr(value);
   }
 
   return length;
-}
-
-hll_value hll_copy_obj(struct hll_vm *vm, hll_value src) {
-  hll_value result;
-  switch (hll_get_value_kind(src)) {
-  case HLL_OBJ_NIL:
-  case HLL_OBJ_TRUE:
-  case HLL_OBJ_NUM:
-    result = src;
-    break;
-  case HLL_OBJ_CONS:
-    result = hll_new_cons(vm, hll_unwrap_car(src), hll_unwrap_cdr(src));
-    break;
-  case HLL_OBJ_SYMB: {
-    struct hll_obj_symb *symb = hll_unwrap_symb(src);
-    result = hll_new_symbol(vm, symb->symb, symb->length);
-  } break;
-  case HLL_OBJ_BIND:
-    result = hll_new_bind(vm, hll_unwrap_bind(src)->bind);
-    break;
-  case HLL_OBJ_ENV: {
-    struct hll_obj_env *env = hll_unwrap_env(src);
-    result = hll_new_env(vm, env->up, env->vars);
-  } break;
-  case HLL_OBJ_MACRO: {
-    struct hll_obj_func *func = hll_unwrap_macro(src);
-    struct hll_bytecode *bytecode = func->bytecode;
-    result = hll_new_macro(vm, func->param_names, bytecode);
-  } break;
-  case HLL_OBJ_FUNC: {
-    struct hll_obj_func *func = hll_unwrap_func(src);
-    struct hll_bytecode *bytecode = func->bytecode;
-    result = hll_new_func(vm, func->param_names, bytecode);
-  } break;
-  default:
-    HLL_UNREACHABLE;
-    break;
-  }
-
-  return result;
 }
 
 void hll_gray_obj(struct hll_vm *vm, hll_value value) {

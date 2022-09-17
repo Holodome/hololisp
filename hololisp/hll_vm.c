@@ -400,7 +400,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
 
       hll_value value = current_call_frame->bytecode->constant_pool[idx];
       assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
-      value = hll_copy_obj(vm, value);
+      value = hll_new_func(vm, hll_unwrap_func(value)->param_names, hll_unwrap_func(value)->bytecode);
       struct hll_obj_func *func = hll_unwrap_func(value);
       func->env = vm->env;
 
