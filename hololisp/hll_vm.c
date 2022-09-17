@@ -8,8 +8,10 @@
 #include <string.h>
 #include <time.h>
 
+#include "hll_bytecode.h"
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
+#include "hll_mem.h"
 #include "hll_obj.h"
 #include "hll_util.h"
 

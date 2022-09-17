@@ -26,7 +26,8 @@ bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   hll_value result = hll_compile_ast(&compiler, ast);
   --vm->forbid_gc;
 
-  if (lexer.has_errors || reader.has_errors || compiler.has_errors) {
+  if (lexer.error_count != 0 || reader.error_count != 0 ||
+      compiler.has_errors) {
     return false;
   }
 
@@ -230,9 +231,9 @@ get_next_state(enum hll_lexer_state state,
   return state;
 }
 
-HLL_ATTR(format(printf, 2, 3))
-static void lexer_error(struct hll_lexer *lexer, const char *fmt, ...) {
-  lexer->has_errors = true;
+__attribute__((format(printf, 2, 3))) static void
+lexer_error(struct hll_lexer *lexer, const char *fmt, ...) {
+  ++lexer->error_count;
   if (lexer->vm == NULL) {
     return;
   }
@@ -253,7 +254,7 @@ void hll_lexer_init(struct hll_lexer *lexer, const char *input,
   lexer->cursor = lexer->input = input;
 }
 
-void hll_lexer_next(struct hll_lexer *lexer) {
+const struct hll_token *hll_lexer_next(struct hll_lexer *lexer) {
   // Pull it from structure so there is better chance in ends up in
   // register.
   const char *cursor = lexer->cursor;
@@ -335,12 +336,14 @@ void hll_lexer_next(struct hll_lexer *lexer) {
       value = 0;
     }
 
-    lexer->next.kind = HLL_TOK_INT;
+    lexer->next.kind = HLL_TOK_NUM;
     lexer->next.value = value;
   } break;
   default:
     HLL_UNREACHABLE;
   }
+
+  return &lexer->next;
 }
 
 void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
@@ -350,9 +353,9 @@ void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
   reader->vm = vm;
 }
 
-HLL_ATTR(format(printf, 2, 3))
-static void reader_error(struct hll_reader *reader, const char *fmt, ...) {
-  reader->has_errors = true;
+__attribute__((format(printf, 2, 3))) static void
+reader_error(struct hll_reader *reader, const char *fmt, ...) {
+  ++reader->error_count;
   if (reader->vm == NULL) {
     return;
   }
@@ -363,8 +366,8 @@ static void reader_error(struct hll_reader *reader, const char *fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt, args);
   va_end(args);
 
-  hll_report_error(reader->vm, reader->lexer->next.offset,
-                   reader->lexer->next.length, buffer);
+  hll_report_error(reader->vm, reader->token->offset, reader->token->length,
+                   buffer);
 }
 
 static void peek_token(struct hll_reader *reader) {
@@ -374,9 +377,11 @@ static void peek_token(struct hll_reader *reader) {
 
   bool is_done = false;
   while (!is_done) {
-    hll_lexer_next(reader->lexer);
-    if (reader->lexer->next.kind == HLL_TOK_COMMENT) {
-    } else if (reader->lexer->next.kind == HLL_TOK_UNEXPECTED) {
+    const struct hll_token *token = hll_lexer_next(reader->lexer);
+    reader->token = token;
+
+    if (token->kind == HLL_TOK_COMMENT) {
+    } else if (token->kind == HLL_TOK_UNEXPECTED) {
       reader_error(reader, "Unexpected token");
     } else {
       is_done = true;
@@ -394,13 +399,13 @@ static hll_value read_expr(struct hll_reader *reader);
 
 static hll_value read_list(struct hll_reader *reader) {
   peek_token(reader);
-  assert(reader->lexer->next.kind == HLL_TOK_LPAREN);
+  assert(reader->token->kind == HLL_TOK_LPAREN);
   eat_token(reader);
   // Now we expect at least one list element followed by others ending either
   // with right paren or dot, element and right paren Now check if we don't
   // have first element
   peek_token(reader);
-  if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
+  if (reader->token->kind == HLL_TOK_RPAREN) {
     eat_token(reader);
     return hll_nil();
   }
@@ -413,18 +418,18 @@ static hll_value read_list(struct hll_reader *reader) {
   // Now enter the loop of parsing other list elements.
   for (;;) {
     peek_token(reader);
-    if (reader->lexer->next.kind == HLL_TOK_EOF) {
+    if (reader->token->kind == HLL_TOK_EOF) {
       reader_error(reader, "Missing closing paren (eof encountered)");
       return list_head;
-    } else if (reader->lexer->next.kind == HLL_TOK_RPAREN) {
+    } else if (reader->token->kind == HLL_TOK_RPAREN) {
       eat_token(reader);
       return list_head;
-    } else if (reader->lexer->next.kind == HLL_TOK_DOT) {
+    } else if (reader->token->kind == HLL_TOK_DOT) {
       eat_token(reader);
       hll_unwrap_cons(list_tail)->cdr = read_expr(reader);
 
       peek_token(reader);
-      if (reader->lexer->next.kind != HLL_TOK_RPAREN) {
+      if (reader->token->kind != HLL_TOK_RPAREN) {
         reader_error(reader, "Missing closing paren after dot");
         return list_head;
       }
@@ -443,24 +448,24 @@ static hll_value read_list(struct hll_reader *reader) {
 static hll_value read_expr(struct hll_reader *reader) {
   hll_value ast = hll_nil();
   peek_token(reader);
-  switch (reader->lexer->next.kind) {
+  switch (reader->token->kind) {
   case HLL_TOK_EOF:
     break;
-  case HLL_TOK_INT:
+  case HLL_TOK_NUM:
     eat_token(reader);
-    ast = hll_num(reader->lexer->next.value);
+    ast = hll_num(reader->token->value);
     break;
   case HLL_TOK_SYMB:
     eat_token(reader);
-    if (reader->lexer->next.length == 1 &&
-        reader->lexer->input[reader->lexer->next.offset] == 't') {
+    if (reader->token->length == 1 &&
+        reader->lexer->input[reader->token->offset] == 't') {
       ast = hll_true();
       break;
     }
 
-    ast = hll_new_symbol(reader->vm,
-                         reader->lexer->input + reader->lexer->next.offset,
-                         reader->lexer->next.length);
+    ast =
+        hll_new_symbol(reader->vm, reader->lexer->input + reader->token->offset,
+                       reader->token->length);
     break;
   case HLL_TOK_LPAREN:
     ast = read_list(reader);
@@ -489,7 +494,7 @@ hll_value hll_read_ast(struct hll_reader *reader) {
 
   for (;;) {
     peek_token(reader);
-    if (reader->lexer->next.kind == HLL_TOK_EOF) {
+    if (reader->token->kind == HLL_TOK_EOF) {
       break;
     }
 

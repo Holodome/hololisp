@@ -143,7 +143,7 @@ static void test_reader_reports_unclosed_list(void) {
 
   hll_value ast = hll_read_ast(&reader);
   (void)ast;
-  TEST_ASSERT(reader.has_errors);
+  TEST_ASSERT(reader.error_count);
 }
 
 static void test_reader_reports_stray_rparen(void) {
@@ -157,7 +157,7 @@ static void test_reader_reports_stray_rparen(void) {
 
   hll_value ast = hll_read_ast(&reader);
   (void)ast;
-  TEST_ASSERT(reader.has_errors);
+  TEST_ASSERT(reader.error_count);
 }
 
 static void test_reader_parses_nil(void) {

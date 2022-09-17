@@ -29,10 +29,4 @@
 #endif
 #endif // HLL_DEBUG
 
-#if defined(__GNUC__) || defined(__clang__)
-#define HLL_ATTR(...) __attribute__((__VA_ARGS__))
-#else
-#define HlL_ATTR(...)
-#endif
-
 #endif
