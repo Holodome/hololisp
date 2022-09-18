@@ -5,6 +5,7 @@
 #ifndef HLL_VM_H
 #define HLL_VM_H
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -57,42 +58,44 @@ struct hll_vm {
 // Garbage collector tracked allocation
 #define hll_gc_free(_vm, _ptr, _size) hll_gc_realloc(_vm, _ptr, _size, 0)
 #define hll_gc_alloc(_vm, _size) hll_gc_realloc(_vm, NULL, 0, _size)
-HLL_PUB
-void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
-                     size_t new_size);
+HLL_PUB void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
+                             size_t new_size) __attribute__((alloc_size(4)));
 
 // Used to report error in current state contained by vm.
 // vm must have current_filename field present if message needs to include
 // source location.
 // offset specifies byte offset of reported location in file.
 // len specifies length of reported part (e.g. token).
-HLL_PUB
-void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
-                      const char *msg);
+HLL_PUB void hll_report_errorv(struct hll_vm *vm, size_t offset, uint32_t len,
+                               const char *fmt, va_list args);
+HLL_PUB void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
+                              const char *fmt, ...)
+    __attribute__((format(printf, 4, 5)));
+HLL_PUB void hll_report_error_value(struct hll_vm *vm, hll_value value,
+                                    const char *msg, ...)
+    __attribute__((format(printf, 3, 4)));
+HLL_PUB void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
+                                     const char *msg, va_list args);
 
-HLL_PUB
-void hll_add_binding(struct hll_vm *vm, const char *symb,
-                     hll_value (*bind)(struct hll_vm *vm, hll_value args));
+HLL_PUB void hll_add_binding(struct hll_vm *vm, const char *symb,
+                             hll_value (*bind)(struct hll_vm *vm,
+                                               hll_value args));
 
-HLL_PUB
-bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
-                            bool print_result);
+HLL_PUB bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
+                                    bool print_result);
 
-HLL_PUB
-void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
-                      hll_value value);
+HLL_PUB void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
+                              hll_value value);
 
-HLL_PUB
-hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args);
+HLL_PUB hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro,
+                                   hll_value args);
 
 HLL_PUB void hll_print_value(struct hll_vm *vm, hll_value obj);
 
-HLL_PUB
-bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
-                  hll_value *found);
+HLL_PUB bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
+                          hll_value *found);
 
-HLL_PUB
-void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...);
+HLL_PUB void hll_runtime_error(struct hll_vm *vm, const char *fmt, ...);
 
 hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
                                           hll_value compiled);

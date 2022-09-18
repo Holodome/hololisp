@@ -322,17 +322,12 @@ get_next_state(enum hll_lexer_state state,
 __attribute__((format(printf, 2, 3))) static void
 lexer_error(struct hll_lexer *lexer, const char *fmt, ...) {
   ++lexer->error_count;
-  if (lexer->vm == NULL) {
-    return;
-  }
 
-  char buffer[4096];
   va_list args;
   va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, fmt,
+                   args);
   va_end(args);
-
-  hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, buffer);
 }
 
 void hll_lexer_init(struct hll_lexer *lexer, const char *input,
@@ -444,18 +439,12 @@ void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
 __attribute__((format(printf, 2, 3))) static void
 reader_error(struct hll_reader *reader, const char *fmt, ...) {
   ++reader->error_count;
-  if (reader->vm == NULL) {
-    return;
-  }
 
-  char buffer[4096];
   va_list args;
   va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  hll_report_errorv(reader->vm, reader->token->offset, reader->token->length,
+                    fmt, args);
   va_end(args);
-
-  hll_report_error(reader->vm, reader->token->offset, reader->token->length,
-                   buffer);
 }
 
 static void peek_token(struct hll_reader *reader) {
@@ -616,20 +605,12 @@ void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
 __attribute__((format(printf, 3, 4))) static void
 compiler_error(struct hll_compiler *compiler, hll_value ast, const char *fmt,
                ...) {
-  (void)ast;
   ++compiler->error_count;
-  if (compiler->vm == NULL) {
-    return;
-  }
 
-  char buffer[4096];
   va_list args;
   va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  hll_report_error_valuev(compiler->vm, ast, fmt, args);
   va_end(args);
-
-  // TODO: Length, offset
-  hll_report_error(compiler->vm, 0, 0, buffer);
 }
 
 static enum hll_form_kind get_form_kind(const char *symb) {

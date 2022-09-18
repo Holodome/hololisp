@@ -38,46 +38,45 @@ static void initialize_default_config(struct hll_config *config) {
   config->user_data = NULL;
 }
 
-#if 0
-typedef struct {
-  uint32_t line;
-  uint32_t column;
-} hll_source_loc;
-
-static hll_source_loc get_source_loc(const char *source, size_t offset) {
-  const char *cursor = source;
-  hll_source_loc loc = {0};
-  if (cursor == NULL) {
-    return loc;
-  }
-
-  while (cursor < source + offset) {
-    char symb = *cursor++;
-    if (symb == '\n') {
-      ++loc.line;
-      loc.column = 0;
-    } else {
-      ++loc.column;
-    }
-  }
-
-  return loc;
-}
-#endif
-
-void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
-                      const char *msg) {
+void hll_report_errorv(struct hll_vm *vm, size_t offset, uint32_t len,
+                       const char *fmt, va_list args) {
   (void)offset;
-  (void)len; // TODO: use in reporting parts of source code.
+  (void)len;
+  if (vm == NULL) {
+    return;
+  }
+
   ++vm->error_count;
   if (vm->config.error_fn == NULL) {
     return;
   }
 
   char buffer[4096];
-  snprintf(buffer, sizeof(buffer), "%s\n", msg);
-
+  vsnprintf(buffer, sizeof(buffer), fmt, args);
   vm->config.error_fn(vm, buffer);
+  vm->config.error_fn(vm, "\n");
+}
+void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
+                      const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  hll_report_errorv(vm, offset, len, fmt, args);
+  va_end(args);
+}
+void hll_report_error_value(struct hll_vm *vm, hll_value value, const char *msg,
+                            ...) {
+  va_list args;
+  va_start(args, msg);
+  hll_report_error_valuev(vm, value, msg, args);
+  va_end(args);
+}
+void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
+                             const char *msg, va_list args) {
+  assert(0);
+  (void)vm;
+  (void)value;
+  (void)msg;
+  (void)args;
 }
 
 void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
@@ -229,18 +228,13 @@ __attribute__((format(printf, 2, 3))) void
 hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  char buffer[4096];
-  size_t a = snprintf(buffer, sizeof(buffer), "Runtime error: ");
-  vsnprintf(buffer + a, sizeof(buffer) - a, fmt, args);
+  hll_report_error(vm, 0, 0, fmt, args);
   va_end(args);
-  // TODO: Line information
-  hll_report_error(vm, 0, 0, buffer);
 }
 
 static void hll_collect_garbage(struct hll_vm *vm) {
   // Reset allocated bytes count
   vm->bytes_allocated = 0;
-  // These objects have unique instances
   hll_sb_purge(vm->gray_objs);
   hll_gray_obj(vm, vm->quote_symb);
   hll_gray_obj(vm, vm->nthcdr_symb);
