@@ -50,7 +50,8 @@ void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride);
 // If new_size is 0, behaves as 'free'.
 // If old_size is 0, behaves as 'calloc'
 // Otherwise behaves as 'realloc'
-void *hll_realloc(void *ptr, size_t old_size, size_t new_size);
+void *hll_realloc(void *ptr, size_t old_size, size_t new_size)
+    __attribute__((alloc_size(3)));
 
 #ifdef HLL_MEM_CHECK
 // Retturns number of bytes allocated but not freed.

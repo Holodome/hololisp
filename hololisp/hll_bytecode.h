@@ -6,6 +6,8 @@
 
 #include "hll_hololisp.h"
 
+#define HLL_BYTECODE_MAX_CONSANT_COUNT UINT16_MAX
+
 enum hll_bytecode_op {
   // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
@@ -59,9 +61,12 @@ enum hll_bytecode_op {
   HLL_BYTECODE_DUP,
 };
 
+// Contains unit of bytecode. This is typically some compiled function
+// with list of all variables referenced in it.
+// Bytecode is reference counted in order to allow dynamic compilation and
+// bytecode freeing, necessary in dynamic lisp environment.
 struct hll_bytecode {
   uint32_t refcount;
-
   // Bytecode dynamic array
   uint8_t *ops;
   // Constant pool dynamic array
@@ -73,13 +78,14 @@ void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode);
 void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode);
 
 size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
-void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
 
-void hll_dump_value(void *file, hll_value value);
 size_t hll_bytecode_op_idx(struct hll_bytecode *bytecode);
 size_t hll_bytecode_emit_u8(struct hll_bytecode *bytecode, uint8_t byte);
 size_t hll_bytecode_emit_u16(struct hll_bytecode *bytecode, uint16_t value);
 size_t hll_bytecode_emit_op(struct hll_bytecode *bytecode,
                             enum hll_bytecode_op op);
+
+void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
+void hll_dump_value(void *file, hll_value value);
 
 #endif
