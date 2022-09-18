@@ -43,7 +43,7 @@ struct hll_vm {
 
   // Linked list of all objects.
   // Uses next field
-  struct hll_obj *all_objects;
+  struct hll_obj *all_objs;
   // Count all allocated bytes to know when to trigger garbage collection.
   size_t bytes_allocated;
   // If bytes_allocated becomes greater than this value, trigger next gc.

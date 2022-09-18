@@ -1,5 +1,9 @@
-#ifndef HLL_OBJ_H
-#define HLL_OBJ_H
+//
+// hll_value.h
+//
+// Defines common methods for manipulating hololisp values.
+#ifndef HLL_VALUE_H
+#define HLL_VALUE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,11 +11,12 @@
 
 #include "hll_hololisp.h"
 
+// Limit max symbol length.
 #define HLL_MAX_SYMB_LENGTH 128
 
-typedef uint8_t hll_object_kind;
+typedef uint8_t hll_value_kind;
 enum {
-  // Singleton values
+  // Singleton values. These are not heap-allocated.
   HLL_OBJ_NUM = 0x0,
   HLL_OBJ_NIL = 0x1,
   HLL_OBJ_TRUE = 0x2,
@@ -24,8 +29,10 @@ enum {
   HLL_OBJ_MACRO = 0x8,
 };
 
+HLL_PUB const char *hll_get_object_kind_str(hll_value_kind kind);
+
 struct hll_obj {
-  hll_object_kind kind;
+  hll_value_kind kind;
   bool is_dark;
   struct hll_obj *next_gc;
   char as[];
@@ -58,11 +65,9 @@ struct hll_obj_symb {
   char symb[];
 };
 
-HLL_PUB
-const char *hll_get_object_kind_str(hll_object_kind kind);
-
-HLL_PUB
-void hll_free_object(struct hll_vm *vm, struct hll_obj *obj);
+//
+// Functions that create new values.
+//
 
 HLL_PUB hll_value hll_nil(void);
 HLL_PUB hll_value hll_true(void);
@@ -80,6 +85,12 @@ HLL_PUB hll_value hll_new_func(struct hll_vm *vm, hll_value params,
 HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
                                 struct hll_bytecode *bytecode);
 
+//
+// Unwrapper functions.
+// Unwrappers are used to get internal contents of value of expected type.
+// If value type is not equal to expected, panic.
+//
+
 HLL_PUB struct hll_obj_cons *hll_unwrap_cons(hll_value value);
 HLL_PUB hll_value hll_unwrap_cdr(hll_value value);
 HLL_PUB hll_value hll_unwrap_car(hll_value value);
@@ -91,20 +102,34 @@ HLL_PUB struct hll_obj_func *hll_unwrap_func(hll_value value);
 HLL_PUB struct hll_obj_func *hll_unwrap_macro(hll_value value);
 HLL_PUB double hll_unwrap_num(hll_value value);
 
-HLL_PUB size_t hll_list_length(hll_value value);
+//
+// Type-checking functions. Generally specific function 'hll_is_nil'
+// is preferred to hll_get_value_kind() == HLL_OBJ_NIL because it makes
+// compiler optimizations easier.
+//
 
-HLL_PUB void hll_gray_obj(struct hll_vm *vm, hll_value value);
-HLL_PUB void hll_blacken_obj(struct hll_vm *vm, hll_value value);
-
-HLL_PUB hll_object_kind hll_get_value_kind(hll_value value);
-
+HLL_PUB hll_value_kind hll_get_value_kind(hll_value value);
 HLL_PUB bool hll_is_nil(hll_value value);
 HLL_PUB bool hll_is_num(hll_value value);
 HLL_PUB bool hll_is_cons(hll_value value);
 HLL_PUB bool hll_is_symb(hll_value value);
 HLL_PUB bool hll_is_list(hll_value value);
 
+//
+// Accessor overriding functions. By lisp standards, car returns car of object
+// if object is cons, nil if object is nil and panics otherwise.
+//
+
 HLL_PUB hll_value hll_car(hll_value lis);
 HLL_PUB hll_value hll_cdr(hll_value lis);
+HLL_PUB size_t hll_list_length(hll_value value);
+
+//
+// Internal API related to GC.
+//
+
+void hll_gray_obj(struct hll_vm *vm, hll_value value);
+void hll_blacken_obj(struct hll_vm *vm, hll_value value);
+void hll_free_obj(struct hll_vm *vm, struct hll_obj *obj);
 
 #endif

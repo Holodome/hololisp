@@ -1,8 +1,6 @@
-#include "hll_obj.h"
+#include "hll_value.h"
 
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "hll_bytecode.h"
@@ -13,16 +11,26 @@
 #define HLL_SIGN_BIT ((uint64_t)1 << 63)
 #define HLL_QNAN ((uint64_t)0x7ffc000000000000)
 
-#define HLL_IS_NUM(_value) (((_value)&HLL_QNAN) != HLL_QNAN)
-#define HLL_IS_OBJ(_value)                                                     \
-  (((_value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT))
+bool hll_is_num(hll_value value) { return (value & HLL_QNAN) != HLL_QNAN; }
+bool hll_is_obj(hll_value value) {
+  return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
+}
 
-#define HLL_NAN_BOX_KIND(_kind) ((hll_value)(uint64_t)(HLL_QNAN | (_kind)))
-#define HLL_NAN_BOX_OBJ(_ptr)                                                  \
-  ((hll_value)(((uint64_t)(uintptr_t)(_ptr)) | (HLL_SIGN_BIT | HLL_QNAN)))
-#define HLL_NAN_BOX_OBJ_UNWRAP(_value)                                         \
-  ((struct hll_obj *)(uintptr_t)((_value) & ~(HLL_SIGN_BIT | HLL_QNAN)))
-#define HLL_VALUE_KIND(_value) ((uint64_t)(_value) & ~HLL_QNAN)
+static hll_value nan_box_singleton(hll_value_kind kind) {
+  return HLL_QNAN | kind;
+}
+
+static hll_value_kind nan_unbox_singleton(hll_value value) {
+  return value & ~(HLL_QNAN);
+}
+
+static hll_value nan_box_ptr(void *ptr) {
+  return ((uintptr_t)ptr) | (HLL_SIGN_BIT | HLL_QNAN);
+}
+
+static struct hll_obj *nan_unbox_ptr(hll_value value) {
+  return (struct hll_obj *)(uintptr_t)(value & ~(HLL_SIGN_BIT | HLL_QNAN));
+}
 
 static uint32_t djb2(const char *src, const char *dst) {
   uint32_t hash = 5381;
@@ -34,45 +42,15 @@ static uint32_t djb2(const char *src, const char *dst) {
   return hash;
 }
 
-const char *hll_get_object_kind_str(hll_object_kind kind) {
-  const char *str = NULL;
-  switch (kind) {
-  case HLL_OBJ_CONS:
-    str = "cons";
-    break;
-  case HLL_OBJ_SYMB:
-    str = "symb";
-    break;
-  case HLL_OBJ_NIL:
-    str = "nil";
-    break;
-  case HLL_OBJ_NUM:
-    str = "num";
-    break;
-  case HLL_OBJ_BIND:
-    str = "bind";
-    break;
-  case HLL_OBJ_ENV:
-    str = "env";
-    break;
-  case HLL_OBJ_TRUE:
-    str = "true";
-    break;
-  case HLL_OBJ_FUNC:
-    str = "func";
-    break;
-  case HLL_OBJ_MACRO:
-    str = "macro";
-    break;
-  default:
-    HLL_UNREACHABLE;
-    break;
-  }
+const char *hll_get_object_kind_str(hll_value_kind kind) {
+  static const char *strs[] = {"num",  "nil", "true", "cons", "symb",
+                               "bind", "env", "func", "macro"};
 
-  return str;
+  assert(kind < sizeof(strs) / sizeof(strs[0]));
+  return strs[kind];
 }
 
-void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
+void hll_free_obj(struct hll_vm *vm, struct hll_obj *obj) {
   switch (obj->kind) {
   case HLL_OBJ_CONS:
     hll_gc_free(vm, obj, sizeof(struct hll_obj) + sizeof(struct hll_obj_cons));
@@ -102,13 +80,13 @@ void hll_free_object(struct hll_vm *vm, struct hll_obj *obj) {
   }
 }
 
-void register_gc_obj(struct hll_vm *vm, struct hll_obj *obj) {
-  obj->next_gc = vm->all_objects;
-  vm->all_objects = obj;
+static void register_gc_obj(struct hll_vm *vm, struct hll_obj *obj) {
+  obj->next_gc = vm->all_objs;
+  vm->all_objs = obj;
 }
 
-hll_value hll_nil(void) { return HLL_NAN_BOX_KIND(HLL_OBJ_NIL); }
-hll_value hll_true(void) { return HLL_NAN_BOX_KIND(HLL_OBJ_TRUE); }
+hll_value hll_nil(void) { return nan_box_singleton(HLL_OBJ_NIL); }
+hll_value hll_true(void) { return nan_box_singleton(HLL_OBJ_TRUE); }
 
 hll_value hll_num(double num) {
   hll_value value;
@@ -135,7 +113,7 @@ hll_value hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length) {
   memcpy(symb->symb, symbol, length);
   register_gc_obj(vm, obj);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 hll_value hll_new_symbolz(struct hll_vm *vm, const char *symbol) {
@@ -152,7 +130,7 @@ hll_value hll_new_cons(struct hll_vm *vm, hll_value car, hll_value cdr) {
   cons->cdr = cdr;
   register_gc_obj(vm, obj);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 hll_value hll_new_bind(struct hll_vm *vm,
@@ -166,7 +144,7 @@ hll_value hll_new_bind(struct hll_vm *vm,
   binding->bind = bind;
   register_gc_obj(vm, obj);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 hll_value hll_new_env(struct hll_vm *vm, hll_value up, hll_value vars) {
@@ -179,7 +157,7 @@ hll_value hll_new_env(struct hll_vm *vm, hll_value up, hll_value vars) {
   env->vars = vars;
   register_gc_obj(vm, obj);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 hll_value hll_new_func(struct hll_vm *vm, hll_value params,
@@ -194,7 +172,7 @@ hll_value hll_new_func(struct hll_vm *vm, hll_value params,
   register_gc_obj(vm, obj);
   hll_bytecode_inc_refcount(bytecode);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
@@ -209,74 +187,74 @@ hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
   register_gc_obj(vm, obj);
   hll_bytecode_inc_refcount(bytecode);
 
-  return HLL_NAN_BOX_OBJ(obj);
+  return nan_box_ptr(obj);
 }
 
 struct hll_obj_cons *hll_unwrap_cons(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_CONS);
   return (struct hll_obj_cons *)obj->as;
 }
 
 const char *hll_unwrap_zsymb(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_SYMB);
   return ((struct hll_obj_symb *)obj->as)->symb;
 }
 
 struct hll_obj_symb *hll_unwrap_symb(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_SYMB);
   return (struct hll_obj_symb *)obj->as;
 }
 
 hll_value hll_unwrap_cdr(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_CONS);
   return ((struct hll_obj_cons *)obj->as)->cdr;
 }
 
 hll_value hll_unwrap_car(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_CONS);
   return ((struct hll_obj_cons *)obj->as)->car;
 }
 
 struct hll_obj_bind *hll_unwrap_bind(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_BIND);
   return (struct hll_obj_bind *)obj->as;
 }
 
 struct hll_obj_env *hll_unwrap_env(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_ENV);
   return (struct hll_obj_env *)obj->as;
 }
 
 struct hll_obj_func *hll_unwrap_func(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_FUNC);
   return (struct hll_obj_func *)obj->as;
 }
 
 struct hll_obj_func *hll_unwrap_macro(hll_value value) {
-  assert(HLL_IS_OBJ(value));
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = nan_unbox_ptr(value);
   assert(obj->kind == HLL_OBJ_MACRO);
   return (struct hll_obj_func *)obj->as;
 }
 
 double hll_unwrap_num(hll_value value) {
-  assert(HLL_IS_NUM(value));
+  assert(hll_is_num(value));
   double result;
   memcpy(&result, &value, sizeof(hll_value));
   return result;
@@ -293,11 +271,11 @@ size_t hll_list_length(hll_value value) {
 }
 
 void hll_gray_obj(struct hll_vm *vm, hll_value value) {
-  if (!HLL_IS_OBJ(value)) {
+  if (!hll_is_obj(value)) {
     return;
   }
 
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  struct hll_obj *obj = nan_unbox_ptr(value);
   if (obj->is_dark) {
     return;
   }
@@ -307,11 +285,11 @@ void hll_gray_obj(struct hll_vm *vm, hll_value value) {
 }
 
 void hll_blacken_obj(struct hll_vm *vm, hll_value value) {
-  if (!HLL_IS_OBJ(value)) {
+  if (!hll_is_obj(value)) {
     return;
   }
 
-  struct hll_obj *obj = HLL_NAN_BOX_OBJ_UNWRAP(value);
+  struct hll_obj *obj = nan_unbox_ptr(value);
   vm->bytes_allocated += sizeof(struct hll_obj);
 
   switch (obj->kind) {
@@ -355,25 +333,19 @@ void hll_blacken_obj(struct hll_vm *vm, hll_value value) {
   }
 }
 
-hll_object_kind hll_get_value_kind(hll_value value) {
-  return HLL_IS_OBJ(value) ? HLL_NAN_BOX_OBJ_UNWRAP(value)->kind
-                           : HLL_VALUE_KIND(value);
+hll_value_kind hll_get_value_kind(hll_value value) {
+  return hll_is_obj(value) ? nan_unbox_ptr(value)->kind
+                           : nan_unbox_singleton(value);
 }
 
-bool hll_is_nil(hll_value value) {
-  return (uint64_t)value == HLL_NAN_BOX_KIND(HLL_OBJ_NIL);
-}
-
-bool hll_is_num(hll_value value) { return HLL_IS_NUM(value); }
+bool hll_is_nil(hll_value value) { return (uint64_t)value == hll_nil(); }
 
 bool hll_is_cons(hll_value value) {
-  return HLL_IS_OBJ(value) &&
-         HLL_NAN_BOX_OBJ_UNWRAP(value)->kind == HLL_OBJ_CONS;
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_OBJ_CONS;
 }
 
 bool hll_is_symb(hll_value value) {
-  return HLL_IS_OBJ(value) &&
-         HLL_NAN_BOX_OBJ_UNWRAP(value)->kind == HLL_OBJ_SYMB;
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_OBJ_SYMB;
 }
 
 bool hll_is_list(hll_value value) {

@@ -30,23 +30,14 @@
 
 // Kinds of tokens recognized by lexer.
 enum hll_token_kind {
-  // End of file
   HLL_TOK_EOF,
-  // Number
   HLL_TOK_NUM,
-  // Symbol
   HLL_TOK_SYMB,
-  // .
   HLL_TOK_DOT,
-  // (
   HLL_TOK_LPAREN,
-  // )
   HLL_TOK_RPAREN,
-  // '
-  HLL_TOK_QUOTE,
-  // Comment
+  HLL_TOK_QUOTE, // '
   HLL_TOK_COMMENT,
-  // Unexpected sequence of tokens. Eats all symbols in row.
   HLL_TOK_UNEXPECTED
 };
 
@@ -78,13 +69,11 @@ struct hll_lexer {
   struct hll_token next;
 };
 
-// Initializes lexer to work on given buffer.
-// vm can be null.
 HLL_PUB void hll_lexer_init(struct hll_lexer *lexer, const char *input,
                             struct hll_vm *vm) __attribute__((nonnull(1, 2)));
 
 // Generate next token and return it. If EOF is reached, EOF token is
-// guaranteed to always be returned.
+// guaranteed to always be returned after that.
 HLL_PUB const struct hll_token *hll_lexer_next(struct hll_lexer *lexer)
     __attribute__((nonnull));
 

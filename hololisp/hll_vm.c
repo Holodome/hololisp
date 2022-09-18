@@ -12,8 +12,8 @@
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
 #include "hll_mem.h"
-#include "hll_obj.h"
 #include "hll_util.h"
+#include "hll_value.h"
 
 extern void add_builtins(struct hll_vm *vm);
 
@@ -112,11 +112,11 @@ struct hll_vm *hll_make_vm(const struct hll_config *config) {
 }
 
 void hll_delete_vm(struct hll_vm *vm) {
-  struct hll_obj *obj = vm->all_objects;
+  struct hll_obj *obj = vm->all_objs;
   while (obj != NULL) {
     struct hll_obj *next = obj->next_gc;
     assert(next != obj);
-    hll_free_object(vm, obj);
+    hll_free_obj(vm, obj);
     obj = next;
   }
   hll_sb_free(vm->gray_objs);
@@ -263,12 +263,12 @@ static void hll_collect_garbage(struct hll_vm *vm) {
   }
 
   // Free all objects not marked
-  struct hll_obj **obj_ptr = &vm->all_objects;
+  struct hll_obj **obj_ptr = &vm->all_objs;
   while (*obj_ptr != NULL) {
     if (!(*obj_ptr)->is_dark) {
       struct hll_obj *to_free = *obj_ptr;
       *obj_ptr = to_free->next_gc;
-      hll_free_object(vm, to_free);
+      hll_free_obj(vm, to_free);
     } else {
       (*obj_ptr)->is_dark = false;
       obj_ptr = &(*obj_ptr)->next_gc;
@@ -400,7 +400,8 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
 
       hll_value value = current_call_frame->bytecode->constant_pool[idx];
       assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
-      value = hll_new_func(vm, hll_unwrap_func(value)->param_names, hll_unwrap_func(value)->bytecode);
+      value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
+                           hll_unwrap_func(value)->bytecode);
       struct hll_obj_func *func = hll_unwrap_func(value);
       func->env = vm->env;
 
@@ -610,8 +611,7 @@ hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args) {
   return hll_interpret_bytecode_internal(vm, env, macro);
 }
 
-void hll_print(struct hll_vm *vm, const char *str)
-{
+void hll_print(struct hll_vm *vm, const char *str) {
   if (vm->config.write_fn) {
     vm->config.write_fn(vm, str);
   }

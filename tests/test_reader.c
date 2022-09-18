@@ -1,5 +1,5 @@
 #include "../hololisp/hll_compiler.h"
-#include "../hololisp/hll_obj.h"
+#include "../hololisp/hll_value.h"
 #include "../hololisp/hll_vm.h"
 
 #include "acutest.h"

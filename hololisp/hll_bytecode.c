@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 #include "hll_mem.h"
-#include "hll_obj.h"
 #include "hll_util.h"
+#include "hll_value.h"
 
 void hll_dump_value(void *file, hll_value value) {
   switch (hll_get_value_kind(value)) {

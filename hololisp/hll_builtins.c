@@ -1,6 +1,6 @@
 #include "hll_compiler.h"
-#include "hll_obj.h"
 #include "hll_util.h"
+#include "hll_value.h"
 #include "hll_vm.h"
 
 #include <assert.h>

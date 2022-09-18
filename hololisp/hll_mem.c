@@ -1,8 +1,8 @@
 #include "hll_mem.h"
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
   if (arr == NULL) {
