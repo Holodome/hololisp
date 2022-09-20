@@ -5,7 +5,6 @@
 #ifndef HLL_VM_H
 #define HLL_VM_H
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -61,21 +60,6 @@ struct hll_vm {
 HLL_PUB void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
                              size_t new_size) __attribute__((alloc_size(4)));
 
-// Used to report error in current state contained by vm.
-// vm must have current_filename field present if message needs to include
-// source location.
-// offset specifies byte offset of reported location in file.
-// len specifies length of reported part (e.g. token).
-HLL_PUB void hll_report_errorv(struct hll_vm *vm, size_t offset, uint32_t len,
-                               const char *fmt, va_list args);
-HLL_PUB void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
-                              const char *fmt, ...)
-    __attribute__((format(printf, 4, 5)));
-HLL_PUB void hll_report_error_value(struct hll_vm *vm, hll_value value,
-                                    const char *msg, ...)
-    __attribute__((format(printf, 3, 4)));
-HLL_PUB void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
-                                     const char *msg, va_list args);
 
 HLL_PUB void hll_add_binding(struct hll_vm *vm, const char *symb,
                              hll_value (*bind)(struct hll_vm *vm,

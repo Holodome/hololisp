@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "hll_bytecode.h"
+#include "hll_debug.h"
 #include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_value.h"
@@ -430,10 +431,11 @@ const struct hll_token *hll_lexer_next(struct hll_lexer *lexer) {
 }
 
 void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
-                     struct hll_vm *vm) {
+                     struct hll_vm *vm, uint32_t compilation_unit_idx) {
   memset(reader, 0, sizeof(struct hll_reader));
   reader->lexer = lexer;
   reader->vm = vm;
+  reader->compilatuon_unit_idx = compilation_unit_idx;
 }
 
 __attribute__((format(printf, 2, 3))) static void
@@ -474,6 +476,11 @@ static void eat_token(struct hll_reader *reader) {
 
 static hll_value read_expr(struct hll_reader *reader);
 
+static void add_reader_meta_info(struct hll_reader *reader, hll_value value) {
+  (void)reader;
+  (void)value;
+}
+
 static hll_value read_list(struct hll_reader *reader) {
   peek_token(reader);
   // This should be guaranteed by caller.
@@ -494,6 +501,7 @@ static hll_value read_list(struct hll_reader *reader) {
   hll_value list_tail;
   list_head = list_tail =
       hll_new_cons(reader->vm, read_expr(reader), hll_nil());
+  add_reader_meta_info(reader, list_head);
 
   // Now enter the loop of parsing other list elements.
   for (;;) {
@@ -521,6 +529,7 @@ static hll_value read_list(struct hll_reader *reader) {
 
     hll_value ast = read_expr(reader);
     hll_unwrap_cons(list_tail)->cdr = hll_new_cons(reader->vm, ast, hll_nil());
+    add_reader_meta_info(reader, list_tail);
     list_tail = hll_unwrap_cdr(list_tail);
   }
 
