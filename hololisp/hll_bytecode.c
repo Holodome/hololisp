@@ -47,14 +47,14 @@ void hll_dump_value(void *file, hll_value value) {
   }
 }
 
-void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
+void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
   uint8_t *instruction = bytecode->ops;
   if (instruction == NULL) {
     fprintf(file, "(null)\n");
     return;
   }
 
-  enum hll_bytecode_op op;
+  hll_bytecode_op op;
   size_t counter = 0;
   while ((op = *instruction++) != HLL_BYTECODE_END) {
     fprintf(file, "%4llX:#%-4llX ", (long long unsigned)counter,
@@ -144,7 +144,7 @@ void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode) {
           (long long unsigned)(instruction - bytecode->ops - 1));
 }
 
-size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op) {
+size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   size_t s = 0;
   if (op == HLL_BYTECODE_CONST || op == HLL_BYTECODE_MAKEFUN ||
       op == HLL_BYTECODE_JN) {
@@ -154,44 +154,43 @@ size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op) {
   return s;
 }
 
-struct hll_bytecode *hll_new_bytecode(void) {
-  return hll_alloc(sizeof(struct hll_bytecode));
+hll_bytecode *hll_new_bytecode(void) {
+  return hll_alloc(sizeof(hll_bytecode));
 }
 
-void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode) {
+void hll_bytecode_inc_refcount(hll_bytecode *bytecode) {
   assert(bytecode->refcount != UINT32_MAX);
   ++bytecode->refcount;
 }
 
-void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode) {
+void hll_bytecode_dec_refcount(hll_bytecode *bytecode) {
   assert(bytecode->refcount != 0);
   --bytecode->refcount;
 
   if (bytecode->refcount == 0) {
     hll_sb_free(bytecode->ops);
     hll_sb_free(bytecode->constant_pool);
-    hll_free(bytecode, sizeof(struct hll_bytecode));
+    hll_free(bytecode, sizeof(hll_bytecode));
   }
 }
 
-size_t hll_bytecode_op_idx(struct hll_bytecode *bytecode) {
+size_t hll_bytecode_op_idx(hll_bytecode *bytecode) {
   return hll_sb_len(bytecode->ops);
 }
 
-size_t hll_bytecode_emit_u8(struct hll_bytecode *bytecode, uint8_t byte) {
+size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte) {
   size_t idx = hll_bytecode_op_idx(bytecode);
   hll_sb_push(bytecode->ops, byte);
   return idx;
 }
 
-size_t hll_bytecode_emit_u16(struct hll_bytecode *bytecode, uint16_t value) {
+size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value) {
   size_t idx = hll_bytecode_emit_u8(bytecode, (value >> 8) & 0xFF);
   hll_bytecode_emit_u8(bytecode, value & 0xFF);
   return idx;
 }
 
-size_t hll_bytecode_emit_op(struct hll_bytecode *bytecode,
-                            enum hll_bytecode_op op) {
+size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
   assert(op <= 0xFF);
   return hll_bytecode_emit_u8(bytecode, op);
 }

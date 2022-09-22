@@ -8,7 +8,7 @@
 
 #define HLL_BYTECODE_MAX_CONSANT_COUNT UINT16_MAX
 
-enum hll_bytecode_op {
+typedef enum {
   // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
   // Pushes nil on stack
@@ -59,19 +59,19 @@ enum hll_bytecode_op {
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
   HLL_BYTECODE_DUP,
-};
+} hll_bytecode_op;
 
-struct hll_bytecode_location_entry {
+typedef struct hll_bytecode_location_entry {
   uint32_t translation_unit;
   size_t offset;
   uint32_t length;
-};
+} hll_bytecode_location_entry;
 
 // Contains unit of bytecode. This is typically some compiled function
 // with list of all variables referenced in it.
 // Bytecode is reference counted in order to allow dynamic compilation and
 // bytecode freeing, necessary in dynamic lisp environment.
-struct hll_bytecode {
+typedef struct hll_bytecode {
   uint32_t refcount;
   // Bytecode dynamic array
   uint8_t *ops;
@@ -90,24 +90,34 @@ struct hll_bytecode {
   // All that information accompanied with one got from runtime system (call
   // stack, memory usage etc.) can be used to display user-friendly thorough
   // error message.
-  bool has_debug_info;
-  struct hll_bytecode_location_entry *locs;
+  hll_bytecode_location_entry *locs;
   uint64_t *loc_rle;
-};
+} hll_bytecode;
 
-struct hll_bytecode *hll_new_bytecode(void);
-void hll_bytecode_inc_refcount(struct hll_bytecode *bytecode);
-void hll_bytecode_dec_refcount(struct hll_bytecode *bytecode);
+//
+// Accessors
+//
 
-size_t hll_get_bytecode_op_body_size(enum hll_bytecode_op op);
+hll_bytecode *hll_new_bytecode(void);
+void hll_bytecode_inc_refcount(hll_bytecode *bytecode);
+void hll_bytecode_dec_refcount(hll_bytecode *bytecode);
 
-size_t hll_bytecode_op_idx(struct hll_bytecode *bytecode);
-size_t hll_bytecode_emit_u8(struct hll_bytecode *bytecode, uint8_t byte);
-size_t hll_bytecode_emit_u16(struct hll_bytecode *bytecode, uint16_t value);
-size_t hll_bytecode_emit_op(struct hll_bytecode *bytecode,
-                            enum hll_bytecode_op op);
+//
+// Functions used to generate bytecode
+//
 
-void hll_dump_bytecode(void *file, const struct hll_bytecode *bytecode);
+size_t hll_get_bytecode_op_body_size(hll_bytecode_op op);
+
+size_t hll_bytecode_op_idx(hll_bytecode *bytecode);
+size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte);
+size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value);
+size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op);
+
+//
+// Debug routines
+//
+
+void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
 void hll_dump_value(void *file, hll_value value);
 
 #endif

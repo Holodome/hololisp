@@ -14,19 +14,19 @@
 #include "hll_util.h"
 #include "hll_value.h"
 
-extern void add_builtins(struct hll_vm *vm);
+extern void add_builtins(hll_vm *vm);
 
-static void default_error_fn(struct hll_vm *vm, const char *text) {
+static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;
   fprintf(stderr, "%s", text);
 }
 
-static void default_write_fn(struct hll_vm *vm, const char *text) {
+static void default_write_fn(hll_vm *vm, const char *text) {
   (void)vm;
   printf("%s", text);
 }
 
-static void initialize_default_config(struct hll_config *config) {
+static void initialize_default_config(hll_config *config) {
   config->write_fn = default_write_fn;
   config->error_fn = default_error_fn;
 
@@ -37,7 +37,7 @@ static void initialize_default_config(struct hll_config *config) {
   config->user_data = NULL;
 }
 
-void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
+void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
                       hll_value value) {
   assert(hll_get_value_kind(name) == HLL_OBJ_SYMB);
   hll_value slot = hll_new_cons(vm, name, value);
@@ -46,8 +46,8 @@ void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
   (void)hll_sb_pop(vm->temp_roots); // slot
 }
 
-struct hll_vm *hll_make_vm(const struct hll_config *config) {
-  struct hll_vm *vm = hll_alloc(sizeof(struct hll_vm));
+hll_vm *hll_make_vm(const hll_config *config) {
+  hll_vm *vm = hll_alloc(sizeof(hll_vm));
 
   if (config == NULL) {
     initialize_default_config(&vm->config);
@@ -68,37 +68,36 @@ struct hll_vm *hll_make_vm(const struct hll_config *config) {
   return vm;
 }
 
-void hll_delete_vm(struct hll_vm *vm) {
-  struct hll_obj *obj = vm->all_objs;
+void hll_delete_vm(hll_vm *vm) {
+  hll_obj *obj = vm->all_objs;
   while (obj != NULL) {
-    struct hll_obj *next = obj->next_gc;
+    hll_obj *next = obj->next_gc;
     assert(next != obj);
     hll_free_obj(vm, obj);
     obj = next;
   }
   hll_sb_free(vm->gray_objs);
   hll_sb_free(vm->temp_roots);
-  hll_free(vm, sizeof(struct hll_vm));
+  hll_free(vm, sizeof(hll_vm));
 }
 
-enum hll_interpret_result hll_interpret(struct hll_vm *vm, const char *source,
-                                        hll_interpret_flags flags) {
+hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
+                                   hll_interpret_flags flags) {
   hll_value compiled;
   if (!hll_compile(vm, source, &compiled)) {
     return HLL_RESULT_COMPILE_ERROR;
   }
 
   bool print_result = (flags & HLL_INTERPRET_PRINT_RESULT) != 0;
-  enum hll_interpret_result result =
+  hll_interpret_result result =
       hll_interpret_bytecode(vm, compiled, print_result)
           ? HLL_RESULT_RUNTIME_ERROR
           : HLL_RESULT_OK;
   return result;
 }
 
-void hll_add_binding(struct hll_vm *vm, const char *symb_str,
-                     hll_value (*bind_func)(struct hll_vm *vm,
-                                            hll_value args)) {
+void hll_add_binding(hll_vm *vm, const char *symb_str,
+                     hll_value (*bind_func)(hll_vm *vm, hll_value args)) {
   hll_value bind = hll_new_bind(vm, bind_func);
   hll_sb_push(vm->temp_roots, bind);
   hll_value symb = hll_new_symbolz(vm, symb_str);
@@ -110,11 +109,10 @@ void hll_add_binding(struct hll_vm *vm, const char *symb_str,
   (void)hll_sb_pop(vm->temp_roots); // symb
 }
 
-bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
-                  hll_value *found) {
+bool hll_find_var(hll_vm *vm, hll_value env, hll_value car, hll_value *found) {
   (void)vm;
   assert(hll_get_value_kind(car) == HLL_OBJ_SYMB && "argument is not a symbol");
-  struct hll_obj_symb *symb = hll_unwrap_symb(car);
+  hll_obj_symb *symb = hll_unwrap_symb(car);
   for (; !hll_is_nil(env); env = hll_unwrap_env(env)->up) {
     for (hll_value cons = hll_unwrap_env(env)->vars; !hll_is_nil(cons);
          cons = hll_unwrap_cdr(cons)) {
@@ -131,7 +129,7 @@ bool hll_find_var(struct hll_vm *vm, hll_value env, hll_value car,
   return false;
 }
 
-void hll_print_value(struct hll_vm *vm, hll_value value) {
+void hll_print_value(hll_vm *vm, hll_value value) {
   switch (hll_get_value_kind(value)) {
   case HLL_OBJ_CONS:
     hll_print(vm, "(");
@@ -183,14 +181,14 @@ void hll_print_value(struct hll_vm *vm, hll_value value) {
 }
 
 __attribute__((format(printf, 2, 3))) void
-hll_runtime_error(struct hll_vm *vm, const char *fmt, ...) {
+hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hll_report_error(vm, 0, 0, fmt, args);
   va_end(args);
 }
 
-static void hll_collect_garbage(struct hll_vm *vm) {
+static void hll_collect_garbage(hll_vm *vm) {
   // Reset allocated bytes count
   vm->bytes_allocated = 0;
   hll_sb_purge(vm->gray_objs);
@@ -204,7 +202,7 @@ static void hll_collect_garbage(struct hll_vm *vm) {
     hll_gray_obj(vm, vm->stack[i]);
   }
   for (size_t i = 0; i < hll_sb_len(vm->call_stack); ++i) {
-    struct hll_call_frame *f = &vm->call_stack[i];
+    hll_call_frame *f = &vm->call_stack[i];
     hll_gray_obj(vm, f->env);
     hll_gray_obj(vm, f->func);
   }
@@ -215,10 +213,10 @@ static void hll_collect_garbage(struct hll_vm *vm) {
   }
 
   // Free all objects not marked
-  struct hll_obj **obj_ptr = &vm->all_objs;
+  hll_obj **obj_ptr = &vm->all_objs;
   while (*obj_ptr != NULL) {
     if (!(*obj_ptr)->is_dark) {
-      struct hll_obj *to_free = *obj_ptr;
+      hll_obj *to_free = *obj_ptr;
       *obj_ptr = to_free->next_gc;
       hll_free_obj(vm, to_free);
     } else {
@@ -234,8 +232,7 @@ static void hll_collect_garbage(struct hll_vm *vm) {
   }
 }
 
-void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
-                     size_t new_size) {
+void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size, size_t new_size) {
   vm->bytes_allocated -= old_size;
   vm->bytes_allocated += new_size;
 
@@ -250,10 +247,10 @@ void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
   return hll_realloc(ptr, old_size, new_size);
 }
 
-hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
+hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled) {
   hll_sb_push(vm->temp_roots, compiled);
-  struct hll_bytecode *initial_bytecode;
+  hll_bytecode *initial_bytecode;
   if (hll_get_value_kind(compiled) == HLL_OBJ_FUNC) {
     initial_bytecode = hll_unwrap_func(compiled)->bytecode;
   } else {
@@ -264,7 +261,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
   vm->env = env_;
 
   {
-    struct hll_call_frame original_frame = {0};
+    hll_call_frame original_frame = {0};
     original_frame.ip = initial_bytecode->ops;
     original_frame.bytecode = initial_bytecode;
     original_frame.env = env_;
@@ -272,7 +269,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
     assert(env_);
     hll_sb_push(vm->call_stack, original_frame);
   }
-  struct hll_call_frame *current_call_frame = vm->call_stack;
+  hll_call_frame *current_call_frame = vm->call_stack;
 
   while (hll_sb_len(vm->call_stack)) {
     uint8_t op = *current_call_frame->ip++;
@@ -354,7 +351,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
       assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
       value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
                            hll_unwrap_func(value)->bytecode);
-      struct hll_obj_func *func = hll_unwrap_func(value);
+      hll_obj_func *func = hll_unwrap_func(value);
       func->env = vm->env;
 
       hll_sb_push(vm->stack, value);
@@ -367,7 +364,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
 
       switch (hll_get_value_kind(callable)) {
       case HLL_OBJ_FUNC: {
-        struct hll_obj_func *func = hll_unwrap_func(callable);
+        hll_obj_func *func = hll_unwrap_func(callable);
         hll_value new_env = hll_new_env(vm, func->env, hll_nil());
         hll_sb_push(vm->temp_roots, new_env);
         hll_value param_name = func->param_names;
@@ -396,7 +393,7 @@ hll_value hll_interpret_bytecode_internal(struct hll_vm *vm, hll_value env_,
           hll_add_variable(vm, new_env, param_name, param_value);
         }
 
-        struct hll_call_frame new_frame = {0};
+        hll_call_frame new_frame = {0};
         new_frame.bytecode = func->bytecode;
         new_frame.ip = func->bytecode->ops;
         new_frame.env = vm->env;
@@ -521,8 +518,7 @@ out:
   return result;
 }
 
-bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
-                            bool print_result) {
+bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled, bool print_result) {
   hll_value result =
       hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
   if (print_result) {
@@ -533,11 +529,11 @@ bool hll_interpret_bytecode(struct hll_vm *vm, hll_value compiled,
   return false;
 }
 
-hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args) {
+hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
   hll_value env = hll_new_env(vm, vm->global_env, hll_nil());
   hll_sb_push(vm->temp_roots, env);
 
-  struct hll_obj_func *fun = hll_unwrap_macro(macro);
+  hll_obj_func *fun = hll_unwrap_macro(macro);
   hll_value name_slot = fun->param_names;
   hll_value value_slot = args;
   for (; hll_get_value_kind(name_slot) == HLL_OBJ_CONS;
@@ -563,7 +559,7 @@ hll_value hll_expand_macro(struct hll_vm *vm, hll_value macro, hll_value args) {
   return hll_interpret_bytecode_internal(vm, env, macro);
 }
 
-void hll_print(struct hll_vm *vm, const char *str) {
+void hll_print(hll_vm *vm, const char *str) {
   if (vm->config.write_fn) {
     vm->config.write_fn(vm, str);
   }

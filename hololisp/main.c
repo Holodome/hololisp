@@ -10,19 +10,19 @@
 #include "hll_mem.h"
 #endif
 
-enum hll_mode {
+typedef enum {
   HLL_MODE_EREPL,
   HLL_MODE_EREPL_NO_TTY,
   HLL_MODE_ESCRIPT,
   HLL_MODE_ESTRING,
   HLL_MODE_HELP,
   HLL_MODE_VERSION
-};
+} hll_mode;
 
-struct hll_options {
-  enum hll_mode mode;
+typedef struct {
+  hll_mode mode;
   const char *str;
-};
+} hll_options;
 
 static char *read_entire_file(const char *filename) {
   FILE *f = fopen(filename, "r");
@@ -75,7 +75,7 @@ static void print_usage(FILE *f) {
 
 static void print_version(void) { printf("hololisp 1.0.0\n"); }
 
-static bool parse_cli_args(struct hll_options *opts, uint32_t argc,
+static bool parse_cli_args(hll_options *opts, uint32_t argc,
                            const char **argv) {
   uint32_t cursor = 0;
   while (cursor < argc) {
@@ -109,7 +109,7 @@ static bool parse_cli_args(struct hll_options *opts, uint32_t argc,
   return false;
 }
 
-static bool manage_result(enum hll_interpret_result result) {
+static bool manage_result(hll_interpret_result result) {
   bool error = false;
   switch (result) {
   case HLL_RESULT_COMPILE_ERROR:
@@ -139,7 +139,7 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    enum hll_interpret_result result =
+    hll_interpret_result result =
         hll_interpret(vm, line, HLL_INTERPRET_PRINT_RESULT);
     manage_result(result);
   }
@@ -162,7 +162,7 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  enum hll_interpret_result result = hll_interpret(vm, file_contents, 0);
+  hll_interpret_result result = hll_interpret(vm, file_contents, 0);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -171,14 +171,14 @@ static bool execute_script(const char *filename) {
 
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  enum hll_interpret_result result =
+  hll_interpret_result result =
       hll_interpret(vm, str, HLL_INTERPRET_PRINT_RESULT);
   hll_delete_vm(vm);
 
   return manage_result(result);
 }
 
-static bool execute(struct hll_options *opts) {
+static bool execute(hll_options *opts) {
   bool error = false;
   switch (opts->mode) {
   case HLL_MODE_EREPL:
@@ -224,7 +224,7 @@ static bool execute(struct hll_options *opts) {
 
 int main(int argc, const char **argv) {
   int result = EXIT_SUCCESS;
-  struct hll_options opts = {0};
+  hll_options opts = {0};
   if (parse_cli_args(&opts, argc - 1, argv + 1)) {
     result = EXIT_FAILURE;
     goto out;

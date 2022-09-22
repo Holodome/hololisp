@@ -36,7 +36,7 @@ typedef void hll_write_fn(struct hll_vm *vm, const char *text);
 
 // Stores configuration of vm runtime.
 // Config cannot be changed after virtual machine creation.
-struct hll_config {
+typedef struct hll_config {
   // The callback used when user prints message (printf for example).
   // If this is NULL, nothing shall be printed.
   hll_write_fn *write_fn;
@@ -64,15 +64,15 @@ struct hll_config {
 
   // Any data user wants to be accessed through callback functions.
   void *user_data;
-};
+} hll_config;
 
 // Result of calling hll_interpret.
 // Contains minimal information about source of error.
-enum hll_interpret_result {
+typedef enum {
   HLL_RESULT_OK = 0x0,
   HLL_RESULT_COMPILE_ERROR = 0x1,
   HLL_RESULT_RUNTIME_ERROR = 0x2,
-};
+} hll_interpret_result;
 
 typedef uint32_t hll_interpret_flags;
 enum {
@@ -95,8 +95,9 @@ HLL_PUB struct hll_vm *hll_make_vm(const struct hll_config *config);
 HLL_PUB void hll_delete_vm(struct hll_vm *vm) __attribute__((nonnull));
 
 // Runs given source as hololisp code.
-HLL_PUB enum hll_interpret_result
-hll_interpret(struct hll_vm *vm, const char *source, hll_interpret_flags flags)
+HLL_PUB hll_interpret_result hll_interpret(struct hll_vm *vm,
+                                           const char *source,
+                                           hll_interpret_flags flags)
     __attribute__((nonnull));
 
 #endif

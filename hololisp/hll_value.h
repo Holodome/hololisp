@@ -31,39 +31,39 @@ enum {
 
 HLL_PUB const char *hll_get_object_kind_str(hll_value_kind kind);
 
-struct hll_obj {
+typedef struct hll_obj {
   hll_value_kind kind;
   bool is_dark;
   struct hll_obj *next_gc;
   char as[];
-};
+} hll_obj;
 
-struct hll_obj_cons {
+typedef struct hll_obj_cons {
   hll_value car;
   hll_value cdr;
-};
+} hll_obj_cons;
 
-struct hll_obj_func {
+typedef struct hll_obj_func {
   struct hll_bytecode *bytecode;
   // List if function parameter names
   hll_value param_names;
   hll_value env;
-};
+} hll_obj_func;
 
-struct hll_obj_env {
+typedef struct hll_obj_env {
   hll_value vars;
   hll_value up;
-};
+} hll_obj_env;
 
-struct hll_obj_bind {
+typedef struct hll_obj_bind {
   hll_value (*bind)(struct hll_vm *vm, hll_value args);
-};
+} hll_obj_bind;
 
-struct hll_obj_symb {
+typedef struct hll_obj_symb {
   size_t length;
   uint32_t hash;
   char symb[];
-};
+} hll_obj_symb;
 
 //
 // Functions that create new values.
@@ -94,22 +94,22 @@ HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
 HLL_PUB double hll_unwrap_num(hll_value value);
 HLL_PUB hll_value hll_unwrap_cdr(hll_value value);
 HLL_PUB hll_value hll_unwrap_car(hll_value value);
-HLL_PUB struct hll_obj_cons *hll_unwrap_cons(hll_value value)
+HLL_PUB hll_obj_cons *hll_unwrap_cons(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB struct hll_obj_env *hll_unwrap_env(hll_value value)
+HLL_PUB hll_obj_env *hll_unwrap_env(hll_value value)
     __attribute__((returns_nonnull));
 HLL_PUB const char *hll_unwrap_zsymb(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB struct hll_obj_symb *hll_unwrap_symb(hll_value value)
+HLL_PUB hll_obj_symb *hll_unwrap_symb(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB struct hll_obj_bind *hll_unwrap_bind(hll_value value)
+HLL_PUB hll_obj_bind *hll_unwrap_bind(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB struct hll_obj_func *hll_unwrap_func(hll_value value)
+HLL_PUB hll_obj_func *hll_unwrap_func(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB struct hll_obj_func *hll_unwrap_macro(hll_value value)
+HLL_PUB hll_obj_func *hll_unwrap_macro(hll_value value)
     __attribute__((returns_nonnull));
 
-struct hll_obj *hll_unwrap_obj(hll_value value);
+hll_obj *hll_unwrap_obj(hll_value value);
 
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'
@@ -141,6 +141,6 @@ HLL_PUB size_t hll_list_length(hll_value value);
 
 void hll_gray_obj(struct hll_vm *vm, hll_value value);
 void hll_blacken_obj(struct hll_vm *vm, hll_value value);
-void hll_free_obj(struct hll_vm *vm, struct hll_obj *obj);
+void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 #endif
