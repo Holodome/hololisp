@@ -8,11 +8,11 @@
 
 #include "hll_bytecode.h"
 #include "hll_compiler.h"
+#include "hll_debug.h"
 #include "hll_hololisp.h"
 #include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_value.h"
-#include "hll_debug.h"
 
 extern void add_builtins(struct hll_vm *vm);
 
@@ -36,7 +36,6 @@ static void initialize_default_config(struct hll_config *config) {
 
   config->user_data = NULL;
 }
-
 
 void hll_add_variable(struct hll_vm *vm, hll_value env, hll_value name,
                       hll_value value) {

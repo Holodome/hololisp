@@ -1,7 +1,7 @@
 #include "hll_debug.h"
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "hll_vm.h"
 

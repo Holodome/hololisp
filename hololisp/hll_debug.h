@@ -28,8 +28,6 @@ struct hll_obj_debug_info {
 
 struct hll_debug_storage {
   struct hll_obj_debug_info *obj_debug_infos;
-
-
 };
 
 // Used to report error in current state contained by vm.

@@ -60,7 +60,6 @@ struct hll_vm {
 HLL_PUB void *hll_gc_realloc(struct hll_vm *vm, void *ptr, size_t old_size,
                              size_t new_size) __attribute__((alloc_size(4)));
 
-
 HLL_PUB void hll_add_binding(struct hll_vm *vm, const char *symb,
                              hll_value (*bind)(struct hll_vm *vm,
                                                hll_value args));

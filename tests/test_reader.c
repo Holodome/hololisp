@@ -10,7 +10,7 @@ static void test_reader_reports_eof(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_NIL);
@@ -23,7 +23,7 @@ static void test_reader_parses_num(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "123", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
 
@@ -41,7 +41,7 @@ static void test_reader_parses_symbol(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "hello-world", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -58,7 +58,7 @@ static void test_reader_parses_one_element_list(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(100)", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -76,7 +76,7 @@ static void test_reader_parses_list(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(100 -100 abc)", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -102,7 +102,7 @@ static void test_reader_parses_nested_lists(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(+ (* 3 2) hello)", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -139,7 +139,7 @@ static void test_reader_reports_unclosed_list(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   (void)ast;
@@ -153,7 +153,7 @@ static void test_reader_reports_stray_rparen(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, ")", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   (void)ast;
@@ -167,7 +167,7 @@ static void test_reader_parses_nil(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "()", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -183,7 +183,7 @@ static void test_reader_parses_simple_dotted_cons(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(abc . 123)", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -201,7 +201,7 @@ static void test_reader_parses_dotted_list(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "(a b c . 123)", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
@@ -227,7 +227,7 @@ static void test_reader_parses_quote(void) {
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, "'1", vm);
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
   TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);

@@ -139,26 +139,29 @@ enum hll_location_form {
 };
 
 bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
+  bool result = true;
+
+  struct hll_compilation_unit cu = {0};
+
   struct hll_lexer lexer;
   hll_lexer_init(&lexer, source, vm);
+
   struct hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm);
+  hll_reader_init(&reader, &lexer, vm, &cu);
 
   ++vm->forbid_gc;
   hll_value ast = hll_read_ast(&reader);
+
   struct hll_compiler compiler;
-  hll_compiler_init(&compiler, vm, vm->env);
-  hll_value result = hll_compile_ast(&compiler, ast);
+  hll_compiler_init(&compiler, vm, vm->env, &cu);
+  *compiled = hll_compile_ast(&compiler, ast);
   --vm->forbid_gc;
 
-  if (lexer.error_count != 0 || reader.error_count != 0 ||
-      compiler.error_count != 0) {
-    return false;
+  if (compiler.error_count != 0) {
+    result = false;
   }
 
-  *compiled = result;
-
-  return true;
+  return result;
 }
 
 static inline enum hll_lexer_equivalence_class
@@ -431,11 +434,11 @@ const struct hll_token *hll_lexer_next(struct hll_lexer *lexer) {
 }
 
 void hll_reader_init(struct hll_reader *reader, struct hll_lexer *lexer,
-                     struct hll_vm *vm, uint32_t compilation_unit_idx) {
+                     struct hll_vm *vm, struct hll_compilation_unit *cu) {
   memset(reader, 0, sizeof(struct hll_reader));
   reader->lexer = lexer;
   reader->vm = vm;
-  reader->compilatuon_unit_idx = compilation_unit_idx;
+  reader->cu = cu;
 }
 
 __attribute__((format(printf, 2, 3))) static void
@@ -604,11 +607,12 @@ hll_value hll_read_ast(struct hll_reader *reader) {
 }
 
 void hll_compiler_init(struct hll_compiler *compiler, struct hll_vm *vm,
-                       hll_value env) {
+                       hll_value env, struct hll_compilation_unit *cu) {
   memset(compiler, 0, sizeof(struct hll_compiler));
   compiler->vm = vm;
   compiler->env = env;
   compiler->bytecode = hll_new_bytecode();
+  compiler->cu = cu;
 }
 
 __attribute__((format(printf, 3, 4))) static void
@@ -1088,11 +1092,10 @@ static void add_symbol_to_function_param_list(struct hll_compiler *compiler,
 
 static bool compile_function_internal(struct hll_compiler *compiler,
                                       hll_value params, hll_value body,
-                                      const char *name, bool is_macro,
-                                      hll_value *compiled_) {
-  (void)name;
+                                      bool is_macro, hll_value *compiled_) {
   struct hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env);
+  // TODO: Compilation unit
+  hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env, NULL);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   if (new_compiler.error_count != 0) {
     compiler->error_count += new_compiler.error_count;
@@ -1154,9 +1157,9 @@ static bool compile_function_internal(struct hll_compiler *compiler,
 }
 
 static bool compile_function(struct hll_compiler *compiler, hll_value params,
-                             hll_value body, const char *name, uint16_t *idx) {
+                             hll_value body, uint16_t *idx) {
   hll_value func;
-  if (!compile_function_internal(compiler, params, body, name, false, &func)) {
+  if (!compile_function_internal(compiler, params, body, false, &func)) {
     return true;
   }
 
@@ -1180,7 +1183,7 @@ static void compile_lambda(struct hll_compiler *compiler, hll_value args) {
   hll_value body = args;
 
   uint16_t function_idx;
-  if (compile_function(compiler, params, body, "lambda", &function_idx)) {
+  if (compile_function(compiler, params, body, &function_idx)) {
     return;
   }
 
@@ -1301,7 +1304,7 @@ static void process_defmacro(struct hll_compiler *compiler, hll_value args) {
 
   hll_value macro_expansion;
   ;
-  if (compile_function_internal(compiler, params, body, "defmacro", true,
+  if (compile_function_internal(compiler, params, body, true,
                                 &macro_expansion)) {
     // TODO: Test if macro with same name exists
     hll_sb_push(compiler->vm->temp_roots, macro_expansion);
@@ -1355,7 +1358,7 @@ static void compile_define(struct hll_compiler *compiler, hll_value args) {
     compile_expression(compiler, name);
 
     uint16_t function_idx;
-    if (compile_function(compiler, params, body, "define", &function_idx)) {
+    if (compile_function(compiler, params, body, &function_idx)) {
       return;
     }
 
