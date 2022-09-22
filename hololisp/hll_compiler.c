@@ -1468,7 +1468,7 @@ static void compile_eval_expression(struct hll_compiler *compiler,
   case HLL_OBJ_CONS: {
     hll_value fn = hll_unwrap_car(ast);
     enum hll_form_kind kind = HLL_FORM_REGULAR;
-    if (hll_get_value_kind(fn) == HLL_OBJ_SYMB) {
+    if (hll_is_symb(fn)) {
       kind = get_form_kind(hll_unwrap_zsymb(fn));
     }
 

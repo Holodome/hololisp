@@ -91,16 +91,23 @@ HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
 // If value type is not equal to expected, panic.
 //
 
-HLL_PUB struct hll_obj_cons *hll_unwrap_cons(hll_value value);
+HLL_PUB double hll_unwrap_num(hll_value value);
 HLL_PUB hll_value hll_unwrap_cdr(hll_value value);
 HLL_PUB hll_value hll_unwrap_car(hll_value value);
-HLL_PUB struct hll_obj_env *hll_unwrap_env(hll_value value);
-HLL_PUB const char *hll_unwrap_zsymb(hll_value value);
-HLL_PUB struct hll_obj_symb *hll_unwrap_symb(hll_value value);
-HLL_PUB struct hll_obj_bind *hll_unwrap_bind(hll_value value);
-HLL_PUB struct hll_obj_func *hll_unwrap_func(hll_value value);
-HLL_PUB struct hll_obj_func *hll_unwrap_macro(hll_value value);
-HLL_PUB double hll_unwrap_num(hll_value value);
+HLL_PUB struct hll_obj_cons *hll_unwrap_cons(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB struct hll_obj_env *hll_unwrap_env(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB const char *hll_unwrap_zsymb(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB struct hll_obj_symb *hll_unwrap_symb(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB struct hll_obj_bind *hll_unwrap_bind(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB struct hll_obj_func *hll_unwrap_func(hll_value value)
+    __attribute__((returns_nonnull));
+HLL_PUB struct hll_obj_func *hll_unwrap_macro(hll_value value)
+    __attribute__((returns_nonnull));
 
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'
