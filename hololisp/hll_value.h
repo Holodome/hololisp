@@ -109,6 +109,8 @@ HLL_PUB struct hll_obj_func *hll_unwrap_func(hll_value value)
 HLL_PUB struct hll_obj_func *hll_unwrap_macro(hll_value value)
     __attribute__((returns_nonnull));
 
+struct hll_obj *hll_unwrap_obj(hll_value value);
+
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'
 // is preferred to hll_get_value_kind() == HLL_OBJ_NIL because it makes
@@ -121,6 +123,8 @@ HLL_PUB bool hll_is_num(hll_value value);
 HLL_PUB bool hll_is_cons(hll_value value);
 HLL_PUB bool hll_is_symb(hll_value value);
 HLL_PUB bool hll_is_list(hll_value value);
+
+bool hll_is_obj(hll_value value);
 
 //
 // Accessor overriding functions. By lisp standards, car returns car of object

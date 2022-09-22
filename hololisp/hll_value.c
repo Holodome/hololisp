@@ -260,6 +260,11 @@ double hll_unwrap_num(hll_value value) {
   return result;
 }
 
+struct hll_obj *hll_unwrap_obj(hll_value value) {
+  assert(hll_is_obj(value));
+  return nan_unbox_ptr(value);
+}
+
 size_t hll_list_length(hll_value value) {
   size_t length = 0;
   while (hll_is_cons(value)) {

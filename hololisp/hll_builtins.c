@@ -283,7 +283,7 @@ static hll_value builtin_random(struct hll_vm *vm, hll_value args) {
 
 static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
   hll_value low = hll_nil();
-  hll_value high = hll_nil();
+  hll_value high;
   if (hll_get_value_kind(args) == HLL_OBJ_CONS) {
     high = hll_car(args);
     if (!hll_is_num(high)) {

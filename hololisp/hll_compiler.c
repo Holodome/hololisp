@@ -138,6 +138,47 @@ enum hll_location_form {
 #undef HLL_CAR_CDR
 };
 
+static size_t *get_location_entry_idx(struct hll_location_table *table,
+                                      uint64_t hash) {
+  size_t entry_count = sizeof(table->hash_table) / sizeof(table->hash_table[0]);
+  size_t hash_mask = entry_count - 1;
+  assert(!(hash_mask & entry_count));
+  size_t hash_slot = hash & hash_mask;
+  size_t *entry = table->hash_table + hash_slot;
+  while (*entry) {
+    uint64_t entry_hash = (table->entries + *entry)->hash;
+    if (entry_hash == hash) {
+      break;
+    }
+
+    entry = &(table->entries + *entry)->next;
+  }
+
+  return entry;
+}
+
+static void set_location_entry(struct hll_location_table *table, uint64_t hash,
+                               uint32_t offset, uint32_t length) {
+  size_t *entry_idx = get_location_entry_idx(table, hash);
+
+  assert(!*entry_idx);
+  struct hll_location_entry new_entry = {
+      .hash = hash, .offset = offset, .length = length};
+  hll_sb_push(table->entries, new_entry);
+  struct hll_location_entry *e = &hll_sb_last(table->entries);
+  e->next = *entry_idx;
+  *entry_idx = e - table->entries;
+}
+
+static struct hll_location_entry *
+get_location_entry(struct hll_location_table *table, uint64_t hash) {
+  size_t *entry_idx = get_location_entry_idx(table, hash);
+  if (entry_idx == NULL) {
+    return NULL;
+  }
+  return table->entries + *entry_idx;
+}
+
 bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   bool result = true;
 
@@ -160,6 +201,9 @@ bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   if (compiler.error_count != 0) {
     result = false;
   }
+
+  hll_sb_free(cu.locs.entries);
+  hll_sb_free(compiler.loc_stack);
 
   return result;
 }
@@ -480,8 +524,17 @@ static void eat_token(struct hll_reader *reader) {
 static hll_value read_expr(struct hll_reader *reader);
 
 static void add_reader_meta_info(struct hll_reader *reader, hll_value value) {
-  (void)reader;
-  (void)value;
+  if (reader->cu == NULL) {
+    return;
+  }
+
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = hll_unwrap_obj(value);
+  uint64_t hash = (uint64_t)(uintptr_t)obj;
+
+  uint32_t offset = reader->token->offset;
+  uint32_t length = reader->token->length;
+  set_location_entry(&reader->cu->locs, hash, offset, length);
 }
 
 static hll_value read_list(struct hll_reader *reader) {
@@ -532,8 +585,8 @@ static hll_value read_list(struct hll_reader *reader) {
 
     hll_value ast = read_expr(reader);
     hll_unwrap_cons(list_tail)->cdr = hll_new_cons(reader->vm, ast, hll_nil());
-    add_reader_meta_info(reader, list_tail);
     list_tail = hll_unwrap_cdr(list_tail);
+    add_reader_meta_info(reader, list_tail);
   }
 
   HLL_UNREACHABLE;
@@ -568,6 +621,7 @@ static hll_value read_expr(struct hll_reader *reader) {
     eat_token(reader);
     ast = hll_new_cons(reader->vm, reader->vm->quote_symb,
                        hll_new_cons(reader->vm, read_expr(reader), hll_nil()));
+    add_reader_meta_info(reader, ast);
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -624,6 +678,33 @@ compiler_error(struct hll_compiler *compiler, hll_value ast, const char *fmt,
   va_start(args, fmt);
   hll_report_error_valuev(compiler->vm, ast, fmt, args);
   va_end(args);
+}
+
+static void compiler_push_location(struct hll_compiler *compiler,
+                                   hll_value value) {
+  if (compiler->cu == NULL) {
+    return;
+  }
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = hll_unwrap_obj(value);
+  uint64_t hash = (uint64_t)(uintptr_t)obj;
+
+  struct hll_location_entry *loc =
+      get_location_entry(&compiler->cu->locs, hash);
+  assert(loc);
+  struct hll_compiler_loc_stack_entry e = {.cu = compiler->cu->compilatuon_unit,
+                                           .offset = loc->offset,
+                                           .length = loc->length};
+  hll_sb_push(compiler->loc_stack, e);
+}
+
+static void compiler_pop_location(struct hll_compiler *compiler) {
+  if (compiler->cu == NULL) {
+    return;
+  }
+
+  assert(hll_sb_len(compiler->loc_stack));
+  hll_sb_pop(compiler->loc_stack);
 }
 
 static enum hll_form_kind get_form_kind(const char *symb) {
@@ -1466,6 +1547,7 @@ static void compile_eval_expression(struct hll_compiler *compiler,
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_OBJ_CONS: {
+    compiler_push_location(compiler, ast);
     hll_value fn = hll_unwrap_car(ast);
     enum hll_form_kind kind = HLL_FORM_REGULAR;
     if (hll_is_symb(fn)) {
@@ -1473,6 +1555,7 @@ static void compile_eval_expression(struct hll_compiler *compiler,
     }
 
     compile_form(compiler, ast, kind);
+    compiler_pop_location(compiler);
   } break;
   case HLL_OBJ_SYMB:
     compile_symbol(compiler, ast);
@@ -1506,6 +1589,7 @@ static void compile_expression(struct hll_compiler *compiler, hll_value ast) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
 
     hll_value obj = ast;
+    compiler_push_location(compiler, obj);
     while (!hll_is_nil(obj)) {
       assert(hll_is_cons(obj));
       compile_expression(compiler, hll_unwrap_car(obj));
@@ -1520,6 +1604,7 @@ static void compile_expression(struct hll_compiler *compiler, hll_value ast) {
 
       obj = cdr;
     }
+    compiler_pop_location(compiler);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   } break;
   case HLL_OBJ_SYMB:
