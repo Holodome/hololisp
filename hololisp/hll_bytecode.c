@@ -149,22 +149,22 @@ void make_ident(void *file, size_t ident) {
 void dump_function_info(void *file, hll_value value);
 void hll_dump_value(void *file, hll_value value) {
   hll_value_kind kind = hll_get_value_kind(value);
-  fprintf(file, "{ kind: \"%s\"", hll_get_value_kind_str(kind));
+  fprintf(file, "{ \"kind\": \"%s\"", hll_get_value_kind_str(kind));
   switch (kind) {
   case HLL_OBJ_NIL:
   case HLL_OBJ_TRUE:
     break;
   case HLL_OBJ_NUM:
-    fprintf(file, ", value: %lf", hll_unwrap_num(value));
+    fprintf(file, ", \"value\": %lf", hll_unwrap_num(value));
     break;
   case HLL_OBJ_CONS:
-    fprintf(file, ", car: ");
+    fprintf(file, ", \"car\": ");
     hll_dump_value(file, hll_unwrap_car(value));
-    fprintf(file, ", cdr: ");
+    fprintf(file, ", \"cdr\": ");
     hll_dump_value(file, hll_unwrap_cdr(value));
     break;
   case HLL_OBJ_SYMB:
-    fprintf(file, ", symb: %s", hll_unwrap_zsymb(value));
+    fprintf(file, ", \"symb\": \"%s\"", hll_unwrap_zsymb(value));
     break;
   case HLL_OBJ_BIND:
     // TODO
@@ -173,7 +173,9 @@ void hll_dump_value(void *file, hll_value value) {
     // TODO
     break;
   case HLL_OBJ_FUNC:
+    fprintf(file, ", \"func\": {");
     dump_function_info(file, value);
+    fprintf(file, "}");
     break;
   case HLL_OBJ_MACRO:
     // TODO
@@ -184,7 +186,7 @@ void hll_dump_value(void *file, hll_value value) {
 
 void dump_function_info(void *file, hll_value value) {
   hll_obj_func *func = hll_unwrap_func(value);
-  fprintf(file, "params: [");
+  fprintf(file, "\"params\": [");
   for (hll_value param = func->param_names; hll_is_cons(param);
        param = hll_unwrap_cdr(param)) {
     hll_dump_value(file, hll_unwrap_car(param));
@@ -192,21 +194,21 @@ void dump_function_info(void *file, hll_value value) {
       fprintf(file, ",");
     }
   }
-  fprintf(file, "],");
+  fprintf(file, "],"); // params
 
   hll_bytecode *bc = func->bytecode;
-  fprintf(file, "bytecode: {");
   fprintf(file,
-          "stats: { ops: %zu, constants: %zu, locs: %zu, loc_rles: %zu},\n",
+          "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu, \"locs\": "
+          "%zu, \"loc_rles\": %zu },\n",
           hll_sb_len(bc->ops), hll_sb_len(bc->constant_pool),
           hll_sb_len(bc->locs), hll_sb_len(bc->loc_rle));
 
-  fprintf(file, "ops: [");
+  fprintf(file, "\"ops\": [");
   const uint8_t *instruction = bc->ops;
   size_t op_idx = 0;
   hll_bytecode_op op;
   while ((op = *instruction++)) {
-    fprintf(file, "op: { idx: %zu, offset: %zu, op: \"%s\"", op_idx,
+    fprintf(file, "{ \"idx\": %zu, \"offset\": %zu, \"op\": \"%s\"", op_idx++,
             instruction - bc->ops, get_op_str(op));
     switch (op) {
     case HLL_BYTECODE_CONST:
@@ -215,45 +217,53 @@ void dump_function_info(void *file, hll_value value) {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t offset = ((uint16_t)high) << 8 | low;
-      fprintf(file, ", value: %" PRId16, offset);
+      fprintf(file, ", \"value\": %" PRId16, offset);
     } break;
     default:
       break;
     }
-    fprintf(file, "},"); // op
+    fprintf(file, "}"); // op
+    if (*instruction) {
+      fprintf(file, ", ");
+    }
   }
   fprintf(file, "], "); // ops
 
-  fprintf(file, "consts: [");
+  fprintf(file, "\"consts\": [");
   for (size_t i = 0; i < hll_sb_len(bc->constant_pool); ++i) {
     hll_value v = bc->constant_pool[i];
     hll_dump_value(file, v);
-    fprintf(file, ",");
+    if (i != hll_sb_len(bc->constant_pool) - 1) {
+      fprintf(file, ", ");
+    }
   }
 
   fprintf(file, "], "); // consts
-  fprintf(file, "locs: [");
+  fprintf(file, "\"locs\": [");
   for (size_t i = 0; i < hll_sb_len(bc->locs); ++i) {
     hll_bytecode_location_entry *loc = bc->locs + i;
     fprintf(file,
-            "{ translation_unit: %" PRIu32 ", offset: %" PRIu32
-            ", length: %" PRIu32 "}, ",
+            "{ \"translation_unit\": %" PRIu32 ", \"offset\": %" PRIu32
+            ", \"length\": %" PRIu32 "}",
             loc->translation_unit, loc->offset, loc->length);
+    if (i != hll_sb_len(bc->locs) - 1) {
+      fprintf(file, ", ");
+    }
   }
   fprintf(file, "], "); // locs
 
-  fprintf(file, "loc_rle: [");
+  fprintf(file, "\"loc_rle\": [");
   for (size_t i = 0; i < hll_sb_len(bc->loc_rle); ++i) {
     hll_bytecode_rle *rle = bc->loc_rle + i;
-    fprintf(file, "{ length: %" PRIu32 ", loc_idx: %" PRIu32 " }, ",
+    fprintf(file, "{ \"length\": %" PRIu32 ", \"loc_idx\": %" PRIu32 " }",
             rle->length, rle->loc_idx);
+    if (i != hll_sb_len(bc->loc_rle) - 1) {
+      fprintf(file, ", ");
+    }
   }
-  fprintf(file, "], "); // loc_rle
-  fprintf(file, "}");   // bytecode
+  fprintf(file, "]"); // loc_rle
 }
 
 void hll_dump_program_info(void *file, hll_value program) {
-  fprintf(file, "{");
-  dump_function_info(file, program);
-  fprintf(file, "}");
+  hll_dump_value(file, program);
 }
