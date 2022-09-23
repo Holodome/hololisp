@@ -686,10 +686,15 @@ static void compiler_push_location(hll_compiler *compiler, hll_value value) {
 
   hll_location_entry *loc = get_location_entry(&compiler->cu->locs, hash);
   assert(loc);
-  hll_compiler_loc_stack_entry e = {.cu = compiler->cu->compilatuon_unit,
+  hll_compiler_loc_stack_entry e = {.cu = compiler->cu->compilation_unit,
                                     .offset = loc->offset,
                                     .length = loc->length};
   hll_sb_push(compiler->loc_stack, e);
+
+  size_t current_op_idx = hll_bytecode_op_idx(compiler->bytecode);
+  size_t section_size = current_op_idx - compiler->loc_op_idx;
+  hll_bytecode_add_loc(compiler->bytecode, section_size, e.cu, e.offset,
+                       e.length);
 }
 
 static void compiler_pop_location(hll_compiler *compiler) {

@@ -29,7 +29,7 @@ enum {
   HLL_OBJ_MACRO = 0x8,
 };
 
-HLL_PUB const char *hll_get_object_kind_str(hll_value_kind kind);
+HLL_PUB const char *hll_get_value_kind_str(hll_value_kind kind);
 
 typedef struct hll_obj {
   hll_value_kind kind;

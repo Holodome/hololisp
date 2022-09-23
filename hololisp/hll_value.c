@@ -42,7 +42,7 @@ static uint32_t djb2(const char *src, const char *dst) {
   return hash;
 }
 
-const char *hll_get_object_kind_str(hll_value_kind kind) {
+const char *hll_get_value_kind_str(hll_value_kind kind) {
   static const char *strs[] = {"num",  "nil", "true", "cons", "symb",
                                "bind", "env", "func", "macro"};
 
@@ -102,8 +102,8 @@ hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
     assert(0);
   }
 
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) +
-                                      sizeof(hll_obj_symb) + length + 1);
+  void *memory =
+      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_SYMB;
 
@@ -121,8 +121,7 @@ hll_value hll_new_symbolz(hll_vm *vm, const char *symbol) {
 }
 
 hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr) {
-  void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_cons));
+  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_cons));
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_CONS;
   hll_obj_cons *cons = (void *)(obj + 1);
@@ -136,8 +135,7 @@ hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr) {
 hll_value hll_new_bind(hll_vm *vm,
                        hll_value (*bind)(hll_vm *vm, hll_value args)) {
   assert(bind != NULL);
-  void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_bind));
+  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_bind));
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_BIND;
   hll_obj_bind *binding = (void *)(obj + 1);
@@ -148,8 +146,7 @@ hll_value hll_new_bind(hll_vm *vm,
 }
 
 hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
-  void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_env));
+  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_env));
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_ENV;
   hll_obj_env *env = (void *)(obj + 1);
@@ -160,10 +157,8 @@ hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
   return nan_box_ptr(obj);
 }
 
-hll_value hll_new_func(hll_vm *vm, hll_value params,
-                       hll_bytecode *bytecode) {
-  void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
+hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
+  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_FUNC;
   hll_obj_func *func = (void *)(obj + 1);
@@ -175,10 +170,8 @@ hll_value hll_new_func(hll_vm *vm, hll_value params,
   return nan_box_ptr(obj);
 }
 
-hll_value hll_new_macro(hll_vm *vm, hll_value params,
-                        hll_bytecode *bytecode) {
-  void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
+hll_value hll_new_macro(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
+  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
   obj->kind = HLL_OBJ_MACRO;
   hll_obj_func *func = (void *)(obj + 1);

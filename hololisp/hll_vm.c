@@ -312,9 +312,9 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
         *headp = *tailp = cons;
       } else {
         if (HLL_UNLIKELY(hll_get_value_kind(*tailp) != HLL_OBJ_CONS)) {
-          hll_runtime_error(
-              vm, "tail operand of APPEND is not a cons (found %s)",
-              hll_get_object_kind_str(hll_get_value_kind(*tailp)));
+          hll_runtime_error(vm,
+                            "tail operand of APPEND is not a cons (found %s)",
+                            hll_get_value_kind_str(hll_get_value_kind(*tailp)));
           goto bail;
         }
         hll_unwrap_cons(*tailp)->cdr = cons;
@@ -327,7 +327,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_sb_push(vm->temp_roots, symb);
       if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_OBJ_SYMB)) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
-                          hll_get_object_kind_str(hll_get_value_kind(symb)));
+                          hll_get_value_kind_str(hll_get_value_kind(symb)));
         goto bail;
       }
 
@@ -410,9 +410,8 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
         hll_sb_push(vm->stack, result);
       } break;
       default:
-        hll_runtime_error(
-            vm, "object is not callable (got %s)",
-            hll_get_object_kind_str(hll_get_value_kind(callable)));
+        hll_runtime_error(vm, "object is not callable (got %s)",
+                          hll_get_value_kind_str(hll_get_value_kind(callable)));
         goto bail;
         break;
       }

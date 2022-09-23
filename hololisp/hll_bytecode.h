@@ -61,11 +61,16 @@ typedef enum {
   HLL_BYTECODE_DUP,
 } hll_bytecode_op;
 
-typedef struct hll_bytecode_location_entry {
+typedef struct {
   uint32_t translation_unit;
-  size_t offset;
+  uint32_t offset;
   uint32_t length;
 } hll_bytecode_location_entry;
+
+typedef struct {
+  uint32_t length;
+  uint32_t loc_idx;
+} hll_bytecode_rle;
 
 // Contains unit of bytecode. This is typically some compiled function
 // with list of all variables referenced in it.
@@ -91,7 +96,7 @@ typedef struct hll_bytecode {
   // stack, memory usage etc.) can be used to display user-friendly thorough
   // error message.
   hll_bytecode_location_entry *locs;
-  uint64_t *loc_rle;
+  hll_bytecode_rle *loc_rle;
 } hll_bytecode;
 
 //
@@ -113,10 +118,15 @@ size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte);
 size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value);
 size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op);
 
+void hll_bytecode_add_loc(hll_bytecode *bc, size_t op_length,
+                          uint32_t compilation_unit, uint32_t offset,
+                          uint32_t length);
+
 //
 // Debug routines
 //
 
+void hll_dump_program_info(void *file, hll_value program);
 void hll_dump_bytecode(void *file, const hll_bytecode *bytecode);
 void hll_dump_value(void *file, hll_value value);
 

@@ -5,6 +5,8 @@
 #include <string.h>
 
 #include "hll_hololisp.h"
+#include "hll_compiler.h"
+#include "hll_bytecode.h"
 
 #ifdef HLL_MEM_CHECK
 #include "hll_mem.h"
@@ -16,7 +18,8 @@ typedef enum {
   HLL_MODE_ESCRIPT,
   HLL_MODE_ESTRING,
   HLL_MODE_HELP,
-  HLL_MODE_VERSION
+  HLL_MODE_VERSION,
+  HLL_MODE_DUMP_BYTECODE,
 } hll_mode;
 
 typedef struct {
@@ -99,6 +102,8 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
       opts->mode = HLL_MODE_VERSION;
     } else if (strcmp(opt, "-h") == 0) {
       opts->mode = HLL_MODE_HELP;
+    } else if (strcmp(opt, "--dump") == 0) {
+      opts->mode = HLL_MODE_DUMP_BYTECODE;
     } else {
       fprintf(stderr, "Unknown option '%s'\n", opt);
       print_usage(stderr);
@@ -178,9 +183,36 @@ static bool execute_string(const char *str) {
   return manage_result(result);
 }
 
+static bool execute_dump_bytecode(const char *filename) {
+  if (filename == NULL) {
+    fprintf(stderr, "No filename provided\n");
+    return true;
+  }
+
+  char *file_contents = read_entire_file(filename);
+  if (file_contents == NULL) {
+    fprintf(stderr, "failed to read file '%s'\n", filename);
+    return true;
+  }
+
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_value compiled;
+  if (!hll_compile(vm, file_contents, &compiled)) {
+    return false;
+  }
+
+  hll_dump_program_info(stdout, compiled);
+  free(file_contents);
+
+  return false;
+}
+
 static bool execute(hll_options *opts) {
   bool error = false;
   switch (opts->mode) {
+  case HLL_MODE_DUMP_BYTECODE:
+    error = execute_dump_bytecode(opts->str);
+    break;
   case HLL_MODE_EREPL:
     error = execute_repl(true);
     break;
