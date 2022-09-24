@@ -84,7 +84,11 @@ enum {
   // debug information, making it very hard to debug errors. When this flag
   // is set, hololisp is able to provide more meaningful both compiler and
   // interpreter errors.
-  HLL_INTERPRET_DEBUG = 0x2
+  HLL_INTERPRET_DEBUG = 0x2,
+  // Generate program dump in json format. Program dump can be read using
+  // 'bytecode_viewer.py' script. Generating dumps can be useful for debugging.
+  // If HLL_INTERPRET_DEBUG flag is not set, dump is generated but is empty.
+  HLL_INTERPRET_DUMP_ON_FAILURE = 0x4,
 };
 
 // If config is NULL, uses default config.

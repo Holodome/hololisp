@@ -61,8 +61,7 @@ HLL_PUB void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size,
                              size_t new_size) __attribute__((alloc_size(4)));
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
-                             hll_value (*bind)(hll_vm *vm,
-                                               hll_value args));
+                             hll_value (*bind)(hll_vm *vm, hll_value args));
 
 HLL_PUB bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
                                     bool print_result);
@@ -70,8 +69,7 @@ HLL_PUB bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
 HLL_PUB void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
                               hll_value value);
 
-HLL_PUB hll_value hll_expand_macro(hll_vm *vm, hll_value macro,
-                                   hll_value args);
+HLL_PUB hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args);
 
 HLL_PUB void hll_print_value(hll_vm *vm, hll_value obj);
 

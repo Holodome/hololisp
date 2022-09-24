@@ -1,12 +1,6 @@
-#ifndef HLL_DEBUG_H
-#define HLL_DEBUG_H
-
-#include <stdarg.h>
-
-#include "hll_hololisp.h"
-
-#define HLL_DEBUG_INFO_HASH_MAP_SIZE 8192
-
+//
+// hll_debug.h
+//
 // Debug information is generated for following objects:
 // * objects created by parser
 //
@@ -14,21 +8,26 @@
 // * compile error - source location
 // * invalid function invocation - where the function lambda was created
 // * runtime error - compiled bytecode mapped to source location
-struct hll_obj_debug_info {
-  struct hll_obj_debug_info *next;
-  uint64_t hash;
-  // offset in src
-  uint32_t offset;
-  // length is src
-  uint32_t length;
-  // index of src. We store all sources (either that is a string containing
-  // lisp source code, or macro invocation).
-  uint32_t src_idx;
-};
+//
+#ifndef HLL_DEBUG_H
+#define HLL_DEBUG_H
 
-struct hll_debug_storage {
-  struct hll_obj_debug_info *obj_debug_infos;
-};
+#include <stdarg.h>
+
+#include "hll_hololisp.h"
+
+// Debug Translation Unit.
+typedef struct {
+  uint32_t index;
+  const char *source;
+} hll_dtu;
+
+typedef struct {
+  hll_dtu *dtus;
+} hll_debug_storage;
+
+hll_debug_storage hll_make_debug_storage(void);
+void hll_delete_debug_storage(hll_debug_storage *ds);
 
 // Used to report error in current state contained by vm.
 // vm must have current_filename field present if message needs to include
