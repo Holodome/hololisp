@@ -81,8 +81,8 @@ void hll_free_obj(hll_vm *vm, hll_obj *obj) {
 }
 
 static void register_gc_obj(hll_vm *vm, hll_obj *obj) {
-  obj->next_gc = vm->all_objs;
-  vm->all_objs = obj;
+  obj->next_gc = vm->gc.all_objs;
+  vm->gc.all_objs = obj;
 }
 
 hll_value hll_nil(void) { return nan_box_singleton(HLL_VALUE_NIL); }
@@ -279,7 +279,7 @@ void hll_gray_obj(hll_vm *vm, hll_value value) {
   }
 
   obj->is_dark = true;
-  hll_sb_push(vm->gray_objs, value);
+  hll_sb_push(vm->gc.gray_objs, value);
 }
 
 void hll_blacken_obj(hll_vm *vm, hll_value value) {
@@ -288,7 +288,7 @@ void hll_blacken_obj(hll_vm *vm, hll_value value) {
   }
 
   hll_obj *obj = nan_unbox_ptr(value);
-  vm->bytes_allocated += sizeof(hll_obj);
+  vm->gc.bytes_allocated += sizeof(hll_obj);
 
   switch (obj->kind) {
   case HLL_VALUE_CONS:
@@ -296,19 +296,19 @@ void hll_blacken_obj(hll_vm *vm, hll_value value) {
     hll_gray_obj(vm, hll_unwrap_cdr(value));
     break;
   case HLL_VALUE_SYMB:
-    vm->bytes_allocated +=
+    vm->gc.bytes_allocated +=
         hll_unwrap_symb(value)->length + 1 + sizeof(hll_obj_symb);
     break;
   case HLL_VALUE_BIND:
-    vm->bytes_allocated += sizeof(hll_obj_bind);
+    vm->gc.bytes_allocated += sizeof(hll_obj_bind);
     break;
   case HLL_VALUE_ENV:
-    vm->bytes_allocated += sizeof(hll_obj_env);
+    vm->gc.bytes_allocated += sizeof(hll_obj_env);
     hll_gray_obj(vm, hll_unwrap_env(value)->vars);
     hll_gray_obj(vm, hll_unwrap_env(value)->up);
     break;
   case HLL_VALUE_FUNC: {
-    vm->bytes_allocated += sizeof(hll_obj_func);
+    vm->gc.bytes_allocated += sizeof(hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_func(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_func(value)->env);
     hll_bytecode *bytecode = hll_unwrap_func(value)->bytecode;
@@ -317,7 +317,7 @@ void hll_blacken_obj(hll_vm *vm, hll_value value) {
     }
   } break;
   case HLL_VALUE_MACRO: {
-    vm->bytes_allocated += sizeof(hll_obj_func);
+    vm->gc.bytes_allocated += sizeof(hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_macro(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_macro(value)->env);
     hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;

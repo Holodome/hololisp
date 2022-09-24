@@ -17,31 +17,8 @@ typedef struct {
   hll_value func;
 } hll_call_frame;
 
-typedef struct hll_vm {
-  struct hll_config config;
-
-  struct hll_debug_storage *ds;
-
-  // Global env. It is stored across calls to interpret, allowing defining
-  // toplevel functions.
-  hll_value global_env;
-
-  uint32_t error_count;
-  // We use xorshift64 for random number generation. Because hololisp is
-  // single-threaded, we can use single global variable for rng state.
-  uint64_t rng_state;
-
-  // Current execution state
-  hll_value *stack;
-  hll_call_frame *call_stack;
-  hll_value env;
-
-  //
-  // Garbage collector stuff
-  //
-
+typedef struct {
   // Linked list of all objects.
-  // Uses next field
   struct hll_obj *all_objs;
   // Count all allocated bytes to know when to trigger garbage collection.
   size_t bytes_allocated;
@@ -50,7 +27,28 @@ typedef struct hll_vm {
   size_t next_gc;
   hll_value *gray_objs;
   hll_value *temp_roots;
-  uint32_t forbid_gc;
+  uint32_t forbid;
+} hll_gc;
+
+typedef struct hll_vm {
+  struct hll_config config;
+  struct hll_debug_storage *ds;
+  hll_gc gc;
+
+  // We use xorshift64 for random number generation. Because hololisp is
+  // single-threaded, we can use single global variable for rng state.
+  uint64_t rng_state;
+
+  // Global env. It is stored across calls to interpret, allowing defining
+  // toplevel functions.
+  hll_value global_env;
+
+
+  // Current execution state
+  hll_value *stack;
+  hll_call_frame *call_stack;
+  hll_value env;
+
 } hll_vm;
 
 // Garbage collector tracked allocation

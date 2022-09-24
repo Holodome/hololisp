@@ -13,7 +13,6 @@ void hll_report_errorv(struct hll_vm *vm, size_t offset, uint32_t len,
     return;
   }
 
-  ++vm->error_count;
   if (vm->config.error_fn == NULL) {
     return;
   }
