@@ -38,7 +38,7 @@ void hll_report_error_value(struct hll_vm *vm, hll_value value, const char *msg,
 }
 void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
                              const char *msg, va_list args) {
-  assert(0);
+  /* assert(0); */
   (void)vm;
   (void)value;
   (void)msg;
@@ -48,6 +48,6 @@ void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
 uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source) {
   (void)ds;
   (void)source;
-  assert(0);
+  /* assert(0); */
   return 0;
 }

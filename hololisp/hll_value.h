@@ -84,6 +84,8 @@ HLL_PUB hll_value hll_new_func(struct hll_vm *vm, hll_value params,
 HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
                                 struct hll_bytecode *bytecode);
 
+void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
+
 //
 // Unwrapper functions.
 // Unwrappers are used to get internal contents of value of expected type.
@@ -134,14 +136,5 @@ HLL_PUB hll_value hll_car(hll_value lis);
 HLL_PUB hll_value hll_cdr(hll_value lis);
 HLL_PUB size_t hll_list_length(hll_value value);
 
-//
-// Internal API related to GC.
-//
-
-struct hll_gc;
-
-void hll_gray_obj(struct hll_gc *gc, hll_value value);
-void hll_blacken_obj(struct hll_gc *gc, hll_value value);
-void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 #endif

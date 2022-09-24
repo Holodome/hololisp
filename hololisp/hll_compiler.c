@@ -13,6 +13,7 @@
 #include "hll_util.h"
 #include "hll_value.h"
 #include "hll_vm.h"
+#include "hll_gc.h"
 
 typedef enum {
   HLL_LEX_EQC_OTHER = 0x0, // Anything not handled
@@ -196,13 +197,13 @@ bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   hll_reader reader;
   hll_reader_init(&reader, &lexer, vm, &cu);
 
-  ++vm->gc.forbid;
+  hll_push_forbid_gc(vm->gc);
   hll_value ast = hll_read_ast(&reader);
 
   hll_compiler compiler;
   hll_compiler_init(&compiler, vm, vm->env, &cu);
   *compiled = hll_compile_ast(&compiler, ast);
-  --vm->gc.forbid;
+  hll_pop_forbid_gc(vm->gc);
 
   if (compiler.error_count != 0) {
     result = false;

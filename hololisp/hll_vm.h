@@ -17,23 +17,11 @@ typedef struct {
   hll_value func;
 } hll_call_frame;
 
-typedef struct hll_gc {
-  // Linked list of all objects.
-  struct hll_obj *all_objs;
-  // Count all allocated bytes to know when to trigger garbage collection.
-  size_t bytes_allocated;
-  // If bytes_allocated becomes greater than this value, trigger next gc.
-  // May not be greater than min_heap_size specified in config.
-  size_t next_gc;
-  hll_value *gray_objs;
-  hll_value *temp_roots;
-  uint32_t forbid;
-} hll_gc;
 
 typedef struct hll_vm {
   struct hll_config config;
   struct hll_debug_storage *ds;
-  hll_gc gc;
+  struct hll_gc *gc;
 
   // We use xorshift64 for random number generation. Because hololisp is
   // single-threaded, we can use single global variable for rng state.
@@ -51,11 +39,6 @@ typedef struct hll_vm {
 
 } hll_vm;
 
-// Garbage collector tracked allocation
-#define hll_gc_free(_vm, _ptr, _size) hll_gc_realloc(_vm, _ptr, _size, 0)
-#define hll_gc_alloc(_vm, _size) hll_gc_realloc(_vm, NULL, 0, _size)
-HLL_PUB void *hll_gc_realloc(hll_vm *vm, void *ptr, size_t old_size,
-                             size_t new_size) __attribute__((alloc_size(4)));
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
                              hll_value (*bind)(hll_vm *vm, hll_value args));

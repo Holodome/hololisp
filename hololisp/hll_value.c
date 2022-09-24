@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "hll_bytecode.h"
+#include "hll_gc.h"
 #include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_vm.h"
@@ -53,26 +54,26 @@ const char *hll_get_value_kind_str(hll_value_kind kind) {
 void hll_free_obj(hll_vm *vm, hll_obj *obj) {
   switch (obj->kind) {
   case HLL_VALUE_CONS:
-    hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_cons));
+    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_cons));
     break;
   case HLL_VALUE_SYMB:
-    hll_gc_free(vm, obj,
+    hll_gc_free(vm->gc, obj,
                 sizeof(hll_obj) + sizeof(hll_obj_symb) +
                     ((hll_obj_symb *)obj->as)->length + 1);
     break;
   case HLL_VALUE_BIND:
-    hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_bind));
+    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_bind));
     break;
   case HLL_VALUE_ENV:
-    hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_env));
+    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_env));
     break;
   case HLL_VALUE_FUNC:
     hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
-    hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
+    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
     break;
   case HLL_VALUE_MACRO:
     hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
-    hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
+    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
     break;
   default:
     HLL_UNREACHABLE;
@@ -81,8 +82,8 @@ void hll_free_obj(hll_vm *vm, hll_obj *obj) {
 }
 
 static void register_gc_obj(hll_vm *vm, hll_obj *obj) {
-  obj->next_gc = vm->gc.all_objs;
-  vm->gc.all_objs = obj;
+  obj->next_gc = vm->gc->all_objs;
+  vm->gc->all_objs = obj;
 }
 
 hll_value hll_nil(void) { return nan_box_singleton(HLL_VALUE_NIL); }
@@ -103,7 +104,7 @@ hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   }
 
   void *memory =
-      hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);
+      hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_SYMB;
 
@@ -121,7 +122,7 @@ hll_value hll_new_symbolz(hll_vm *vm, const char *symbol) {
 }
 
 hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr) {
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_cons));
+  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_cons));
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_CONS;
   hll_obj_cons *cons = (void *)(obj + 1);
@@ -135,7 +136,7 @@ hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr) {
 hll_value hll_new_bind(hll_vm *vm,
                        hll_value (*bind)(hll_vm *vm, hll_value args)) {
   assert(bind != NULL);
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_bind));
+  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_bind));
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_BIND;
   hll_obj_bind *binding = (void *)(obj + 1);
@@ -146,7 +147,7 @@ hll_value hll_new_bind(hll_vm *vm,
 }
 
 hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_env));
+  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_env));
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_ENV;
   hll_obj_env *env = (void *)(obj + 1);
@@ -158,7 +159,7 @@ hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
 }
 
 hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
+  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_FUNC;
   hll_obj_func *func = (void *)(obj + 1);
@@ -171,7 +172,7 @@ hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
 }
 
 hll_value hll_new_macro(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
-  void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
+  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
   obj->kind = HLL_VALUE_MACRO;
   hll_obj_func *func = (void *)(obj + 1);
@@ -266,69 +267,6 @@ size_t hll_list_length(hll_value value) {
   }
 
   return length;
-}
-
-void hll_gray_obj(hll_gc *gc, hll_value value) {
-  if (!hll_is_obj(value)) {
-    return;
-  }
-
-  hll_obj *obj = nan_unbox_ptr(value);
-  if (obj->is_dark) {
-    return;
-  }
-
-  obj->is_dark = true;
-  hll_sb_push(gc->gray_objs, value);
-}
-
-void hll_blacken_obj(hll_gc *gc, hll_value value) {
-  if (!hll_is_obj(value)) {
-    return;
-  }
-
-  hll_obj *obj = nan_unbox_ptr(value);
-  gc->bytes_allocated += sizeof(hll_obj);
-
-  switch (obj->kind) {
-  case HLL_VALUE_CONS:
-    hll_gray_obj(gc, hll_unwrap_car(value));
-    hll_gray_obj(gc, hll_unwrap_cdr(value));
-    break;
-  case HLL_VALUE_SYMB:
-    gc->bytes_allocated +=
-        hll_unwrap_symb(value)->length + 1 + sizeof(hll_obj_symb);
-    break;
-  case HLL_VALUE_BIND:
-    gc->bytes_allocated += sizeof(hll_obj_bind);
-    break;
-  case HLL_VALUE_ENV:
-    gc->bytes_allocated += sizeof(hll_obj_env);
-    hll_gray_obj(gc, hll_unwrap_env(value)->vars);
-    hll_gray_obj(gc, hll_unwrap_env(value)->up);
-    break;
-  case HLL_VALUE_FUNC: {
-    gc->bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(gc, hll_unwrap_func(value)->param_names);
-    hll_gray_obj(gc, hll_unwrap_func(value)->env);
-    hll_bytecode *bytecode = hll_unwrap_func(value)->bytecode;
-    for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(gc, bytecode->constant_pool[i]);
-    }
-  } break;
-  case HLL_VALUE_MACRO: {
-    gc->bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(gc, hll_unwrap_macro(value)->param_names);
-    hll_gray_obj(gc, hll_unwrap_macro(value)->env);
-    hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;
-    for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(gc, bytecode->constant_pool[i]);
-    }
-  } break;
-  default:
-    HLL_UNREACHABLE;
-    break;
-  }
 }
 
 hll_value_kind hll_get_value_kind(hll_value value) {
