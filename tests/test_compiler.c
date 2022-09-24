@@ -226,7 +226,7 @@ static void test_compiler_compiles_defun(void) {
 
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[1];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_OBJ_FUNC);
+  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
 
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
@@ -487,7 +487,7 @@ static void test_compiler_compiles_lambda(void) {
 
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[0];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_OBJ_FUNC);
+  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
 
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;

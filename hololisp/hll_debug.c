@@ -45,3 +45,10 @@ void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
   (void)msg;
   (void)args;
 }
+
+uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source) {
+  (void)ds;
+  (void)source;
+  assert(0);
+  return 0;
+}

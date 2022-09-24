@@ -138,6 +138,11 @@ typedef enum {
 #undef HLL_CAR_CDR
 } hll_location_form;
 
+typedef struct {
+  uint32_t offset;
+  uint32_t length;
+} hll_location_sample;
+
 static size_t *get_location_entry_idx(hll_location_table *table,
                                       uint64_t hash) {
   size_t entry_count = sizeof(table->hash_table) / sizeof(table->hash_table[0]);
@@ -182,7 +187,8 @@ static hll_location_entry *get_location_entry(hll_location_table *table,
 bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   bool result = true;
 
-  hll_compilation_unit cu = {0};
+  hll_translation_unit cu = {0};
+  cu.translation_unit = hll_ds_init_tu(vm->ds, source);
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, source, vm);
@@ -475,7 +481,7 @@ const hll_token *hll_lexer_next(hll_lexer *lexer) {
 }
 
 void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm,
-                     hll_compilation_unit *cu) {
+                     hll_translation_unit *cu) {
   memset(reader, 0, sizeof(hll_reader));
   reader->lexer = lexer;
   reader->vm = vm;
@@ -616,7 +622,7 @@ static hll_value read_expr(hll_reader *reader) {
     break;
   case HLL_TOK_QUOTE: {
     eat_token(reader);
-    ast = hll_new_cons(reader->vm, reader->vm->quote_symb,
+    ast = hll_new_cons(reader->vm, hll_new_symbolz(reader->vm, "quote"),
                        hll_new_cons(reader->vm, read_expr(reader), hll_nil()));
     add_reader_meta_info(reader, ast);
   } break;
@@ -658,12 +664,12 @@ hll_value hll_read_ast(hll_reader *reader) {
 }
 
 void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm, hll_value env,
-                       hll_compilation_unit *cu) {
+                       hll_translation_unit *tu) {
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->vm = vm;
   compiler->env = env;
   compiler->bytecode = hll_new_bytecode();
-  compiler->cu = cu;
+  compiler->tu = tu;
 }
 
 __attribute__((format(printf, 3, 4))) static void
@@ -677,16 +683,16 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
 }
 
 static void compiler_push_location(hll_compiler *compiler, hll_value value) {
-  if (compiler->cu == NULL) {
+  if (compiler->tu == NULL) {
     return;
   }
   assert(hll_is_obj(value));
   struct hll_obj *obj = hll_unwrap_obj(value);
   uint64_t hash = (uint64_t)(uintptr_t)obj;
 
-  hll_location_entry *loc = get_location_entry(&compiler->cu->locs, hash);
+  hll_location_entry *loc = get_location_entry(&compiler->tu->locs, hash);
   assert(loc);
-  hll_compiler_loc_stack_entry e = {.cu = compiler->cu->compilation_unit,
+  hll_compiler_loc_stack_entry e = {.cu = compiler->tu->translation_unit,
                                     .offset = loc->offset,
                                     .length = loc->length};
   hll_sb_push(compiler->loc_stack, e);
@@ -698,7 +704,7 @@ static void compiler_push_location(hll_compiler *compiler, hll_value value) {
 }
 
 static void compiler_pop_location(hll_compiler *compiler) {
-  if (compiler->cu == NULL) {
+  if (compiler->tu == NULL) {
     return;
   }
 
@@ -1002,7 +1008,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       break;
     }
     // get the nth function
-    compile_symbol(compiler, compiler->vm->nthcdr_symb);
+    compile_symbol(compiler, hll_new_symbolz(compiler->vm, "nthcdr"));
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     // call nth
@@ -1016,7 +1022,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       break;
     }
     // get the nth function
-    compile_symbol(compiler, compiler->vm->nthcdr_symb);
+    compile_symbol(compiler, hll_new_symbolz(compiler->vm, "nthcdr"));
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     // call nth

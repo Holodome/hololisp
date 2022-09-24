@@ -13,7 +13,7 @@ static void test_reader_reports_eof(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_NIL);
 }
 
 static void test_reader_parses_num(void) {
@@ -27,10 +27,10 @@ static void test_reader_parses_num(void) {
 
   hll_value ast = hll_read_ast(&reader);
 
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_NUM);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_NUM);
   TEST_ASSERT(hll_unwrap_num(ast) == 123);
 }
 
@@ -44,10 +44,10 @@ static void test_reader_parses_symbol(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_SYMB);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_SYMB);
   TEST_ASSERT(strcmp(hll_unwrap_zsymb(ast), "hello-world") == 0);
 }
 
@@ -61,12 +61,12 @@ static void test_reader_parses_one_element_list(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_NUM);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_NUM);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
 }
 
 static void test_reader_parses_list(void) {
@@ -79,20 +79,20 @@ static void test_reader_parses_list(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_NUM);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_NUM);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_VALUE_NIL);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_NUM);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_NUM);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_VALUE_NIL);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
 }
 
 static void test_reader_parses_nested_lists(void) {
@@ -105,31 +105,31 @@ static void test_reader_parses_nested_lists(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
 
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_CONS);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_CONS);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_CONS);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_CONS);
   {
     hll_value inner = hll_unwrap_car(ast);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_OBJ_SYMB);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_OBJ_CONS);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_VALUE_SYMB);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_VALUE_CONS);
     inner = hll_unwrap_cdr(inner);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_OBJ_NUM);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_OBJ_CONS);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_VALUE_NUM);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_VALUE_CONS);
     inner = hll_unwrap_cdr(inner);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_OBJ_NUM);
-    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_OBJ_NIL);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(inner)) == HLL_VALUE_NUM);
+    TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(inner)) == HLL_VALUE_NIL);
   }
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
 }
 
 static void test_reader_reports_unclosed_list(void) {
@@ -170,10 +170,10 @@ static void test_reader_parses_nil(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_NIL);
 }
 
 static void test_reader_parses_simple_dotted_cons(void) {
@@ -186,12 +186,12 @@ static void test_reader_parses_simple_dotted_cons(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NUM);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NUM);
 }
 
 static void test_reader_parses_dotted_list(void) {
@@ -204,20 +204,20 @@ static void test_reader_parses_dotted_list(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_VALUE_NIL);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_VALUE_NIL);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NUM);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NUM);
 }
 
 static void test_reader_parses_quote(void) {
@@ -230,15 +230,15 @@ static void test_reader_parses_quote(void) {
   hll_reader_init(&reader, &lexer, vm, NULL);
 
   hll_value ast = hll_read_ast(&reader);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
   ast = hll_unwrap_car(ast);
-  TEST_ASSERT(hll_get_value_kind(ast) == HLL_OBJ_CONS);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_SYMB);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(ast) == HLL_VALUE_CONS);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_SYMB);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) != HLL_VALUE_NIL);
   ast = hll_unwrap_cdr(ast);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_OBJ_NUM);
-  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_OBJ_NIL);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_car(ast)) == HLL_VALUE_NUM);
+  TEST_ASSERT(hll_get_value_kind(hll_unwrap_cdr(ast)) == HLL_VALUE_NIL);
 }
 
 #define TCASE(_name)                                                           \

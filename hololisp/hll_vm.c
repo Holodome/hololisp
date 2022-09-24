@@ -59,8 +59,6 @@ hll_vm *hll_make_vm(const hll_config *config) {
   vm->next_gc = vm->config.heap_size;
   vm->rng_state = time(NULL);
 
-  vm->quote_symb = hll_new_symbolz(vm, "quote");
-  vm->nthcdr_symb = hll_new_symbolz(vm, "nthcdr");
   vm->global_env = hll_new_env(vm, hll_nil(), hll_nil());
   vm->env = vm->global_env;
 
@@ -192,8 +190,6 @@ static void hll_collect_garbage(hll_vm *vm) {
   // Reset allocated bytes count
   vm->bytes_allocated = 0;
   hll_sb_purge(vm->gray_objs);
-  hll_gray_obj(vm, vm->quote_symb);
-  hll_gray_obj(vm, vm->nthcdr_symb);
   hll_gray_obj(vm, vm->global_env);
   for (size_t i = 0; i < hll_sb_len(vm->temp_roots); ++i) {
     hll_gray_obj(vm, vm->temp_roots[i]);

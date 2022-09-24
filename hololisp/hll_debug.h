@@ -18,16 +18,17 @@
 
 // Debug Translation Unit.
 typedef struct {
-  uint32_t index;
   const char *source;
 } hll_dtu;
 
-typedef struct {
+typedef struct hll_debug_storage {
   hll_dtu *dtus;
 } hll_debug_storage;
 
 hll_debug_storage hll_make_debug_storage(void);
 void hll_delete_debug_storage(hll_debug_storage *ds);
+
+uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source);
 
 // Used to report error in current state contained by vm.
 // vm must have current_filename field present if message needs to include

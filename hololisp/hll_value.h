@@ -11,7 +11,6 @@
 
 #include "hll_hololisp.h"
 
-// Limit max symbol length.
 #define HLL_MAX_SYMB_LENGTH 128
 
 typedef uint8_t hll_value_kind;

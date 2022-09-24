@@ -20,8 +20,7 @@ typedef struct {
 typedef struct hll_vm {
   struct hll_config config;
 
-  hll_value nthcdr_symb;
-  hll_value quote_symb;
+  struct hll_debug_storage *ds;
 
   // Global env. It is stored across calls to interpret, allowing defining
   // toplevel functions.
