@@ -1185,8 +1185,6 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     return false;
   }
 
-  hll_sb_push(compiler->vm->gc.temp_roots, compiled);
-
   hll_value param_list = hll_nil();
   hll_value param_list_tail = hll_nil();
   if (hll_is_symb(params)) {
@@ -1234,7 +1232,6 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     hll_unwrap_macro(func)->param_names = param_list;
   }
 
-  (void)hll_sb_pop(compiler->vm->gc.temp_roots); // compiled
   *compiled_ = func;
   return true;
 }
@@ -1390,9 +1387,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   if (compile_function_internal(compiler, params, body, true,
                                 &macro_expansion)) {
     // TODO: Test if macro with same name exists
-    hll_sb_push(compiler->vm->gc.temp_roots, macro_expansion);
     hll_add_variable(compiler->vm, compiler->env, name, macro_expansion);
-    (void)hll_sb_pop(compiler->vm->gc.temp_roots);
   }
 }
 
@@ -1619,10 +1614,8 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
 
 hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   hll_value result = hll_new_func(compiler->vm, hll_nil(), compiler->bytecode);
-  hll_sb_push(compiler->vm->gc.temp_roots, result);
   compile_progn(compiler, ast);
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
-  (void)hll_sb_pop(compiler->vm->gc.temp_roots);
   return result;
 }
 

@@ -268,7 +268,7 @@ size_t hll_list_length(hll_value value) {
   return length;
 }
 
-void hll_gray_obj(hll_vm *vm, hll_value value) {
+void hll_gray_obj(hll_gc *gc, hll_value value) {
   if (!hll_is_obj(value)) {
     return;
   }
@@ -279,50 +279,50 @@ void hll_gray_obj(hll_vm *vm, hll_value value) {
   }
 
   obj->is_dark = true;
-  hll_sb_push(vm->gc.gray_objs, value);
+  hll_sb_push(gc->gray_objs, value);
 }
 
-void hll_blacken_obj(hll_vm *vm, hll_value value) {
+void hll_blacken_obj(hll_gc *gc, hll_value value) {
   if (!hll_is_obj(value)) {
     return;
   }
 
   hll_obj *obj = nan_unbox_ptr(value);
-  vm->gc.bytes_allocated += sizeof(hll_obj);
+  gc->bytes_allocated += sizeof(hll_obj);
 
   switch (obj->kind) {
   case HLL_VALUE_CONS:
-    hll_gray_obj(vm, hll_unwrap_car(value));
-    hll_gray_obj(vm, hll_unwrap_cdr(value));
+    hll_gray_obj(gc, hll_unwrap_car(value));
+    hll_gray_obj(gc, hll_unwrap_cdr(value));
     break;
   case HLL_VALUE_SYMB:
-    vm->gc.bytes_allocated +=
+    gc->bytes_allocated +=
         hll_unwrap_symb(value)->length + 1 + sizeof(hll_obj_symb);
     break;
   case HLL_VALUE_BIND:
-    vm->gc.bytes_allocated += sizeof(hll_obj_bind);
+    gc->bytes_allocated += sizeof(hll_obj_bind);
     break;
   case HLL_VALUE_ENV:
-    vm->gc.bytes_allocated += sizeof(hll_obj_env);
-    hll_gray_obj(vm, hll_unwrap_env(value)->vars);
-    hll_gray_obj(vm, hll_unwrap_env(value)->up);
+    gc->bytes_allocated += sizeof(hll_obj_env);
+    hll_gray_obj(gc, hll_unwrap_env(value)->vars);
+    hll_gray_obj(gc, hll_unwrap_env(value)->up);
     break;
   case HLL_VALUE_FUNC: {
-    vm->gc.bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(vm, hll_unwrap_func(value)->param_names);
-    hll_gray_obj(vm, hll_unwrap_func(value)->env);
+    gc->bytes_allocated += sizeof(hll_obj_func);
+    hll_gray_obj(gc, hll_unwrap_func(value)->param_names);
+    hll_gray_obj(gc, hll_unwrap_func(value)->env);
     hll_bytecode *bytecode = hll_unwrap_func(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(vm, bytecode->constant_pool[i]);
+      hll_gray_obj(gc, bytecode->constant_pool[i]);
     }
   } break;
   case HLL_VALUE_MACRO: {
-    vm->gc.bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(vm, hll_unwrap_macro(value)->param_names);
-    hll_gray_obj(vm, hll_unwrap_macro(value)->env);
+    gc->bytes_allocated += sizeof(hll_obj_func);
+    hll_gray_obj(gc, hll_unwrap_macro(value)->param_names);
+    hll_gray_obj(gc, hll_unwrap_macro(value)->env);
     hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(vm, bytecode->constant_pool[i]);
+      hll_gray_obj(gc, bytecode->constant_pool[i]);
     }
   } break;
   default:

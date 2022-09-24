@@ -138,8 +138,10 @@ HLL_PUB size_t hll_list_length(hll_value value);
 // Internal API related to GC.
 //
 
-void hll_gray_obj(struct hll_vm *vm, hll_value value);
-void hll_blacken_obj(struct hll_vm *vm, hll_value value);
+struct hll_gc;
+
+void hll_gray_obj(struct hll_gc *gc, hll_value value);
+void hll_blacken_obj(struct hll_gc *gc, hll_value value);
 void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 #endif

@@ -17,7 +17,7 @@ typedef struct {
   hll_value func;
 } hll_call_frame;
 
-typedef struct {
+typedef struct hll_gc {
   // Linked list of all objects.
   struct hll_obj *all_objs;
   // Count all allocated bytes to know when to trigger garbage collection.
