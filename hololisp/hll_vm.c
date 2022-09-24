@@ -39,7 +39,7 @@ static void initialize_default_config(hll_config *config) {
 
 void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
                       hll_value value) {
-  assert(hll_get_value_kind(name) == HLL_OBJ_SYMB);
+  assert(hll_get_value_kind(name) == HLL_VALUE_SYMB);
   hll_value slot = hll_new_cons(vm, name, value);
   hll_sb_push(vm->temp_roots, slot);
   hll_unwrap_env(env)->vars = hll_new_cons(vm, slot, hll_unwrap_env(env)->vars);
@@ -111,13 +111,13 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
 
 bool hll_find_var(hll_vm *vm, hll_value env, hll_value car, hll_value *found) {
   (void)vm;
-  assert(hll_get_value_kind(car) == HLL_OBJ_SYMB && "argument is not a symbol");
+  assert(hll_get_value_kind(car) == HLL_VALUE_SYMB && "argument is not a symbol");
   hll_obj_symb *symb = hll_unwrap_symb(car);
   for (; !hll_is_nil(env); env = hll_unwrap_env(env)->up) {
     for (hll_value cons = hll_unwrap_env(env)->vars; !hll_is_nil(cons);
          cons = hll_unwrap_cdr(cons)) {
       hll_value test = hll_unwrap_car(cons);
-      assert(hll_get_value_kind(hll_unwrap_car(test)) == HLL_OBJ_SYMB &&
+      assert(hll_get_value_kind(hll_unwrap_car(test)) == HLL_VALUE_SYMB &&
              "Variable is not a cons of symbol and its value");
       if (symb->hash == hll_unwrap_symb(hll_unwrap_car(test))->hash) {
         *found = test;
@@ -131,7 +131,7 @@ bool hll_find_var(hll_vm *vm, hll_value env, hll_value car, hll_value *found) {
 
 void hll_print_value(hll_vm *vm, hll_value value) {
   switch (hll_get_value_kind(value)) {
-  case HLL_OBJ_CONS:
+  case HLL_VALUE_CONS:
     hll_print(vm, "(");
     while (hll_is_cons(value)) {
       hll_print_value(vm, hll_unwrap_car(value));
@@ -141,7 +141,7 @@ void hll_print_value(hll_vm *vm, hll_value value) {
         hll_print(vm, " . ");
         hll_print_value(vm, cdr);
         break;
-      } else if (hll_get_value_kind(cdr) != HLL_OBJ_NIL) {
+      } else if (hll_get_value_kind(cdr) != HLL_VALUE_NIL) {
         hll_print(vm, " ");
       }
 
@@ -149,29 +149,29 @@ void hll_print_value(hll_vm *vm, hll_value value) {
     }
     hll_print(vm, ")");
     break;
-  case HLL_OBJ_SYMB: {
+  case HLL_VALUE_SYMB: {
     char buffer[HLL_MAX_SYMB_LENGTH + 1];
     snprintf(buffer, sizeof(buffer), "%s", hll_unwrap_zsymb(value));
     hll_print(vm, buffer);
   } break;
-  case HLL_OBJ_NIL:
+  case HLL_VALUE_NIL:
     hll_print(vm, "()");
     break;
-  case HLL_OBJ_NUM: {
+  case HLL_VALUE_NUM: {
     char buffer[128];
     snprintf(buffer, sizeof(buffer), "%lld", (long long)hll_unwrap_num(value));
     hll_print(vm, buffer);
   } break;
-  case HLL_OBJ_TRUE:
+  case HLL_VALUE_TRUE:
     hll_print(vm, "t");
     break;
-  case HLL_OBJ_BIND:
+  case HLL_VALUE_BIND:
     hll_print(vm, "bind");
     break;
-  case HLL_OBJ_ENV:
+  case HLL_VALUE_ENV:
     hll_print(vm, "env");
     break;
-  case HLL_OBJ_FUNC:
+  case HLL_VALUE_FUNC:
     hll_print(vm, "func");
     break;
   default:
@@ -251,7 +251,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled) {
   hll_sb_push(vm->temp_roots, compiled);
   hll_bytecode *initial_bytecode;
-  if (hll_get_value_kind(compiled) == HLL_OBJ_FUNC) {
+  if (hll_get_value_kind(compiled) == HLL_VALUE_FUNC) {
     initial_bytecode = hll_unwrap_func(compiled)->bytecode;
   } else {
     initial_bytecode = hll_unwrap_macro(compiled)->bytecode;
@@ -311,7 +311,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       if (hll_is_nil(*headp)) {
         *headp = *tailp = cons;
       } else {
-        if (HLL_UNLIKELY(hll_get_value_kind(*tailp) != HLL_OBJ_CONS)) {
+        if (HLL_UNLIKELY(hll_get_value_kind(*tailp) != HLL_VALUE_CONS)) {
           hll_runtime_error(vm,
                             "tail operand of APPEND is not a cons (found %s)",
                             hll_get_value_kind_str(hll_get_value_kind(*tailp)));
@@ -325,7 +325,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
     case HLL_BYTECODE_FIND: {
       hll_value symb = hll_sb_pop(vm->stack);
       hll_sb_push(vm->temp_roots, symb);
-      if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_OBJ_SYMB)) {
+      if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_VALUE_SYMB)) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
                           hll_get_value_kind_str(hll_get_value_kind(symb)));
         goto bail;
@@ -348,7 +348,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
 
       hll_value value = current_call_frame->bytecode->constant_pool[idx];
-      assert(hll_get_value_kind(value) == HLL_OBJ_FUNC);
+      assert(hll_get_value_kind(value) == HLL_VALUE_FUNC);
       value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
                            hll_unwrap_func(value)->bytecode);
       hll_obj_func *func = hll_unwrap_func(value);
@@ -363,7 +363,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_sb_push(vm->temp_roots, callable);
 
       switch (hll_get_value_kind(callable)) {
-      case HLL_OBJ_FUNC: {
+      case HLL_VALUE_FUNC: {
         hll_obj_func *func = hll_unwrap_func(callable);
         hll_value new_env = hll_new_env(vm, func->env, hll_nil());
         hll_sb_push(vm->temp_roots, new_env);
@@ -374,7 +374,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
           for (; hll_is_cons(param_name);
                param_name = hll_unwrap_cdr(param_name),
                param_value = hll_unwrap_cdr(param_value)) {
-            if (hll_get_value_kind(param_value) != HLL_OBJ_CONS) {
+            if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
               hll_runtime_error(vm, "number of arguments does not match");
               goto bail;
             }
@@ -403,7 +403,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
         (void)hll_sb_pop(vm->temp_roots); // new_env
         vm->env = new_env;
       } break;
-      case HLL_OBJ_BIND: {
+      case HLL_VALUE_BIND: {
         ++vm->forbid_gc;
         hll_value result = hll_unwrap_bind(callable)->bind(vm, args);
         --vm->forbid_gc;
@@ -453,7 +453,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
     case HLL_BYTECODE_POPENV:
       vm->env = hll_unwrap_env(vm->env)->up;
       assert(vm->env);
-      assert(hll_get_value_kind(vm->env) == HLL_OBJ_ENV);
+      assert(hll_get_value_kind(vm->env) == HLL_VALUE_ENV);
       break;
     case HLL_BYTECODE_CAR: {
       assert(hll_sb_len(vm->stack) != 0);
@@ -499,7 +499,7 @@ bail:
   //  for (size_t i = 0; i < hll_sb_len(initial_bytecode->constant_pool); ++i) {
   //    hll_obj *test = initial_bytecode->constant_pool[i];
   //    fprintf(stderr, "\n\n");
-  //    if (hll_get_value_kind(test) == HLL_OBJ_FUNC) {
+  //    if (hll_get_value_kind(test) == HLL_VALUE_FUNC) {
   //      hll_dump_bytecode(stderr, hll_unwrap_func(test)->bytecode);
   //    }
   //  }
@@ -535,22 +535,22 @@ hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
   hll_obj_func *fun = hll_unwrap_macro(macro);
   hll_value name_slot = fun->param_names;
   hll_value value_slot = args;
-  for (; hll_get_value_kind(name_slot) == HLL_OBJ_CONS;
+  for (; hll_get_value_kind(name_slot) == HLL_VALUE_CONS;
        name_slot = hll_unwrap_cdr(name_slot),
        value_slot = hll_unwrap_cdr(value_slot)) {
-    if (hll_get_value_kind(value_slot) != HLL_OBJ_CONS) {
+    if (hll_get_value_kind(value_slot) != HLL_VALUE_CONS) {
       hll_runtime_error(vm, "number of arguments does not match");
       (void)hll_sb_pop(vm->temp_roots); // env
       return hll_nil();
     }
     hll_value name = hll_unwrap_car(name_slot);
-    assert(hll_get_value_kind(name) == HLL_OBJ_SYMB);
+    assert(hll_get_value_kind(name) == HLL_VALUE_SYMB);
     hll_value value = hll_unwrap_car(value_slot);
     hll_add_variable(vm, env, name, value);
   }
 
-  if (hll_get_value_kind(name_slot) != HLL_OBJ_NIL) {
-    assert(hll_get_value_kind(name_slot) == HLL_OBJ_SYMB);
+  if (hll_get_value_kind(name_slot) != HLL_VALUE_NIL) {
+    assert(hll_get_value_kind(name_slot) == HLL_VALUE_SYMB);
     hll_add_variable(vm, env, name_slot, value_slot);
   }
 

@@ -17,16 +17,16 @@
 typedef uint8_t hll_value_kind;
 enum {
   // Singleton values. These are not heap-allocated.
-  HLL_OBJ_NUM = 0x0,
-  HLL_OBJ_NIL = 0x1,
-  HLL_OBJ_TRUE = 0x2,
+  HLL_VALUE_NUM = 0x0,
+  HLL_VALUE_NIL = 0x1,
+  HLL_VALUE_TRUE = 0x2,
   // Heap-allocated garbage-collected values
-  HLL_OBJ_CONS = 0x3,
-  HLL_OBJ_SYMB = 0x4,
-  HLL_OBJ_BIND = 0x5,
-  HLL_OBJ_ENV = 0x6,
-  HLL_OBJ_FUNC = 0x7,
-  HLL_OBJ_MACRO = 0x8,
+  HLL_VALUE_CONS = 0x3,
+  HLL_VALUE_SYMB = 0x4,
+  HLL_VALUE_BIND = 0x5,
+  HLL_VALUE_ENV = 0x6,
+  HLL_VALUE_FUNC = 0x7,
+  HLL_VALUE_MACRO = 0x8,
 };
 
 HLL_PUB const char *hll_get_value_kind_str(hll_value_kind kind);
@@ -113,7 +113,7 @@ hll_obj *hll_unwrap_obj(hll_value value);
 
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'
-// is preferred to hll_get_value_kind() == HLL_OBJ_NIL because it makes
+// is preferred to hll_get_value_kind() == HLL_VALUE_NIL because it makes
 // compiler optimizations easier.
 //
 

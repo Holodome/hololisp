@@ -151,33 +151,33 @@ void hll_dump_value(void *file, hll_value value) {
   hll_value_kind kind = hll_get_value_kind(value);
   fprintf(file, "{ \"kind\": \"%s\"", hll_get_value_kind_str(kind));
   switch (kind) {
-  case HLL_OBJ_NIL:
-  case HLL_OBJ_TRUE:
+  case HLL_VALUE_NIL:
+  case HLL_VALUE_TRUE:
     break;
-  case HLL_OBJ_NUM:
+  case HLL_VALUE_NUM:
     fprintf(file, ", \"value\": %lf", hll_unwrap_num(value));
     break;
-  case HLL_OBJ_CONS:
+  case HLL_VALUE_CONS:
     fprintf(file, ", \"car\": ");
     hll_dump_value(file, hll_unwrap_car(value));
     fprintf(file, ", \"cdr\": ");
     hll_dump_value(file, hll_unwrap_cdr(value));
     break;
-  case HLL_OBJ_SYMB:
+  case HLL_VALUE_SYMB:
     fprintf(file, ", \"symb\": \"%s\"", hll_unwrap_zsymb(value));
     break;
-  case HLL_OBJ_BIND:
+  case HLL_VALUE_BIND:
     // TODO
     break;
-  case HLL_OBJ_ENV:
+  case HLL_VALUE_ENV:
     // TODO
     break;
-  case HLL_OBJ_FUNC:
+  case HLL_VALUE_FUNC:
     fprintf(file, ", \"func\": {");
     dump_function_info(file, value);
     fprintf(file, "}");
     break;
-  case HLL_OBJ_MACRO:
+  case HLL_VALUE_MACRO:
     // TODO
     break;
   }

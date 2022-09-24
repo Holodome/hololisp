@@ -52,25 +52,25 @@ const char *hll_get_value_kind_str(hll_value_kind kind) {
 
 void hll_free_obj(hll_vm *vm, hll_obj *obj) {
   switch (obj->kind) {
-  case HLL_OBJ_CONS:
+  case HLL_VALUE_CONS:
     hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_cons));
     break;
-  case HLL_OBJ_SYMB:
+  case HLL_VALUE_SYMB:
     hll_gc_free(vm, obj,
                 sizeof(hll_obj) + sizeof(hll_obj_symb) +
                     ((hll_obj_symb *)obj->as)->length + 1);
     break;
-  case HLL_OBJ_BIND:
+  case HLL_VALUE_BIND:
     hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_bind));
     break;
-  case HLL_OBJ_ENV:
+  case HLL_VALUE_ENV:
     hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_env));
     break;
-  case HLL_OBJ_FUNC:
+  case HLL_VALUE_FUNC:
     hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
     hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
     break;
-  case HLL_OBJ_MACRO:
+  case HLL_VALUE_MACRO:
     hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
     hll_gc_free(vm, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
     break;
@@ -85,8 +85,8 @@ static void register_gc_obj(hll_vm *vm, hll_obj *obj) {
   vm->all_objs = obj;
 }
 
-hll_value hll_nil(void) { return nan_box_singleton(HLL_OBJ_NIL); }
-hll_value hll_true(void) { return nan_box_singleton(HLL_OBJ_TRUE); }
+hll_value hll_nil(void) { return nan_box_singleton(HLL_VALUE_NIL); }
+hll_value hll_true(void) { return nan_box_singleton(HLL_VALUE_TRUE); }
 
 hll_value hll_num(double num) {
   hll_value value;
@@ -105,7 +105,7 @@ hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   void *memory =
       hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_SYMB;
+  obj->kind = HLL_VALUE_SYMB;
 
   hll_obj_symb *symb = (void *)(obj + 1);
   symb->length = length;
@@ -123,7 +123,7 @@ hll_value hll_new_symbolz(hll_vm *vm, const char *symbol) {
 hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr) {
   void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_cons));
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_CONS;
+  obj->kind = HLL_VALUE_CONS;
   hll_obj_cons *cons = (void *)(obj + 1);
   cons->car = car;
   cons->cdr = cdr;
@@ -137,7 +137,7 @@ hll_value hll_new_bind(hll_vm *vm,
   assert(bind != NULL);
   void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_bind));
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_BIND;
+  obj->kind = HLL_VALUE_BIND;
   hll_obj_bind *binding = (void *)(obj + 1);
   binding->bind = bind;
   register_gc_obj(vm, obj);
@@ -148,7 +148,7 @@ hll_value hll_new_bind(hll_vm *vm,
 hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
   void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_env));
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_ENV;
+  obj->kind = HLL_VALUE_ENV;
   hll_obj_env *env = (void *)(obj + 1);
   env->up = up;
   env->vars = vars;
@@ -160,7 +160,7 @@ hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars) {
 hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
   void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_FUNC;
+  obj->kind = HLL_VALUE_FUNC;
   hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
@@ -173,7 +173,7 @@ hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
 hll_value hll_new_macro(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
   void *memory = hll_gc_alloc(vm, sizeof(hll_obj) + sizeof(hll_obj_func));
   hll_obj *obj = memory;
-  obj->kind = HLL_OBJ_MACRO;
+  obj->kind = HLL_VALUE_MACRO;
   hll_obj_func *func = (void *)(obj + 1);
   func->param_names = params;
   func->bytecode = bytecode;
@@ -186,63 +186,63 @@ hll_value hll_new_macro(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
 hll_obj_cons *hll_unwrap_cons(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(obj->kind == HLL_VALUE_CONS);
   return (hll_obj_cons *)obj->as;
 }
 
 const char *hll_unwrap_zsymb(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_SYMB);
+  assert(obj->kind == HLL_VALUE_SYMB);
   return ((hll_obj_symb *)obj->as)->symb;
 }
 
 hll_obj_symb *hll_unwrap_symb(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_SYMB);
+  assert(obj->kind == HLL_VALUE_SYMB);
   return (hll_obj_symb *)obj->as;
 }
 
 hll_value hll_unwrap_cdr(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(obj->kind == HLL_VALUE_CONS);
   return ((hll_obj_cons *)obj->as)->cdr;
 }
 
 hll_value hll_unwrap_car(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_CONS);
+  assert(obj->kind == HLL_VALUE_CONS);
   return ((hll_obj_cons *)obj->as)->car;
 }
 
 hll_obj_bind *hll_unwrap_bind(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_BIND);
+  assert(obj->kind == HLL_VALUE_BIND);
   return (hll_obj_bind *)obj->as;
 }
 
 hll_obj_env *hll_unwrap_env(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_ENV);
+  assert(obj->kind == HLL_VALUE_ENV);
   return (hll_obj_env *)obj->as;
 }
 
 hll_obj_func *hll_unwrap_func(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_FUNC);
+  assert(obj->kind == HLL_VALUE_FUNC);
   return (hll_obj_func *)obj->as;
 }
 
 hll_obj_func *hll_unwrap_macro(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_OBJ_MACRO);
+  assert(obj->kind == HLL_VALUE_MACRO);
   return (hll_obj_func *)obj->as;
 }
 
@@ -291,23 +291,23 @@ void hll_blacken_obj(hll_vm *vm, hll_value value) {
   vm->bytes_allocated += sizeof(hll_obj);
 
   switch (obj->kind) {
-  case HLL_OBJ_CONS:
+  case HLL_VALUE_CONS:
     hll_gray_obj(vm, hll_unwrap_car(value));
     hll_gray_obj(vm, hll_unwrap_cdr(value));
     break;
-  case HLL_OBJ_SYMB:
+  case HLL_VALUE_SYMB:
     vm->bytes_allocated +=
         hll_unwrap_symb(value)->length + 1 + sizeof(hll_obj_symb);
     break;
-  case HLL_OBJ_BIND:
+  case HLL_VALUE_BIND:
     vm->bytes_allocated += sizeof(hll_obj_bind);
     break;
-  case HLL_OBJ_ENV:
+  case HLL_VALUE_ENV:
     vm->bytes_allocated += sizeof(hll_obj_env);
     hll_gray_obj(vm, hll_unwrap_env(value)->vars);
     hll_gray_obj(vm, hll_unwrap_env(value)->up);
     break;
-  case HLL_OBJ_FUNC: {
+  case HLL_VALUE_FUNC: {
     vm->bytes_allocated += sizeof(hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_func(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_func(value)->env);
@@ -316,7 +316,7 @@ void hll_blacken_obj(hll_vm *vm, hll_value value) {
       hll_gray_obj(vm, bytecode->constant_pool[i]);
     }
   } break;
-  case HLL_OBJ_MACRO: {
+  case HLL_VALUE_MACRO: {
     vm->bytes_allocated += sizeof(hll_obj_func);
     hll_gray_obj(vm, hll_unwrap_macro(value)->param_names);
     hll_gray_obj(vm, hll_unwrap_macro(value)->env);
@@ -339,11 +339,11 @@ hll_value_kind hll_get_value_kind(hll_value value) {
 bool hll_is_nil(hll_value value) { return (uint64_t)value == hll_nil(); }
 
 bool hll_is_cons(hll_value value) {
-  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_OBJ_CONS;
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_CONS;
 }
 
 bool hll_is_symb(hll_value value) {
-  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_OBJ_SYMB;
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_SYMB;
 }
 
 bool hll_is_list(hll_value value) {
