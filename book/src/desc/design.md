@@ -20,5 +20,6 @@ Additional goal set at the start of the project is to create an online compiler/
 
 ## Language design 
 
-hololisp does not have discrete specification. It is a freestanding interpretation of ideas found in other lisp dialect. hololisp borrows ideas both from [common lisp](https://common-lisp.net/) and [scheme](https://www.scheme.com/tspl4/). More information about language features is located in next chapter.
+hololisp does not have discrete specification. It is a freestanding interpretation of ideas found in other lisp dialect. hololisp borrows ideas both from [common lisp](https://common-lisp.net/) and [scheme](https://www.scheme.com/tspl4/). More information about language features is located in the next chapters.
 
+By its nature hololisp is extremely slow. It is slower than many popular lisp dialects, as well as other interpreted languages, like Python. Most of this time is spent on managing linked lists upon which the language is built on. For example, each function invocation loads and processes its arguments in linked list, spending a lot more time on a single call compared to using array for passing arguments.

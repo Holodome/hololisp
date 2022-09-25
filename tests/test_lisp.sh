@@ -331,10 +331,6 @@ pos_test "macro" "7" "(defmacro (seven) 7) ((lambda () (seven)))"
 pos_test "macro" "42" "(defmacro (if-zero x then) (list 'if (list '= x 0) then))
   (if-zero 0 42)"
 
-pos_test "macroexpand" '(if (= x 0) (print x))' "
-  (defmacro (if-zero x then) (list 'if (list '= x 0) then))
-  (macroexpand (if-zero x (print x)))"
-
 pos_test "restargs" "(3 5 7)" "(define (f x . y) (cons x y)) (f 3 5 7)"
 pos_test "restargs" "(3)" "(define (f x . y) (cons x y)) (f 3)"
 pos_test "restargs" "empty" "(define (f . rest) (if (null? rest) 'empty 'not-empty)) (f)"
@@ -361,14 +357,22 @@ pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6
 pos_test "range" "(0 1 2 3 4)" "(range 5)"
 pos_test "range" "(5 6 7 8 9)" "(range 5 10)"
 
-pos_test "restargs macro" "(if 1 (if 2 3))" "
-(defmacro (&& . rest)
-  (define (continue expr rest)
-    (if rest 
-      (list 'if expr (continue (car rest) (cdr rest)))
-      expr))
-  (continue (car rest) (cdr rest)))
-(macroexpand (&& 1 2 3))"
+pos_test "restargs macro" "1" "(defmacro (&& expr . rest)
+  (if rest
+    (list 'if expr (cons 'and rest))
+    expr))
+(define x 0)
+(print (&& (progn
+              (set! x 1)
+              x)
+           ()
+           (progn
+              (set! x 2)
+              x)
+           (progn
+              (set! x 3)
+              x)))
+x"
 
 
 exit $failed

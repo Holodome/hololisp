@@ -298,46 +298,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_push_temp_root(vm->gc, callable);
 
       switch (hll_get_value_kind(callable)) {
-      case HLL_VALUE_MACRO: {
-        hll_obj_func *func = hll_unwrap_macro(callable);
-        hll_value new_env = hll_new_env(vm, func->env, hll_nil());
-        hll_gc_push_temp_root(vm->gc, new_env);
-        hll_value param_name = func->param_names;
-        hll_value param_value = args;
-        if (hll_is_cons(param_name) &&
-            hll_is_symb(hll_unwrap_car(param_name))) {
-          for (; hll_is_cons(param_name);
-               param_name = hll_unwrap_cdr(param_name),
-               param_value = hll_unwrap_cdr(param_value)) {
-            if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
-              hll_runtime_error(vm, "number of arguments does not match");
-              goto bail;
-            }
-            hll_value name = hll_unwrap_car(param_name);
-            assert(hll_is_symb(name));
-            hll_value value = hll_unwrap_car(param_value);
-            hll_add_variable(vm, new_env, name, value);
-          }
-        } else if (hll_is_cons(param_name) &&
-                   hll_is_nil(hll_unwrap_car(param_name))) {
-          param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
-        }
-
-        if (!hll_is_nil(param_name)) {
-          assert(hll_is_symb(param_name));
-          hll_add_variable(vm, new_env, param_name, param_value);
-        }
-
-        hll_call_frame new_frame = {0};
-        new_frame.bytecode = func->bytecode;
-        new_frame.ip = func->bytecode->ops;
-        new_frame.env = vm->env;
-        new_frame.func = callable;
-        hll_sb_push(vm->call_stack, new_frame);
-        current_call_frame = &hll_sb_last(vm->call_stack);
-        hll_gc_pop_temp_root(vm->gc); // new_env
-        vm->env = new_env;
-      } break;
       case HLL_VALUE_FUNC: {
         hll_obj_func *func = hll_unwrap_func(callable);
         hll_value new_env = hll_new_env(vm, func->env, hll_nil());

@@ -123,7 +123,6 @@ typedef enum {
   HLL_FORM_AND,
   HLL_FORM_DEFINE,
   HLL_FORM_DEFMACRO,
-  HLL_FORM_MACROEXPAND,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
@@ -743,8 +742,6 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_AND;
   } else if (strcmp(symb, "defmacro") == 0) {
     kind = HLL_FORM_DEFMACRO;
-  } else if (strcmp(symb, "macroexpand") == 0) {
-    kind = HLL_FORM_MACROEXPAND;
   }
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   else if (strcmp(symb, "c" #_lower "r") == 0) {                               \
@@ -1392,28 +1389,6 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   }
 }
 
-static void compile_macroexpand(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) != 1) {
-    compiler_error(compiler, args,
-                   "'macroexpand' expects exactly one argument");
-    return;
-  }
-
-  hll_value macro_list = hll_unwrap_car(args);
-  if (hll_list_length(macro_list) < 1) {
-    compiler_error(compiler, macro_list,
-                   "'macroexpand' argument is not a list");
-    return;
-  }
-
-  hll_value expanded;
-  bool ok = expand_macro(compiler, hll_unwrap_car(macro_list),
-                         hll_unwrap_cdr(macro_list), &expanded);
-  (void)ok;
-  assert(ok);
-  compile_expression(compiler, expanded);
-}
-
 static void compile_define(hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) == 0) {
     compiler_error(compiler, args,
@@ -1520,9 +1495,6 @@ static void compile_form(hll_compiler *compiler, hll_value args,
     break;
   case HLL_FORM_DEFMACRO:
     process_defmacro(compiler, args);
-    break;
-  case HLL_FORM_MACROEXPAND:
-    compile_macroexpand(compiler, args);
     break;
   default:
     HLL_UNREACHABLE;
