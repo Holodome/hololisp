@@ -710,7 +710,7 @@ static void compiler_pop_location(hll_compiler *compiler) {
   }
 
   assert(hll_sb_len(compiler->loc_stack));
-  hll_sb_pop(compiler->loc_stack);
+  (void)hll_sb_pop(compiler->loc_stack);
 }
 
 static hll_form_kind get_form_kind(const char *symb) {

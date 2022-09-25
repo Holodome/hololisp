@@ -156,3 +156,12 @@ void hll_pop_forbid_gc(hll_gc *gc) {
   assert(gc->forbid);
   --gc->forbid;
 }
+
+void hll_gc_push_temp_root(hll_gc *gc, hll_value value) {
+  hll_sb_push(gc->temp_roots, value);
+}
+
+void hll_gc_pop_temp_root(hll_gc *gc) {
+  assert(hll_sb_len(gc->temp_roots));
+  (void)hll_sb_pop(gc->temp_roots);
+}

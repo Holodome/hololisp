@@ -27,6 +27,9 @@ void hll_delete_gc(hll_gc *gc);
 void hll_push_forbid_gc(hll_gc *gc);
 void hll_pop_forbid_gc(hll_gc *gc);
 
+void hll_gc_push_temp_root(hll_gc *gc, hll_value value);
+void hll_gc_pop_temp_root(hll_gc *gc);
+
 // Garbage collector tracked allocation
 #define hll_gc_free(_vm, _ptr, _size) hll_gc_realloc(_vm, _ptr, _size, 0)
 #define hll_gc_alloc(_vm, _size) hll_gc_realloc(_vm, NULL, 0, _size)
