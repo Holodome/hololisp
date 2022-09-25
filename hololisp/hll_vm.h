@@ -17,7 +17,6 @@ typedef struct {
   hll_value func;
 } hll_call_frame;
 
-
 typedef struct hll_vm {
   struct hll_config config;
   struct hll_debug_storage *ds;
@@ -31,14 +30,12 @@ typedef struct hll_vm {
   // toplevel functions.
   hll_value global_env;
 
-
   // Current execution state
   hll_value *stack;
   hll_call_frame *call_stack;
   hll_value env;
 
 } hll_vm;
-
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
                              hll_value (*bind)(hll_vm *vm, hll_value args));

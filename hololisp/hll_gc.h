@@ -30,7 +30,7 @@ void hll_pop_forbid_gc(hll_gc *gc);
 // Garbage collector tracked allocation
 #define hll_gc_free(_vm, _ptr, _size) hll_gc_realloc(_vm, _ptr, _size, 0)
 #define hll_gc_alloc(_vm, _size) hll_gc_realloc(_vm, NULL, 0, _size)
-void *hll_gc_realloc(hll_gc *gc, void *ptr, size_t old_size,
-                     size_t new_size) __attribute__((alloc_size(4)));
+void *hll_gc_realloc(hll_gc *gc, void *ptr, size_t old_size, size_t new_size)
+    __attribute__((alloc_size(4)));
 
 #endif

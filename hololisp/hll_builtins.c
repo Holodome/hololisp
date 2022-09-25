@@ -567,8 +567,8 @@ static hll_value builtin_append(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value tail = list;
-  for (hll_value slot = hll_cdr(args); hll_get_value_kind(slot) == HLL_VALUE_CONS;
-       slot = hll_cdr(slot)) {
+  for (hll_value slot = hll_cdr(args);
+       hll_get_value_kind(slot) == HLL_VALUE_CONS; slot = hll_cdr(slot)) {
     for (; hll_get_value_kind(tail) == HLL_VALUE_CONS &&
            hll_get_value_kind(hll_cdr(tail)) != HLL_VALUE_NIL;
          tail = hll_cdr(tail)) {

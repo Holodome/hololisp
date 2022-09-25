@@ -350,6 +350,8 @@ pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
 neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
 pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
+pos_test "heads" "(1 3 5 7)" "(heads '((1) (3 2 4) (5 5 5) (7 1 2 34)))"
+
 pos_test "map" "(2 4 6 8)" "(map (lambda (it) (* 2 it)) (list 1 2 3 4))"
 pos_test "amap" "(2 4 6 8)" "(amap (* 2 it) (list 1 2 3 4))"
 
@@ -359,9 +361,14 @@ pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6
 pos_test "range" "(0 1 2 3 4)" "(range 5)"
 pos_test "range" "(5 6 7 8 9)" "(range 5 10)"
 
-#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro (&& expr . rest)
-#                                 (if rest
-#                                    (list 'if expr (&& rest))
-#                                    (list expr))) (macroexpand (&& 1 2 3))"
+pos_test "restargs macro" "(if 1 (if 2 3))" "
+(defmacro (&& . rest)
+  (define (continue expr rest)
+    (if rest 
+      (list 'if expr (continue (car rest) (cdr rest)))
+      expr))
+  (continue (car rest) (cdr rest)))
+(macroexpand (&& 1 2 3))"
+
 
 exit $failed

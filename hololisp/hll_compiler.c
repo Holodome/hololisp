@@ -9,11 +9,11 @@
 
 #include "hll_bytecode.h"
 #include "hll_debug.h"
+#include "hll_gc.h"
 #include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_value.h"
 #include "hll_vm.h"
-#include "hll_gc.h"
 
 typedef enum {
   HLL_LEX_EQC_OTHER = 0x0, // Anything not handled

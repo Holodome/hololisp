@@ -2,7 +2,12 @@
 // hll_compiler.h
 //
 // This file contains lexer, parser and compiler definitions for use with
-// hololisp.
+// hololisp. This is probably the largest unit in a codebase but there is no
+// attempts to split it because its parts are interviened and spliiting them
+// will make comprehensing more complex.
+//
+// The only API for public usage is hll_compile, which takes source string and
+// produces hololisp bytecode output.
 //
 // Lexer accepts c string of input and produces sequence of tokens.
 // Lexer uses FSM internally and is able to generate tokens on demand
@@ -63,7 +68,7 @@ typedef enum {
   HLL_TOK_DOT,
   HLL_TOK_LPAREN,
   HLL_TOK_RPAREN,
-  HLL_TOK_QUOTE, 
+  HLL_TOK_QUOTE,
   HLL_TOK_COMMENT,
   HLL_TOK_UNEXPECTED
 } hll_token_kind;

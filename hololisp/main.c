@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hll_hololisp.h"
-#include "hll_compiler.h"
 #include "hll_bytecode.h"
+#include "hll_compiler.h"
+#include "hll_hololisp.h"
 
 #ifdef HLL_MEM_CHECK
 #include "hll_mem.h"

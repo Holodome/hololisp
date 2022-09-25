@@ -8,7 +8,7 @@
 #include "hll_value.h"
 #include "hll_vm.h"
 
-static void hll_gray_obj(hll_gc *gc, hll_value value) {
+static void hll_gray_value(hll_gc *gc, hll_value value) {
   if (!hll_is_obj(value)) {
     return;
   }
@@ -22,7 +22,7 @@ static void hll_gray_obj(hll_gc *gc, hll_value value) {
   hll_sb_push(gc->gray_objs, value);
 }
 
-static void hll_blacken_obj(hll_gc *gc, hll_value value) {
+static void hll_blacken_value(hll_gc *gc, hll_value value) {
   if (!hll_is_obj(value)) {
     return;
   }
@@ -32,8 +32,8 @@ static void hll_blacken_obj(hll_gc *gc, hll_value value) {
 
   switch (obj->kind) {
   case HLL_VALUE_CONS:
-    hll_gray_obj(gc, hll_unwrap_car(value));
-    hll_gray_obj(gc, hll_unwrap_cdr(value));
+    hll_gray_value(gc, hll_unwrap_car(value));
+    hll_gray_value(gc, hll_unwrap_cdr(value));
     break;
   case HLL_VALUE_SYMB:
     gc->bytes_allocated +=
@@ -44,25 +44,25 @@ static void hll_blacken_obj(hll_gc *gc, hll_value value) {
     break;
   case HLL_VALUE_ENV:
     gc->bytes_allocated += sizeof(hll_obj_env);
-    hll_gray_obj(gc, hll_unwrap_env(value)->vars);
-    hll_gray_obj(gc, hll_unwrap_env(value)->up);
+    hll_gray_value(gc, hll_unwrap_env(value)->vars);
+    hll_gray_value(gc, hll_unwrap_env(value)->up);
     break;
   case HLL_VALUE_FUNC: {
     gc->bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(gc, hll_unwrap_func(value)->param_names);
-    hll_gray_obj(gc, hll_unwrap_func(value)->env);
+    hll_gray_value(gc, hll_unwrap_func(value)->param_names);
+    hll_gray_value(gc, hll_unwrap_func(value)->env);
     hll_bytecode *bytecode = hll_unwrap_func(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(gc, bytecode->constant_pool[i]);
+      hll_gray_value(gc, bytecode->constant_pool[i]);
     }
   } break;
   case HLL_VALUE_MACRO: {
     gc->bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_obj(gc, hll_unwrap_macro(value)->param_names);
-    hll_gray_obj(gc, hll_unwrap_macro(value)->env);
+    hll_gray_value(gc, hll_unwrap_macro(value)->param_names);
+    hll_gray_value(gc, hll_unwrap_macro(value)->env);
     hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;
     for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_obj(gc, bytecode->constant_pool[i]);
+      hll_gray_value(gc, bytecode->constant_pool[i]);
     }
   } break;
   default:
@@ -77,22 +77,22 @@ static void hll_collect_garbage(hll_gc *gc) {
   // Reset allocated bytes count
   gc->bytes_allocated = 0;
   hll_sb_purge(gc->gray_objs);
-  hll_gray_obj(gc, vm->global_env);
+  hll_gray_value(gc, vm->global_env);
   for (size_t i = 0; i < hll_sb_len(gc->temp_roots); ++i) {
-    hll_gray_obj(gc, gc->temp_roots[i]);
+    hll_gray_value(gc, gc->temp_roots[i]);
   }
   for (size_t i = 0; i < hll_sb_len(vm->stack); ++i) {
-    hll_gray_obj(gc, vm->stack[i]);
+    hll_gray_value(gc, vm->stack[i]);
   }
   for (size_t i = 0; i < hll_sb_len(vm->call_stack); ++i) {
     hll_call_frame *f = vm->call_stack + i;
-    hll_gray_obj(gc, f->env);
-    hll_gray_obj(gc, f->func);
+    hll_gray_value(gc, f->env);
+    hll_gray_value(gc, f->func);
   }
-  hll_gray_obj(gc, vm->env);
+  hll_gray_value(gc, vm->env);
 
   for (size_t i = 0; i < hll_sb_len(gc->gray_objs); ++i) {
-    hll_blacken_obj(gc, gc->gray_objs[i]);
+    hll_blacken_value(gc, gc->gray_objs[i]);
   }
 
   // Free all objects not marked

@@ -136,5 +136,4 @@ HLL_PUB hll_value hll_car(hll_value lis);
 HLL_PUB hll_value hll_cdr(hll_value lis);
 HLL_PUB size_t hll_list_length(hll_value value);
 
-
 #endif
