@@ -16,6 +16,12 @@
 
 #include "hll_hololisp.h"
 
+typedef struct hll_loc {
+  uint32_t translation_unit;
+  uint32_t offset;
+  uint32_t length;
+} hll_loc;
+
 // Debug Translation Unit.
 typedef struct {
   const char *source;
@@ -25,7 +31,7 @@ typedef struct hll_debug_storage {
   hll_dtu *dtus;
 } hll_debug_storage;
 
-hll_debug_storage hll_make_debug_storage(void);
+hll_debug_storage *hll_make_debug_storage(void);
 void hll_delete_debug_storage(hll_debug_storage *ds);
 
 uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source);
@@ -35,14 +41,11 @@ uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source);
 // source location.
 // offset specifies byte offset of reported location in file.
 // len specifies length of reported part (e.g. token).
-void hll_report_errorv(struct hll_vm *vm, size_t offset, uint32_t len,
-                       const char *fmt, va_list args);
-void hll_report_error(struct hll_vm *vm, size_t offset, uint32_t len,
-                      const char *fmt, ...)
-    __attribute__((format(printf, 4, 5)));
-void hll_report_error_value(struct hll_vm *vm, hll_value value, const char *msg,
-                            ...) __attribute__((format(printf, 3, 4)));
-void hll_report_error_valuev(struct hll_vm *vm, hll_value value,
-                             const char *msg, va_list args);
+void hll_report_errorv(struct hll_vm *vm, uint32_t translation_unit,
+                       uint32_t offset, uint32_t len, const char *fmt,
+                       va_list args);
+void hll_report_error(struct hll_vm *vm, uint32_t translation_unit,
+                      uint32_t offset, uint32_t len, const char *fmt, ...)
+    __attribute__((format(printf, 5, 6)));
 
 #endif

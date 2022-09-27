@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "hll_debug.h"
 #include "hll_mem.h"
 #include "hll_util.h"
 #include "hll_value.h"
@@ -128,7 +129,7 @@ size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
 void hll_bytecode_add_loc(hll_bytecode *bc, size_t op_length,
                           uint32_t compilation_unit, uint32_t offset,
                           uint32_t length) {
-  hll_bytecode_location_entry bc_loc = {
+  hll_loc bc_loc = {
       .translation_unit = compilation_unit,
       .offset = offset,
       .length = length,
@@ -241,7 +242,7 @@ void dump_function_info(void *file, hll_value value) {
   fprintf(file, "], "); // consts
   fprintf(file, "\"locs\": [");
   for (size_t i = 0; i < hll_sb_len(bc->locs); ++i) {
-    hll_bytecode_location_entry *loc = bc->locs + i;
+    hll_loc *loc = bc->locs + i;
     fprintf(file,
             "{ \"translation_unit\": %" PRIu32 ", \"offset\": %" PRIu32
             ", \"length\": %" PRIu32 "}",

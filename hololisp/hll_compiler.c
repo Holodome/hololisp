@@ -145,6 +145,7 @@ typedef struct {
 
 static size_t *get_location_entry_idx(hll_location_table *table,
                                       uint64_t hash) {
+  assert(table);
   size_t entry_count = sizeof(table->hash_table) / sizeof(table->hash_table[0]);
   size_t hash_mask = entry_count - 1;
   assert(!(hash_mask & entry_count));
@@ -164,6 +165,7 @@ static size_t *get_location_entry_idx(hll_location_table *table,
 
 static void set_location_entry(hll_location_table *table, uint64_t hash,
                                uint32_t offset, uint32_t length) {
+  assert(table);
   size_t *entry_idx = get_location_entry_idx(table, hash);
 
   assert(!*entry_idx);
@@ -173,6 +175,12 @@ static void set_location_entry(hll_location_table *table, uint64_t hash,
   hll_location_entry *e = &hll_sb_last(table->entries);
   e->next = *entry_idx;
   *entry_idx = e - table->entries;
+}
+
+static uint64_t hash_value(hll_value value) {
+  assert(hll_is_obj(value));
+  struct hll_obj *obj = hll_unwrap_obj(value);
+  return (uint64_t)(uintptr_t)obj;
 }
 
 static hll_location_entry *get_location_entry(hll_location_table *table,
@@ -187,20 +195,19 @@ static hll_location_entry *get_location_entry(hll_location_table *table,
 bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   bool result = true;
 
-  hll_translation_unit cu = {0};
-  cu.translation_unit = hll_ds_init_tu(vm->ds, source);
+  hll_translation_unit tu = hll_make_tu(vm, source, HLL_TU_FLAG_DEBUG);
 
   hll_lexer lexer;
-  hll_lexer_init(&lexer, source, vm);
+  hll_lexer_init(&lexer, source, &tu);
 
   hll_reader reader;
-  hll_reader_init(&reader, &lexer, vm, &cu);
+  hll_reader_init(&reader, &lexer, &tu);
 
   hll_push_forbid_gc(vm->gc);
   hll_value ast = hll_read_ast(&reader);
 
   hll_compiler compiler;
-  hll_compiler_init(&compiler, vm, vm->env, &cu);
+  hll_compiler_init(&compiler, vm->env, &tu);
   *compiled = hll_compile_ast(&compiler, ast);
   hll_pop_forbid_gc(vm->gc);
 
@@ -208,7 +215,7 @@ bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
     result = false;
   }
 
-  hll_sb_free(cu.locs.entries);
+  hll_delete_tu(&tu);
   hll_sb_free(compiler.loc_stack);
 
   return result;
@@ -374,17 +381,21 @@ static inline hll_lexer_state get_next_state(hll_lexer_state state,
 __attribute__((format(printf, 2, 3))) static void
 lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   ++lexer->error_count;
+  if (lexer->tu == NULL || !(lexer->tu->flags & HLL_TU_FLAG_DEBUG)) {
+    return;
+  }
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(lexer->vm, lexer->next.offset, lexer->next.length, fmt,
-                   args);
+  hll_report_error(lexer->tu->vm, lexer->tu->translation_unit,
+                   lexer->next.offset, lexer->next.length, fmt, args);
   va_end(args);
 }
 
-void hll_lexer_init(hll_lexer *lexer, const char *input, struct hll_vm *vm) {
+void hll_lexer_init(hll_lexer *lexer, const char *input,
+                    hll_translation_unit *tu) {
   memset(lexer, 0, sizeof(hll_lexer));
-  lexer->vm = vm;
+  lexer->tu = tu;
   lexer->cursor = lexer->input = input;
 }
 
@@ -480,22 +491,45 @@ const hll_token *hll_lexer_next(hll_lexer *lexer) {
   return &lexer->next;
 }
 
-void hll_reader_init(hll_reader *reader, hll_lexer *lexer, struct hll_vm *vm,
-                     hll_translation_unit *cu) {
+hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
+                                 hll_tu_flags flags) {
+  hll_translation_unit tu = {0};
+  tu.vm = vm;
+  tu.flags = flags;
+
+  if (flags & HLL_TU_FLAG_DEBUG) {
+    tu.locs = hll_alloc(sizeof(*tu.locs));
+    tu.translation_unit = hll_ds_init_tu(vm->ds, source);
+  }
+
+  return tu;
+}
+
+void hll_delete_tu(hll_translation_unit *tu) {
+  if (tu->locs != NULL) {
+    hll_sb_free(tu->locs->entries);
+    hll_free(tu->locs, sizeof(*tu->locs));
+  }
+}
+
+void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
+                     hll_translation_unit *tu) {
   memset(reader, 0, sizeof(hll_reader));
   reader->lexer = lexer;
-  reader->vm = vm;
-  reader->cu = cu;
+  reader->tu = tu;
 }
 
 __attribute__((format(printf, 2, 3))) static void
 reader_error(hll_reader *reader, const char *fmt, ...) {
+  if (!reader->tu) {
+    return;
+  }
   ++reader->error_count;
 
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(reader->vm, reader->token->offset, reader->token->length,
-                    fmt, args);
+  hll_report_errorv(reader->tu->vm, reader->tu->translation_unit,
+                    reader->token->offset, reader->token->length, fmt, args);
   va_end(args);
 }
 
@@ -527,7 +561,7 @@ static void eat_token(hll_reader *reader) {
 static hll_value read_expr(hll_reader *reader);
 
 static void add_reader_meta_info(hll_reader *reader, hll_value value) {
-  if (reader->cu == NULL) {
+  if (reader->tu->locs == NULL) {
     return;
   }
 
@@ -537,7 +571,7 @@ static void add_reader_meta_info(hll_reader *reader, hll_value value) {
 
   uint32_t offset = reader->token->offset;
   uint32_t length = reader->token->length;
-  set_location_entry(&reader->cu->locs, hash, offset, length);
+  set_location_entry(reader->tu->locs, hash, offset, length);
 }
 
 static hll_value read_list(hll_reader *reader) {
@@ -559,7 +593,7 @@ static hll_value read_list(hll_reader *reader) {
   hll_value list_head;
   hll_value list_tail;
   list_head = list_tail =
-      hll_new_cons(reader->vm, read_expr(reader), hll_nil());
+      hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil());
   add_reader_meta_info(reader, list_head);
 
   // Now enter the loop of parsing other list elements.
@@ -587,7 +621,8 @@ static hll_value read_list(hll_reader *reader) {
     }
 
     hll_value ast = read_expr(reader);
-    hll_unwrap_cons(list_tail)->cdr = hll_new_cons(reader->vm, ast, hll_nil());
+    hll_unwrap_cons(list_tail)->cdr =
+        hll_new_cons(reader->tu->vm, ast, hll_nil());
     list_tail = hll_unwrap_cdr(list_tail);
     add_reader_meta_info(reader, list_tail);
   }
@@ -613,17 +648,18 @@ static hll_value read_expr(hll_reader *reader) {
       break;
     }
 
-    ast =
-        hll_new_symbol(reader->vm, reader->lexer->input + reader->token->offset,
-                       reader->token->length);
+    ast = hll_new_symbol(reader->tu->vm,
+                         reader->lexer->input + reader->token->offset,
+                         reader->token->length);
     break;
   case HLL_TOK_LPAREN:
     ast = read_list(reader);
     break;
   case HLL_TOK_QUOTE: {
     eat_token(reader);
-    ast = hll_new_cons(reader->vm, hll_new_symbolz(reader->vm, "quote"),
-                       hll_new_cons(reader->vm, read_expr(reader), hll_nil()));
+    ast = hll_new_cons(
+        reader->tu->vm, hll_new_symbolz(reader->tu->vm, "quote"),
+        hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil()));
     add_reader_meta_info(reader, ast);
   } break;
   case HLL_TOK_COMMENT:
@@ -650,7 +686,7 @@ hll_value hll_read_ast(hll_reader *reader) {
     }
 
     hll_value ast = read_expr(reader);
-    hll_value cons = hll_new_cons(reader->vm, ast, hll_nil());
+    hll_value cons = hll_new_cons(reader->tu->vm, ast, hll_nil());
 
     if (hll_is_nil(list_head)) {
       list_head = list_tail = cons;
@@ -663,34 +699,39 @@ hll_value hll_read_ast(hll_reader *reader) {
   return list_head;
 }
 
-void hll_compiler_init(hll_compiler *compiler, struct hll_vm *vm, hll_value env,
+void hll_compiler_init(hll_compiler *compiler, hll_value env,
                        hll_translation_unit *tu) {
   memset(compiler, 0, sizeof(hll_compiler));
-  compiler->vm = vm;
+  compiler->tu = tu;
   compiler->env = env;
   compiler->bytecode = hll_new_bytecode();
-  compiler->tu = tu;
 }
 
 __attribute__((format(printf, 3, 4))) static void
 compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
   ++compiler->error_count;
+  if (!(compiler->tu->flags & HLL_TU_FLAG_DEBUG)) {
+    return;
+  }
+
+  uint64_t hash = hash_value(ast);
+  hll_location_entry *loc = get_location_entry(compiler->tu->locs, hash);
+  assert(loc);
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error_valuev(compiler->vm, ast, fmt, args);
+  hll_report_error(compiler->tu->vm, compiler->tu->translation_unit,
+                   loc->offset, loc->length, fmt, args);
   va_end(args);
 }
 
 static void compiler_push_location(hll_compiler *compiler, hll_value value) {
-  if (compiler->tu == NULL) {
+  if (compiler->tu == NULL || !(compiler->tu->flags & HLL_TU_FLAG_DEBUG)) {
     return;
   }
-  assert(hll_is_obj(value));
-  struct hll_obj *obj = hll_unwrap_obj(value);
-  uint64_t hash = (uint64_t)(uintptr_t)obj;
 
-  hll_location_entry *loc = get_location_entry(&compiler->tu->locs, hash);
+  uint64_t hash = hash_value(value);
+  hll_location_entry *loc = get_location_entry(compiler->tu->locs, hash);
   assert(loc);
   hll_compiler_loc_stack_entry e = {.cu = compiler->tu->translation_unit,
                                     .offset = loc->offset,
@@ -704,7 +745,7 @@ static void compiler_push_location(hll_compiler *compiler, hll_value value) {
 }
 
 static void compiler_pop_location(hll_compiler *compiler) {
-  if (compiler->tu == NULL) {
+  if (compiler->tu == NULL || !(compiler->tu->flags & HLL_TU_FLAG_DEBUG)) {
     return;
   }
 
@@ -787,7 +828,7 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
     }
   }
 
-  hll_value symb = hll_new_symbol(compiler->vm, symb_, length);
+  hll_value symb = hll_new_symbol(compiler->tu->vm, symb_, length);
   hll_sb_push(compiler->bytecode->constant_pool, symb);
   size_t result = hll_sb_len(compiler->bytecode->constant_pool) - 1;
   uint16_t narrowed = result;
@@ -827,14 +868,14 @@ static bool expand_macro(hll_compiler *compiler, hll_value macro,
   }
 
   hll_value macro_body;
-  if (!hll_find_var(compiler->vm, compiler->env, macro, &macro_body) ||
+  if (!hll_find_var(compiler->tu->vm, compiler->env, macro, &macro_body) ||
       hll_get_value_kind(hll_unwrap_cdr(macro_body)) != HLL_VALUE_MACRO) {
     return false;
   } else {
     macro_body = hll_unwrap_cdr(macro_body);
   }
 
-  *expanded = hll_expand_macro(compiler->vm, macro_body, args);
+  *expanded = hll_expand_macro(compiler->tu->vm, macro_body, args);
   return true;
 }
 
@@ -1006,7 +1047,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       break;
     }
     // get the nth function
-    compile_symbol(compiler, hll_new_symbolz(compiler->vm, "nthcdr"));
+    compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     // call nth
@@ -1020,7 +1061,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       break;
     }
     // get the nth function
-    compile_symbol(compiler, hll_new_symbolz(compiler->vm, "nthcdr"));
+    compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
     // call nth
@@ -1162,7 +1203,7 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
     symb = compiler->bytecode->constant_pool[symb_idx];
   }
 
-  hll_value cons = hll_new_cons(compiler->vm, (hll_value)symb, hll_nil());
+  hll_value cons = hll_new_cons(compiler->tu->vm, (hll_value)symb, hll_nil());
   if (hll_is_nil(*param_list)) {
     *param_list = *param_list_tail = cons;
   } else {
@@ -1174,9 +1215,10 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value body, bool is_macro,
                                       hll_value *compiled_) {
+  // TODO: Locations
+  hll_translation_unit tu = hll_make_tu(compiler->tu->vm, NULL, 0);
   hll_compiler new_compiler = {0};
-  // TODO: Compilation unit
-  hll_compiler_init(&new_compiler, compiler->vm, compiler->vm->env, NULL);
+  hll_compiler_init(&new_compiler, compiler->tu->vm->env, &tu);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   if (new_compiler.error_count != 0) {
     compiler->error_count += new_compiler.error_count;
@@ -1384,8 +1426,12 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   ;
   if (compile_function_internal(compiler, params, body, true,
                                 &macro_expansion)) {
-    // TODO: Test if macro with same name exists
-    hll_add_variable(compiler->vm, compiler->env, name, macro_expansion);
+    /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
+    /*   compiler_error(compiler, name, "Macro with same name already exists (%s)", */
+    /*                  hll_unwrap_zsymb(name)); */
+    /*   return; */
+    /* } */
+    hll_add_variable(compiler->tu->vm, compiler->env, name, macro_expansion);
   }
 }
 
@@ -1586,7 +1632,8 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
 }
 
 hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
-  hll_value result = hll_new_func(compiler->vm, hll_nil(), compiler->bytecode);
+  hll_value result =
+      hll_new_func(compiler->tu->vm, hll_nil(), compiler->bytecode);
   compile_progn(compiler, ast);
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
   return result;

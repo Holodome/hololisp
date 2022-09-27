@@ -114,7 +114,9 @@ bool hll_find_var(hll_vm *vm, hll_value env, hll_value car, hll_value *found) {
       assert(hll_get_value_kind(hll_unwrap_car(test)) == HLL_VALUE_SYMB &&
              "Variable is not a cons of symbol and its value");
       if (symb->hash == hll_unwrap_symb(hll_unwrap_car(test))->hash) {
-        *found = test;
+        if (found) {
+          *found = test;
+        }
         return true;
       }
     }
@@ -178,7 +180,7 @@ __attribute__((format(printf, 2, 3))) void
 hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(vm, 0, 0, fmt, args);
+  hll_report_errorv(vm, 0, 0, 0, fmt, args);
   va_end(args);
 }
 

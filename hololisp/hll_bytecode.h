@@ -8,6 +8,8 @@
 
 #define HLL_BYTECODE_MAX_CONSANT_COUNT UINT16_MAX
 
+struct hll_loc; // hll_debug.h
+
 typedef enum {
   // Bytecode must be terminated with 0.
   HLL_BYTECODE_END = 0x0,
@@ -62,12 +64,6 @@ typedef enum {
 } hll_bytecode_op;
 
 typedef struct {
-  uint32_t translation_unit;
-  uint32_t offset;
-  uint32_t length;
-} hll_bytecode_location_entry;
-
-typedef struct {
   uint32_t length;
   uint32_t loc_idx;
 } hll_bytecode_rle;
@@ -95,7 +91,7 @@ typedef struct hll_bytecode {
   // All that information accompanied with one got from runtime system (call
   // stack, memory usage etc.) can be used to display user-friendly thorough
   // error message.
-  hll_bytecode_location_entry *locs;
+  struct hll_loc *locs;
   hll_bytecode_rle *loc_rle;
 } hll_bytecode;
 
