@@ -70,8 +70,7 @@ typedef struct hll_config {
 // Contains minimal information about source of error.
 typedef enum {
   HLL_RESULT_OK = 0x0,
-  HLL_RESULT_COMPILE_ERROR = 0x1,
-  HLL_RESULT_RUNTIME_ERROR = 0x2,
+  HLL_RESULT_ERROR = 0x1,
 } hll_interpret_result;
 
 typedef uint32_t hll_interpret_flags;
@@ -89,6 +88,8 @@ enum {
   // 'bytecode_viewer.py' script. Generating dumps can be useful for debugging.
   // If HLL_INTERPRET_DEBUG flag is not set, dump is generated but is empty.
   HLL_INTERPRET_DUMP_ON_FAILURE = 0x4,
+  // Make output of error messages be colored using ANSI escape codes.
+  HLL_INTERPRET_DEBUG_COLORED = 0x8
 };
 
 // If config is NULL, uses default config.

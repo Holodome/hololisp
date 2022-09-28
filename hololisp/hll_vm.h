@@ -19,7 +19,7 @@ typedef struct {
 
 typedef struct hll_vm {
   struct hll_config config;
-  struct hll_debug_storage *ds;
+  struct hll_debug_storage *debug;
   struct hll_gc *gc;
 
   // We use xorshift64 for random number generation. Because hololisp is
@@ -34,14 +34,14 @@ typedef struct hll_vm {
   hll_value *stack;
   hll_call_frame *call_stack;
   hll_value env;
-
 } hll_vm;
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
                              hll_value (*bind)(hll_vm *vm, hll_value args));
 
-HLL_PUB bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
-                                    bool print_result);
+HLL_PUB hll_interpret_result hll_interpret_bytecode(hll_vm *vm,
+                                                    hll_value compiled,
+                                                    bool print_result);
 
 HLL_PUB void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
                               hll_value value);

@@ -1,6 +1,7 @@
 #include "hll_debug.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "hll_mem.h"
@@ -8,6 +9,8 @@
 
 void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
                        va_list args) {
+  ++debug->error_count;
+
   hll_error_fn *error_fn = debug->vm->config.error_fn;
   if (error_fn == NULL) {
     return;
@@ -50,17 +53,40 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
     ++line_end;
   }
 
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[1m");
+  }
   char buffer[4096];
   snprintf(buffer, sizeof(buffer), "%s:%zu:%zu: ", dtu->name, line_number,
            column_number);
   error_fn(debug->vm, buffer);
+
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[31;1m");
+  }
+  error_fn(debug->vm, "error: ");
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[0m");
+    error_fn(debug->vm, "\033[1m");
+  }
+
   vsnprintf(buffer, sizeof(buffer), fmt, args);
   error_fn(debug->vm, buffer);
   error_fn(debug->vm, "\n");
 
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[0m");
+  }
+
   snprintf(buffer, sizeof(buffer), "%.*s\n", (int)(line_end - last_line_start),
            last_line_start);
+
   error_fn(debug->vm, buffer);
+
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[32;1m");
+  }
+
   if (cursor - last_line_start != 0) {
     snprintf(buffer, sizeof(buffer), "%*c^\n", (int)(cursor - last_line_start),
              ' ');
@@ -68,6 +94,10 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
   } else {
     snprintf(buffer, sizeof(buffer), "^\n");
     error_fn(debug->vm, buffer);
+  }
+
+  if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
+    error_fn(debug->vm, "\033[0m");
   }
 }
 
@@ -86,7 +116,7 @@ uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source,
   return hll_sb_len(ds->dtus);
 }
 
-hll_debug_storage *hll_make_debug_storage(hll_vm *vm, hll_debug_flags flags) {
+hll_debug_storage *hll_make_debug(hll_vm *vm, hll_debug_flags flags) {
   hll_debug_storage *storage = hll_alloc(sizeof(*storage));
   storage->flags = flags;
   storage->vm = vm;
@@ -94,7 +124,20 @@ hll_debug_storage *hll_make_debug_storage(hll_vm *vm, hll_debug_flags flags) {
   return storage;
 }
 
-void hll_delete_debug_storage(hll_debug_storage *ds) {
+void hll_delete_debug(hll_debug_storage *ds) {
   hll_sb_free(ds->dtus);
   hll_free(ds, sizeof(*ds));
+}
+
+void hll_reset_debug(hll_debug_storage *ds) { ds->error_count = 0; }
+
+void hll_debug_print_summary(hll_debug_storage *debug) {
+  char buffer[1024];
+  snprintf(buffer, sizeof(buffer), "%" PRIu32 " errors generated.\n",
+           debug->error_count);
+
+  hll_error_fn *error_fn = debug->vm->config.error_fn;
+  if (error_fn != NULL) {
+    error_fn(debug->vm, buffer);
+  }
 }

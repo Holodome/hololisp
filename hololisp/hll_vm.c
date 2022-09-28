@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "hll_bytecode.h"
 #include "hll_compiler.h"
@@ -59,8 +59,8 @@ hll_vm *hll_make_vm(const hll_config *config) {
   // Set this value first not to accidentally trigger garbage collection with
   // allocating new nil object
   vm->gc = hll_make_gc(vm);
-  vm->ds = hll_make_debug_storage(vm, HLL_DEBUG_DIAGNOSTICS_COLORED);
-  vm->rng_state = time(NULL);
+  vm->debug = hll_make_debug(vm, HLL_DEBUG_DIAGNOSTICS_COLORED);
+  vm->rng_state = rand();
 
   vm->global_env = hll_new_env(vm, hll_nil(), hll_nil());
   vm->env = vm->global_env;
@@ -70,7 +70,7 @@ hll_vm *hll_make_vm(const hll_config *config) {
 }
 
 void hll_delete_vm(hll_vm *vm) {
-  hll_delete_debug_storage(vm->ds);
+  hll_delete_debug(vm->debug);
   hll_delete_gc(vm->gc);
   hll_free(vm, sizeof(hll_vm));
 }
@@ -78,16 +78,27 @@ void hll_delete_vm(hll_vm *vm) {
 hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
                                    const char *name,
                                    hll_interpret_flags flags) {
+  hll_interpret_result result = HLL_RESULT_OK;
+
+  hll_reset_debug(vm->debug);
+  // Set debug colored flag
+  vm->debug->flags &= ~HLL_DEBUG_DIAGNOSTICS_COLORED;
+  vm->debug->flags |=
+      HLL_DEBUG_DIAGNOSTICS_COLORED * !!(flags & HLL_INTERPRET_DEBUG_COLORED);
+
   hll_value compiled;
   if (!hll_compile(vm, source, name, &compiled)) {
-    return HLL_RESULT_COMPILE_ERROR;
+    result = HLL_RESULT_ERROR;
+  } else {
+
+    bool print_result = (flags & HLL_INTERPRET_PRINT_RESULT) != 0;
+    result = hll_interpret_bytecode(vm, compiled, print_result);
   }
 
-  bool print_result = (flags & HLL_INTERPRET_PRINT_RESULT) != 0;
-  hll_interpret_result result =
-      hll_interpret_bytecode(vm, compiled, print_result)
-          ? HLL_RESULT_RUNTIME_ERROR
-          : HLL_RESULT_OK;
+  if (result != HLL_RESULT_OK) {
+    hll_debug_print_summary(vm->debug);
+  }
+
   return result;
 }
 
@@ -183,7 +194,7 @@ __attribute__((format(printf, 2, 3))) void
 hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(vm->ds, (hll_loc){0}, fmt, args);
+  hll_report_errorv(vm->debug, (hll_loc){0}, fmt, args);
   va_end(args);
 }
 
@@ -450,7 +461,8 @@ out:
   return result;
 }
 
-bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled, bool print_result) {
+hll_interpret_result hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
+                                            bool print_result) {
   hll_value result =
       hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
   if (print_result) {
@@ -458,7 +470,7 @@ bool hll_interpret_bytecode(hll_vm *vm, hll_value compiled, bool print_result) {
     printf("\n");
   }
 
-  return false;
+  return HLL_RESULT_OK;
 }
 
 hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {

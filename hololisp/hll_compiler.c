@@ -389,7 +389,7 @@ lexer_error(hll_lexer *lexer, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(lexer->tu->vm->ds,
+  hll_report_error(lexer->tu->vm->debug,
                    (hll_loc){lexer->tu->translation_unit, lexer->next.offset,
                              lexer->next.length},
                    fmt, args);
@@ -503,7 +503,7 @@ hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
 
   if (flags & HLL_TU_FLAG_DEBUG) {
     tu.locs = hll_alloc(sizeof(*tu.locs));
-    tu.translation_unit = hll_ds_init_tu(vm->ds, source, name);
+    tu.translation_unit = hll_ds_init_tu(vm->debug, source, name);
   }
 
   return tu;
@@ -533,7 +533,7 @@ reader_error(hll_reader *reader, uint32_t offset, uint32_t length,
 
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(reader->tu->vm->ds,
+  hll_report_errorv(reader->tu->vm->debug,
                     (hll_loc){reader->tu->translation_unit, offset, length},
                     fmt, args);
   va_end(args);
@@ -730,7 +730,7 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hll_report_error(
-      compiler->tu->vm->ds,
+      compiler->tu->vm->debug,
       (hll_loc){compiler->tu->translation_unit, loc->offset, loc->length}, fmt,
       args);
   va_end(args);

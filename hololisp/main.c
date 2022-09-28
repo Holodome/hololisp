@@ -114,25 +114,8 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
   return false;
 }
 
-static bool manage_result(hll_interpret_result result) {
-  bool error = false;
-  switch (result) {
-  case HLL_RESULT_COMPILE_ERROR:
-    fprintf(stderr, "Compile error\n");
-    error = true;
-    break;
-  case HLL_RESULT_RUNTIME_ERROR:
-    fprintf(stderr, "Runtime error\n");
-    error = true;
-    break;
-  case HLL_RESULT_OK:
-    break;
-  }
-
-  return error;
-}
-
 static bool execute_repl(bool tty) {
+  bool result = false;
   struct hll_vm *vm = hll_make_vm(NULL);
 
   for (;;) {
@@ -144,14 +127,15 @@ static bool execute_repl(bool tty) {
       break;
     }
 
-    hll_interpret_result result =
-        hll_interpret(vm, line, "REPL", HLL_INTERPRET_PRINT_RESULT);
-    manage_result(result);
+    hll_interpret_result interpret_result =
+        hll_interpret(vm, line, "repl",
+                      HLL_INTERPRET_PRINT_RESULT | HLL_INTERPRET_DEBUG_COLORED);
+    result = interpret_result == HLL_RESULT_ERROR;
   }
 
   hll_delete_vm(vm);
 
-  return false;
+  return result;
 }
 
 static bool execute_script(const char *filename) {
@@ -167,20 +151,22 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, file_contents, filename, 0);
+  hll_interpret_result interpret_result =
+      hll_interpret(vm, file_contents, filename, HLL_INTERPRET_DEBUG_COLORED);
+  bool result = interpret_result == HLL_RESULT_ERROR;
   hll_delete_vm(vm);
   free(file_contents);
 
-  return manage_result(result);
+  return result;
 }
 
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result =
-      hll_interpret(vm, str, "CLI", HLL_INTERPRET_PRINT_RESULT);
+  hll_interpret_result result = hll_interpret(
+      vm, str, "cli", HLL_INTERPRET_PRINT_RESULT | HLL_INTERPRET_DEBUG_COLORED);
   hll_delete_vm(vm);
 
-  return manage_result(result);
+  return result == HLL_RESULT_ERROR;
 }
 
 static bool execute_dump_bytecode(const char *filename) {
