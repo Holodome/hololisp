@@ -1427,7 +1427,8 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   if (compile_function_internal(compiler, params, body, true,
                                 &macro_expansion)) {
     /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
-    /*   compiler_error(compiler, name, "Macro with same name already exists (%s)", */
+    /*   compiler_error(compiler, name, "Macro with same name already exists
+     * (%s)", */
     /*                  hll_unwrap_zsymb(name)); */
     /*   return; */
     /* } */
