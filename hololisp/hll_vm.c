@@ -59,6 +59,7 @@ hll_vm *hll_make_vm(const hll_config *config) {
   // Set this value first not to accidentally trigger garbage collection with
   // allocating new nil object
   vm->gc = hll_make_gc(vm);
+  vm->ds = hll_make_debug_storage(vm, HLL_DEBUG_DIAGNOSTICS_COLORED);
   vm->rng_state = time(NULL);
 
   vm->global_env = hll_new_env(vm, hll_nil(), hll_nil());
@@ -69,14 +70,16 @@ hll_vm *hll_make_vm(const hll_config *config) {
 }
 
 void hll_delete_vm(hll_vm *vm) {
+  hll_delete_debug_storage(vm->ds);
   hll_delete_gc(vm->gc);
   hll_free(vm, sizeof(hll_vm));
 }
 
 hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
+                                   const char *name,
                                    hll_interpret_flags flags) {
   hll_value compiled;
-  if (!hll_compile(vm, source, &compiled)) {
+  if (!hll_compile(vm, source, name, &compiled)) {
     return HLL_RESULT_COMPILE_ERROR;
   }
 
@@ -180,7 +183,7 @@ __attribute__((format(printf, 2, 3))) void
 hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(vm, 0, 0, 0, fmt, args);
+  hll_report_errorv(vm->ds, (hll_loc){0}, fmt, args);
   va_end(args);
 }
 
@@ -350,7 +353,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       default:
         hll_runtime_error(vm, "object is not callable (got %s)",
                           hll_get_value_kind_str(hll_get_value_kind(callable)));
-        assert(0);
         goto bail;
         break;
       }

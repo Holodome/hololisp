@@ -7,7 +7,7 @@
 
 static void test_reader_reports_eof(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
   hll_lexer lexer;
   hll_lexer_init(&lexer, "", &tu);
@@ -20,7 +20,7 @@ static void test_reader_reports_eof(void) {
 
 static void test_reader_parses_num(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -39,7 +39,7 @@ static void test_reader_parses_num(void) {
 
 static void test_reader_parses_symbol(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -57,7 +57,7 @@ static void test_reader_parses_symbol(void) {
 
 static void test_reader_parses_one_element_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -76,7 +76,7 @@ static void test_reader_parses_one_element_list(void) {
 
 static void test_reader_parses_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -103,7 +103,7 @@ static void test_reader_parses_list(void) {
 
 static void test_reader_parses_nested_lists(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -141,7 +141,7 @@ static void test_reader_parses_nested_lists(void) {
 
 static void test_reader_reports_unclosed_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -156,7 +156,7 @@ static void test_reader_reports_unclosed_list(void) {
 
 static void test_reader_reports_stray_rparen(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -171,7 +171,7 @@ static void test_reader_reports_stray_rparen(void) {
 
 static void test_reader_parses_nil(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -188,7 +188,7 @@ static void test_reader_parses_nil(void) {
 
 static void test_reader_parses_simple_dotted_cons(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -207,7 +207,7 @@ static void test_reader_parses_simple_dotted_cons(void) {
 
 static void test_reader_parses_dotted_list(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;
@@ -234,7 +234,7 @@ static void test_reader_parses_dotted_list(void) {
 
 static void test_reader_parses_quote(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_translation_unit tu = hll_make_tu(vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_push_forbid_gc(vm->gc);
 
   hll_lexer lexer;

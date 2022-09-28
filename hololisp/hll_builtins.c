@@ -715,7 +715,7 @@ static hll_value builtin_eval(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value compiled;
-  if (!hll_compile(vm, buffer, &compiled)) {
+  if (!hll_compile(vm, buffer, "eval", &compiled)) {
     hll_runtime_error(vm, "failed to compile eval");
     return hll_nil();
   }
@@ -803,7 +803,7 @@ void add_builtins(struct hll_vm *vm) {
                 "  (if lis\n"
                 "      (and (pred (car lis)) (all pred (cdr lis)))\n"
                 "      t))\n",
-                0);
+                "builtins1", 0);
   hll_interpret(vm,
 
                 "(define (any pred lis)\n"
@@ -846,6 +846,6 @@ void add_builtins(struct hll_vm *vm) {
                 "  (when lis\n"
                 "    (cons (fn (car lis))\n"
                 "          (map fn (cdr lis)))))\n",
-                0);
+                "builtins2", 0);
 #endif
 }

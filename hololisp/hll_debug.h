@@ -25,27 +25,36 @@ typedef struct hll_loc {
 // Debug Translation Unit.
 typedef struct {
   const char *source;
+  const char *name;
 } hll_dtu;
 
+typedef uint32_t hll_debug_flags;
+enum {
+  HLL_DEBUG_DIAGNOSTICS_COLORED = 0x1,
+};
+
 typedef struct hll_debug_storage {
+  struct hll_vm *vm;
+
   hll_dtu *dtus;
+  hll_debug_flags flags;
 } hll_debug_storage;
 
-hll_debug_storage *hll_make_debug_storage(void);
+hll_debug_storage *hll_make_debug_storage(struct hll_vm *vm,
+                                          hll_debug_flags flags);
 void hll_delete_debug_storage(hll_debug_storage *ds);
 
-uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source);
+uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source,
+                        const char *name);
 
 // Used to report error in current state contained by vm.
 // vm must have current_filename field present if message needs to include
 // source location.
 // offset specifies byte offset of reported location in file.
 // len specifies length of reported part (e.g. token).
-void hll_report_errorv(struct hll_vm *vm, uint32_t translation_unit,
-                       uint32_t offset, uint32_t len, const char *fmt,
+void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
                        va_list args);
-void hll_report_error(struct hll_vm *vm, uint32_t translation_unit,
-                      uint32_t offset, uint32_t len, const char *fmt, ...)
-    __attribute__((format(printf, 5, 6)));
+void hll_report_error(hll_debug_storage *debug, hll_loc loc, const char *fmt,
+                      ...) __attribute__((format(printf, 3, 4)));
 
 #endif

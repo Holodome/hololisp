@@ -100,7 +100,7 @@ HLL_PUB void hll_delete_vm(struct hll_vm *vm) __attribute__((nonnull));
 
 // Runs given source as hololisp code.
 HLL_PUB hll_interpret_result hll_interpret(struct hll_vm *vm,
-                                           const char *source,
+                                           const char *source, const char *name,
                                            hll_interpret_flags flags)
     __attribute__((nonnull));
 

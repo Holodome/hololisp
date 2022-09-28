@@ -6,8 +6,6 @@
 
 #include "hll_hololisp.h"
 
-#define HLL_BYTECODE_MAX_CONSANT_COUNT UINT16_MAX
-
 struct hll_loc; // hll_debug.h
 
 typedef enum {

@@ -145,7 +145,7 @@ static bool execute_repl(bool tty) {
     }
 
     hll_interpret_result result =
-        hll_interpret(vm, line, HLL_INTERPRET_PRINT_RESULT);
+        hll_interpret(vm, line, "REPL", HLL_INTERPRET_PRINT_RESULT);
     manage_result(result);
   }
 
@@ -167,7 +167,7 @@ static bool execute_script(const char *filename) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(vm, file_contents, 0);
+  hll_interpret_result result = hll_interpret(vm, file_contents, filename, 0);
   hll_delete_vm(vm);
   free(file_contents);
 
@@ -177,7 +177,7 @@ static bool execute_script(const char *filename) {
 static bool execute_string(const char *str) {
   struct hll_vm *vm = hll_make_vm(NULL);
   hll_interpret_result result =
-      hll_interpret(vm, str, HLL_INTERPRET_PRINT_RESULT);
+      hll_interpret(vm, str, "CLI", HLL_INTERPRET_PRINT_RESULT);
   hll_delete_vm(vm);
 
   return manage_result(result);
@@ -197,7 +197,7 @@ static bool execute_dump_bytecode(const char *filename) {
 
   struct hll_vm *vm = hll_make_vm(NULL);
   hll_value compiled;
-  if (!hll_compile(vm, file_contents, &compiled)) {
+  if (!hll_compile(vm, file_contents, filename, &compiled)) {
     return false;
   }
 

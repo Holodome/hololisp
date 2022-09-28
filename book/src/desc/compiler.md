@@ -34,3 +34,9 @@ switch (state) {
 ## Parser
 
 ## Bytecode generator 
+
+## Diagnostics 
+
+Generation of decent error messages is arguably the single most complicated part
+of virtual machine. The difficulty comes from the need to minimize slowdown 
+and additional memory footprint none of which are possible to do entirely.

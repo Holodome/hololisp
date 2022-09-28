@@ -77,7 +77,7 @@ typedef struct {
 } hll_translation_unit;
 
 hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
-                                 hll_tu_flags flags);
+                                 const char *name, hll_tu_flags flags);
 void hll_delete_tu(hll_translation_unit *tu);
 
 // Kinds of tokens recognized by lexer.
@@ -193,7 +193,7 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast)
 // writes resulting function to location pointed by 'compiled' parameter.
 // If function does not success, contents of memory pointed by 'compiled'
 // are not defined.
-bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled)
-    __attribute__((nonnull));
+bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
+                 hll_value *compiled) __attribute__((nonnull));
 
 #endif

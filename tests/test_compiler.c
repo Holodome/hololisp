@@ -30,7 +30,7 @@ static void test_compiler_compiles_integer(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -52,7 +52,7 @@ static void test_compiler_compiles_addition(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -130,7 +130,7 @@ static void test_compiler_compiles_complex_arithmetic_operation(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -157,7 +157,7 @@ static void test_compiler_compiles_if(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -174,7 +174,7 @@ static void test_compiler_compiles_quote(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -219,7 +219,7 @@ static void test_compiler_compiles_defun(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(program_bytecode, sizeof(program_bytecode), compiled);
@@ -284,7 +284,7 @@ static void test_compiler_compiles_let(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -368,7 +368,7 @@ static void test_compiler_compiles_let_with_body(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -386,7 +386,7 @@ static void test_compiler_compiles_setf_symbol(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -408,7 +408,7 @@ static void test_compiler_compiles_setf_cdr(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -422,7 +422,7 @@ static void test_compiler_compiles_macro(void) {
 
   struct hll_vm *vm = hll_make_vm(NULL);
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
@@ -480,7 +480,7 @@ static void test_compiler_compiles_lambda(void) {
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
-  bool is_compiled = hll_compile(vm, source, &result);
+  bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   test_bytecode_equals(program_bytecode, sizeof(program_bytecode), compiled);

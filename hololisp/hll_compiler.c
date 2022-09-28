@@ -192,10 +192,11 @@ static hll_location_entry *get_location_entry(hll_location_table *table,
   return table->entries + *entry_idx;
 }
 
-bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
+bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
+                 hll_value *compiled) {
   bool result = true;
 
-  hll_translation_unit tu = hll_make_tu(vm, source, HLL_TU_FLAG_DEBUG);
+  hll_translation_unit tu = hll_make_tu(vm, source, name, HLL_TU_FLAG_DEBUG);
 
   hll_lexer lexer;
   hll_lexer_init(&lexer, source, &tu);
@@ -211,7 +212,8 @@ bool hll_compile(struct hll_vm *vm, const char *source, hll_value *compiled) {
   *compiled = hll_compile_ast(&compiler, ast);
   hll_pop_forbid_gc(vm->gc);
 
-  if (compiler.error_count != 0) {
+  if (lexer.error_count != 0 || reader.error_count != 0 ||
+      compiler.error_count != 0) {
     result = false;
   }
 
@@ -387,8 +389,10 @@ lexer_error(hll_lexer *lexer, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(lexer->tu->vm, lexer->tu->translation_unit,
-                   lexer->next.offset, lexer->next.length, fmt, args);
+  hll_report_error(lexer->tu->vm->ds,
+                   (hll_loc){lexer->tu->translation_unit, lexer->next.offset,
+                             lexer->next.length},
+                   fmt, args);
   va_end(args);
 }
 
@@ -492,14 +496,14 @@ const hll_token *hll_lexer_next(hll_lexer *lexer) {
 }
 
 hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
-                                 hll_tu_flags flags) {
+                                 const char *name, hll_tu_flags flags) {
   hll_translation_unit tu = {0};
   tu.vm = vm;
   tu.flags = flags;
 
   if (flags & HLL_TU_FLAG_DEBUG) {
     tu.locs = hll_alloc(sizeof(*tu.locs));
-    tu.translation_unit = hll_ds_init_tu(vm->ds, source);
+    tu.translation_unit = hll_ds_init_tu(vm->ds, source, name);
   }
 
   return tu;
@@ -519,8 +523,9 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
   reader->tu = tu;
 }
 
-__attribute__((format(printf, 2, 3))) static void
-reader_error(hll_reader *reader, const char *fmt, ...) {
+__attribute__((format(printf, 4, 5))) static void
+reader_error(hll_reader *reader, uint32_t offset, uint32_t length,
+             const char *fmt, ...) {
   if (!reader->tu) {
     return;
   }
@@ -528,8 +533,9 @@ reader_error(hll_reader *reader, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(reader->tu->vm, reader->tu->translation_unit,
-                    reader->token->offset, reader->token->length, fmt, args);
+  hll_report_errorv(reader->tu->vm->ds,
+                    (hll_loc){reader->tu->translation_unit, offset, length},
+                    fmt, args);
   va_end(args);
 }
 
@@ -545,7 +551,7 @@ static void peek_token(hll_reader *reader) {
 
     if (token->kind == HLL_TOK_COMMENT) {
     } else if (token->kind == HLL_TOK_UNEXPECTED) {
-      reader_error(reader, "Unexpected token");
+      reader_error(reader, token->offset, token->length, "Unexpected token");
     } else {
       is_done = true;
     }
@@ -578,6 +584,8 @@ static hll_value read_list(hll_reader *reader) {
   peek_token(reader);
   // This should be guaranteed by caller.
   assert(reader->token->kind == HLL_TOK_LPAREN);
+  uint32_t head_offset = reader->token->offset;
+  uint32_t head_length = reader->token->length;
   eat_token(reader);
   // Now we expect at least one list element followed by others ending either
   // with right paren or dot, element and right paren Now check if we don't
@@ -600,7 +608,7 @@ static hll_value read_list(hll_reader *reader) {
   for (;;) {
     peek_token(reader);
     if (reader->token->kind == HLL_TOK_EOF) {
-      reader_error(reader,
+      reader_error(reader, head_offset, head_length,
                    "Missing closing paren when reading list (eof encountered)");
       return list_head;
     } else if (reader->token->kind == HLL_TOK_RPAREN) {
@@ -612,7 +620,7 @@ static hll_value read_list(hll_reader *reader) {
 
       peek_token(reader);
       if (reader->token->kind != HLL_TOK_RPAREN) {
-        reader_error(reader,
+        reader_error(reader, head_offset, head_length,
                      "Missing closing paren after dot when reading list");
         return list_head;
       }
@@ -668,8 +676,9 @@ static hll_value read_expr(hll_reader *reader) {
     HLL_UNREACHABLE;
     break;
   default:
+    reader_error(reader, reader->token->offset, reader->token->length,
+                 "Unexpected token when parsing s-expression");
     eat_token(reader);
-    reader_error(reader, "Unexpected token when parsing s-expression");
     break;
   }
   return ast;
@@ -720,8 +729,10 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(compiler->tu->vm, compiler->tu->translation_unit,
-                   loc->offset, loc->length, fmt, args);
+  hll_report_error(
+      compiler->tu->vm->ds,
+      (hll_loc){compiler->tu->translation_unit, loc->offset, loc->length}, fmt,
+      args);
   va_end(args);
 }
 
@@ -1216,7 +1227,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value body, bool is_macro,
                                       hll_value *compiled_) {
   // TODO: Locations
-  hll_translation_unit tu = hll_make_tu(compiler->tu->vm, NULL, 0);
+  hll_translation_unit tu = hll_make_tu(compiler->tu->vm, NULL, NULL, 0);
   hll_compiler new_compiler = {0};
   hll_compiler_init(&new_compiler, compiler->tu->vm->env, &tu);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
@@ -1423,7 +1434,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   hll_value body = hll_unwrap_cdr(args);
 
   hll_value macro_expansion;
-  ;
+
   if (compile_function_internal(compiler, params, body, true,
                                 &macro_expansion)) {
     /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
