@@ -893,7 +893,7 @@ static void compile_quote(hll_compiler *compiler, hll_value args) {
     compiler_error(compiler, args, "'quote' form must have an argument");
     return;
   }
-  if (hll_get_value_kind(hll_unwrap_cdr(args)) != HLL_VALUE_NIL) {
+  if (!hll_is_nil(hll_unwrap_cdr(args))) {
     compiler_error(compiler, args,
                    "'quote' form must have exactly one argument");
   }
@@ -1117,7 +1117,7 @@ static void compile_setf(hll_compiler *compiler, hll_value args) {
   hll_value location = hll_unwrap_car(args);
   hll_value value = hll_unwrap_cdr(args);
   if (hll_is_cons(value)) {
-    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
+    assert(hll_is_nil(hll_unwrap_cdr(value)));
     value = hll_unwrap_car(value);
   }
 
@@ -1133,7 +1133,7 @@ static void compile_setcar(hll_compiler *compiler, hll_value args) {
   hll_value location = hll_unwrap_car(args);
   hll_value value = hll_unwrap_cdr(args);
   if (hll_is_cons(value)) {
-    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
+    assert(hll_is_nil(hll_unwrap_cdr(value)));
     value = hll_unwrap_car(value);
   }
 
@@ -1445,7 +1445,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
 
   if (hll_is_cons(decide)) {
     hll_value name = hll_unwrap_car(decide);
-    if (hll_get_value_kind(name) != HLL_VALUE_SYMB) {
+    if (!hll_is_symb(name)) {
       compiler_error(compiler, name, "'define' name should be a symbol");
       return;
     }

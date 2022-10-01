@@ -32,6 +32,11 @@ test_error () {
   echo "ok"
 }
 
-test_error "closing paren" "$(cat tests/errors/closing_paren.out)" "$(cat tests/errors/closing_paren.hl)"
+for src in tests/errors/*.hl ; do
+    out=${src/.hl/.out}
+    b=$(basename $src)
+    name=${b/.hl/}
+    test_error "$name" "$(cat $out)" "$(cat $src)"
+done
 
 exit $failed
