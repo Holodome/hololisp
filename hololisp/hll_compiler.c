@@ -93,29 +93,15 @@ typedef enum {
 // here.
 typedef enum {
   // Regular form. This means function invocation, either ffi or
-  // language-defined
+  // language-defined function
   HLL_FORM_REGULAR,
-  // Quote returns unevaluated argument
   HLL_FORM_QUOTE,
-  // If checks condition and executes one of its arms
   HLL_FORM_IF,
-  // Lambda constructs a new function
-  // Set sets value pointed to by location defined by first argument
-  // as second argument. First argument is of special kind of form,
-  // which denotes location and requires special handling from compiler.
-  // It is usually implemented via macros using functions for setting different
-  // kinds of locations, but we handle all of that here.
   HLL_FORM_SET,
-  // let form
   HLL_FORM_LET,
-  // list returns all of its evaluated arguments
   HLL_FORM_LIST,
-  // makes new cons
   HLL_FORM_CONS,
-  // Sets car. This is made a compiler inlined function because we have the same
-  // bytecode instruction
   HLL_FORM_SETCAR,
-  // Sets cdr. Similar to car
   HLL_FORM_SETCDR,
   HLL_FORM_PROGN,
   HLL_FORM_LAMBDA,

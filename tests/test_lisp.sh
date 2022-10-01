@@ -7,41 +7,41 @@ fi
 failed=0
 
 panic () {
-    echo -n -e '\e[1;31m[ERROR]\e[0m '
-    echo "$1"
-    failed=1
+  echo -n -e '\e[1;31m[ERROR]\e[0m '
+  echo "$1"
+  failed=1
 }
 
 pos_test () {
-    echo -n "Testing $1 ... "
+  echo -n "Testing $1 ... "
 
-    error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
-    if [ -n "$error" ]; then
-        echo FAILED
-        panic "$error"
-        return 
-    fi
+  error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
+  if [ -n "$error" ]; then
+    echo FAILED
+    panic "$error"
+    return 
+  fi
 
-    result=$($EXECUTABLE -e "$3" 2> /dev/null | tail -1)
-    if [ "$result" != "$2" ]; then
-        echo FAILED
-        panic "'$2' expected, but got '$result'"
-        return 
-    fi
+  result=$($EXECUTABLE -e "$3" 2> /dev/null | tail -1)
+  if [ "$result" != "$2" ]; then
+    echo FAILED
+    panic "'$2' expected, but got '$result'"
+    return 
+  fi
 
-    echo "ok"
+  echo "ok"
 }
 
 neg_test () {
-    echo -n "Testing $1 ... "
-     error=$($EXECUTABLE -e "$2" 2>&1 > /dev/null)
-    if [ -z "$error" ]; then
-        echo FAILED
-        panic "$1"
-        return
-    fi
+  echo -n "Testing $1 ... "
+  error=$($EXECUTABLE -e "$2" 2>&1 > /dev/null)
+  if [ -z "$error" ]; then
+    echo FAILED
+    panic "$1"
+    return
+  fi
 
-    echo "ok"
+  echo "ok"
 }
 
 pos_test comment 5 "
