@@ -490,3 +490,4 @@ cov.json
 .vimrc
 .nvimrc
 .ccls
+!tests/errors/*.out

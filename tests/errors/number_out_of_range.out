@@ -1,0 +1,4 @@
+cli:3:5: error: Number literal is out of range
+    123312389219389213981289312893891238918923
+    ^
+1 error generated.

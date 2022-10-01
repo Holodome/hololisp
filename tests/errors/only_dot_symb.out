@@ -1,0 +1,4 @@
+cli:3:13: error: Symbol consists of only dots
+            ... )
+            ^
+1 error generated.
