@@ -33,7 +33,7 @@ jobs:
           curl -Os https://uploader.codecov.io/latest/linux/codecov && chmod +x codecov 
       - name: Test
         run: |
-          make test COV=1 DEBUG=1
+          make test COV=1 
       - name: Generate coverage statistics
         run: |
           gcovr -x cov.xml 
