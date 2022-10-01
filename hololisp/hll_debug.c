@@ -133,8 +133,13 @@ void hll_reset_debug(hll_debug_storage *ds) { ds->error_count = 0; }
 
 void hll_debug_print_summary(hll_debug_storage *debug) {
   char buffer[1024];
-  snprintf(buffer, sizeof(buffer), "%" PRIu32 " errors generated.\n",
-           debug->error_count);
+  if (debug->error_count != 1) {
+    snprintf(buffer, sizeof(buffer), "%" PRIu32 " errors generated.\n",
+             debug->error_count);
+  } else {
+    snprintf(buffer, sizeof(buffer), "%" PRIu32 " error generated.\n",
+             debug->error_count);
+  }
 
   hll_error_fn *error_fn = debug->vm->config.error_fn;
   if (error_fn != NULL) {
