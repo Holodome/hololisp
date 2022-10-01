@@ -1,3 +1,25 @@
+//
+// hll_bytecode.h
+//
+// This file contains descriptions for bytecode used in hololisp compiler.
+//
+// Bytecode is an intermediate representation of code between what programmer
+// writes and what computer executes.
+//
+// Hololisp uses stack-based bytecode executor. This means that it does not
+// use any internal registers and uses single LIFO structure for managing return
+// values.
+// Bytecode is formed using bytecode operands. These are comands encoded
+// as u8 integers that virtual machine decodes and executes one by one.
+// Bytecode is superior to executing AST because it allows more optimizations
+// and is more cache-friendly than executing arbitrary functions.
+// Bytecode-based interpreter allows arbitrary nesting of function call stack
+// without fear of overflowing system one.
+//
+// Bytecode is compiled in functions, even the global scope. Function bytecode
+// contains series of instructions forming function body, as well as
+// separate list of constants.
+//
 #ifndef HLL_BYTECODE_H
 #define HLL_BYTECODE_H
 
@@ -9,7 +31,9 @@
 struct hll_loc; // hll_debug.h
 
 typedef enum {
-  // Bytecode must be terminated with 0.
+  // Bytecode must be terminated with 0. This means return from currently
+  // executed function
+  // and go up call stack
   HLL_BYTECODE_END = 0x0,
   // Pushes nil on stack
   HLL_BYTECODE_NIL,
@@ -21,7 +45,7 @@ typedef enum {
   // 3 is element that needs to be appended to list. Pops last element
   // leaving only head and tail.
   // The reason for this instruction is to ease up creation of lists,
-  // in favor of conses because the latter appear much rarer than lists.
+  // in favor of conses because the latter appears much rarer than lists.
   HLL_BYTECODE_APPEND,
   // Removes top element from stack
   HLL_BYTECODE_POP,
@@ -33,7 +57,7 @@ typedef enum {
   // First is callable object. This is lisp object either a function (lambda)
   // or C binding. In first case creates new env and calls that function.
   HLL_BYTECODE_CALL,
-  // Jump if true (i16 offset, two's complement).
+  // Jump if nil (u16 offset, two's complement).
   HLL_BYTECODE_JN,
   // Defines new variable with given name in current env (lexical env).
   // If variable with same name is defined in current env, error.
@@ -61,6 +85,10 @@ typedef enum {
   HLL_BYTECODE_DUP,
 } hll_bytecode_op;
 
+// Bytecode contains source location in order to provide meaningful error
+// messages. This information is encoded in run-length encoding based format.
+// This structure describes unit of rle encoding, specifying locations for
+// next 'length' operands.
 typedef struct {
   uint32_t length;
   uint32_t loc_idx;

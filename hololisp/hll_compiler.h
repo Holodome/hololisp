@@ -4,7 +4,7 @@
 // This file contains lexer, parser and compiler definitions for use with
 // hololisp. This is probably the largest unit in a codebase but there is no
 // attempts to split it because its parts are interviened and spliiting them
-// will make comprehensing more complex.
+// will make understanding more complex.
 //
 // The only API for public usage is hll_compile, which takes source string and
 // produces hololisp bytecode output.
