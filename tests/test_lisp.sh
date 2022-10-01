@@ -153,8 +153,6 @@ neg_test "define args" "(define (1))"
 pos_test "define" "double" "(define (double x) (+ x x))"
 pos_test "define & call" "12" "(define (double x) (+ x x)) (double 6)"
 neg_test "define" "(define (fn a) (car 2 3))"
-neg_test "define args" "(define (abc))"
-neg_test "define args" "(define (abc) ())"
 neg_test "define args" "(define (1) ())"
 
 neg_test "let args" "(let)"
@@ -341,8 +339,7 @@ pos_test "macro" "19" "(defmacro (mac1 a b) (list '+ a (list '* b 3))) (mac1 4 5
 pos_test "macro" "7" "(defmacro (seven) 7) ((lambda () (seven)))"
 pos_test "macro" "42" "(defmacro (if-zero x then) (list 'if (list '= x 0) then))
   (if-zero 0 42)"
-neg_test "defmacro args" "(defmacro (abc))"
-neg_test "defmacro args" "(defmacro (abc) ())"
+neg_test "defmacro args" "(defmacro)"
 neg_test "defmacro args" "(defmacro (1) ())"
 
 pos_test "restargs" "(3 5 7)" "(define (f x . y) (cons x y)) (f 3 5 7)"
