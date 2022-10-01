@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ -z "$EXECUTABLE" ]; then
-    EXECUTABLE=./build/hololisp
+    EXECUTABLE=./build/hololisp 
 fi
 
 failed=0
@@ -13,18 +13,16 @@ panic () {
 }
 
 test_error () {
-  echo -n "Testing $1"
+  echo -n "Testing $1 ... "
 
-  error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
+  error=$($EXECUTABLE -m -e "$3" 2>&1 > /dev/null)
   if [ -z "$error" ]; then 
     echo FAILED error code
     panic "$1"
     return
   fi 
 
-  echo 123123
-
-  result=$($EXECUTABLE -e "$3" 1> /dev/null)
+  result=$(($EXECUTABLE -m -e "$3" 1> /dev/null) 2>&1)
   if [ "$result" != "$2" ]; then 
     echo FAILED
     panic "'$2' expected, but got '$result'"
@@ -34,6 +32,6 @@ test_error () {
   echo "ok"
 }
 
-test_error "compile_closing_paren" "$(cat tests/errors/call_stack.out)" "$(cat tests/errors/call_stack.hl)"
+test_error "closing paren" "$(cat tests/errors/closing_paren.out)" "$(cat tests/errors/closing_paren.hl)"
 
 exit $failed

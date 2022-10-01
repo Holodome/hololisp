@@ -25,6 +25,7 @@ typedef enum {
 typedef struct {
   hll_mode mode;
   const char *str;
+  bool forbid_colors;
 } hll_options;
 
 static char *read_entire_file(const char *filename) {
@@ -73,7 +74,8 @@ static void print_usage(FILE *f) {
              "Available options are:\n"
              "  -e stat   Execute string 'stat'\n"
              "  -v        Show version information\n"
-             "  -h        Show this message\n");
+             "  -h        Show this message\n"
+             "  -m        Do not use colored output\n");
 }
 
 static void print_version(void) { printf("hololisp 1.0.0\n"); }
@@ -104,6 +106,8 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
       opts->mode = HLL_MODE_HELP;
     } else if (strcmp(opt, "--dump") == 0) {
       opts->mode = HLL_MODE_DUMP_BYTECODE;
+    } else if (strcmp(opt, "-m") == 0) {
+      opts->forbid_colors = true;
     } else {
       fprintf(stderr, "Unknown option '%s'\n", opt);
       print_usage(stderr);
@@ -114,7 +118,7 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
   return false;
 }
 
-static bool execute_repl(bool tty) {
+static bool execute_repl(hll_options *opts, bool tty) {
   bool result = false;
   struct hll_vm *vm = hll_make_vm(NULL);
 
@@ -127,9 +131,12 @@ static bool execute_repl(bool tty) {
       break;
     }
 
+    hll_interpret_flags flags = HLL_INTERPRET_PRINT_RESULT;
+    if (!opts->forbid_colors) {
+      flags |= HLL_INTERPRET_DEBUG_COLORED;
+    }
     hll_interpret_result interpret_result =
-        hll_interpret(vm, line, "repl",
-                      HLL_INTERPRET_PRINT_RESULT | HLL_INTERPRET_DEBUG_COLORED);
+        hll_interpret(vm, line, "repl", flags);
     result = interpret_result == HLL_RESULT_ERROR;
   }
 
@@ -138,21 +145,25 @@ static bool execute_repl(bool tty) {
   return result;
 }
 
-static bool execute_script(const char *filename) {
-  if (filename == NULL) {
+static bool execute_script(hll_options *opts) {
+  if (opts->str == NULL) {
     fprintf(stderr, "No filename provided\n");
     return true;
   }
 
-  char *file_contents = read_entire_file(filename);
+  char *file_contents = read_entire_file(opts->str);
   if (file_contents == NULL) {
-    fprintf(stderr, "failed to read file '%s'\n", filename);
+    fprintf(stderr, "failed to read file '%s'\n", opts->str);
     return true;
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
+  hll_interpret_flags flags = 0;
+  if (!opts->forbid_colors) {
+    flags |= HLL_INTERPRET_DEBUG_COLORED;
+  }
   hll_interpret_result interpret_result =
-      hll_interpret(vm, file_contents, filename, HLL_INTERPRET_DEBUG_COLORED);
+      hll_interpret(vm, file_contents, opts->str, flags);
   bool result = interpret_result == HLL_RESULT_ERROR;
   hll_delete_vm(vm);
   free(file_contents);
@@ -160,10 +171,13 @@ static bool execute_script(const char *filename) {
   return result;
 }
 
-static bool execute_string(const char *str) {
+static bool execute_string(hll_options *opts) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_result result = hll_interpret(
-      vm, str, "cli", HLL_INTERPRET_PRINT_RESULT | HLL_INTERPRET_DEBUG_COLORED);
+  hll_interpret_flags flags = HLL_INTERPRET_PRINT_RESULT;
+  if (!opts->forbid_colors) {
+    flags |= HLL_INTERPRET_DEBUG_COLORED;
+  }
+  hll_interpret_result result = hll_interpret(vm, opts->str, "cli", flags);
   hll_delete_vm(vm);
 
   return result == HLL_RESULT_ERROR;
@@ -200,16 +214,16 @@ static bool execute(hll_options *opts) {
     error = execute_dump_bytecode(opts->str);
     break;
   case HLL_MODE_EREPL:
-    error = execute_repl(true);
+    error = execute_repl(opts, true);
     break;
   case HLL_MODE_EREPL_NO_TTY:
-    error = execute_repl(false);
+    error = execute_repl(opts, false);
     break;
   case HLL_MODE_ESCRIPT:
-    error = execute_script(opts->str);
+    error = execute_script(opts);
     break;
   case HLL_MODE_ESTRING:
-    error = execute_string(opts->str);
+    error = execute_string(opts);
     break;
   case HLL_MODE_HELP:
     print_usage(stdout);

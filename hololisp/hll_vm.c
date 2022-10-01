@@ -83,8 +83,9 @@ hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
   hll_reset_debug(vm->debug);
   // Set debug colored flag
   vm->debug->flags &= ~HLL_DEBUG_DIAGNOSTICS_COLORED;
-  vm->debug->flags |=
-      HLL_DEBUG_DIAGNOSTICS_COLORED * !!(flags & HLL_INTERPRET_DEBUG_COLORED);
+  if (flags & HLL_INTERPRET_DEBUG_COLORED) {
+    vm->debug->flags |= HLL_DEBUG_DIAGNOSTICS_COLORED;
+  }
 
   hll_value compiled;
   if (!hll_compile(vm, source, name, &compiled)) {
