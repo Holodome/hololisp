@@ -127,13 +127,6 @@ HLL_PUB bool hll_is_list(hll_value value);
 
 bool hll_is_obj(hll_value value);
 
-//
-// Accessor overriding functions. By lisp standards, car returns car of object
-// if object is cons, nil if object is nil and panics otherwise.
-//
-
-HLL_PUB hll_value hll_car(hll_value lis);
-HLL_PUB hll_value hll_cdr(hll_value lis);
 HLL_PUB size_t hll_list_length(hll_value value);
 
 #endif

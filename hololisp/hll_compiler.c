@@ -126,7 +126,6 @@ typedef enum {
 
 typedef struct {
   uint32_t offset;
-  uint32_t length;
 } hll_location_sample;
 
 static size_t *get_location_entry_idx(hll_location_table *table,
@@ -376,8 +375,7 @@ lexer_error(hll_lexer *lexer, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hll_report_error(lexer->tu->vm->debug,
-                   (hll_loc){lexer->tu->translation_unit, lexer->next.offset,
-                             lexer->next.length},
+                   (hll_loc){lexer->tu->translation_unit, lexer->next.offset},
                    fmt, args);
   va_end(args);
 }
@@ -509,9 +507,8 @@ void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
   reader->tu = tu;
 }
 
-__attribute__((format(printf, 4, 5))) static void
-reader_error(hll_reader *reader, uint32_t offset, uint32_t length,
-             const char *fmt, ...) {
+__attribute__((format(printf, 3, 4))) static void
+reader_error(hll_reader *reader, uint32_t offset, const char *fmt, ...) {
   if (!reader->tu) {
     return;
   }
@@ -520,8 +517,7 @@ reader_error(hll_reader *reader, uint32_t offset, uint32_t length,
   va_list args;
   va_start(args, fmt);
   hll_report_errorv(reader->tu->vm->debug,
-                    (hll_loc){reader->tu->translation_unit, offset, length},
-                    fmt, args);
+                    (hll_loc){reader->tu->translation_unit, offset}, fmt, args);
   va_end(args);
 }
 
@@ -537,7 +533,7 @@ static void peek_token(hll_reader *reader) {
 
     if (token->kind == HLL_TOK_COMMENT) {
     } else if (token->kind == HLL_TOK_UNEXPECTED) {
-      reader_error(reader, token->offset, token->length, "Unexpected token");
+      reader_error(reader, token->offset, "Unexpected token");
     } else {
       is_done = true;
     }
@@ -571,7 +567,6 @@ static hll_value read_list(hll_reader *reader) {
   // This should be guaranteed by caller.
   assert(reader->token->kind == HLL_TOK_LPAREN);
   uint32_t head_offset = reader->token->offset;
-  uint32_t head_length = reader->token->length;
   eat_token(reader);
   // Now we expect at least one list element followed by others ending either
   // with right paren or dot, element and right paren Now check if we don't
@@ -594,7 +589,7 @@ static hll_value read_list(hll_reader *reader) {
   for (;;) {
     peek_token(reader);
     if (reader->token->kind == HLL_TOK_EOF) {
-      reader_error(reader, head_offset, head_length,
+      reader_error(reader, head_offset,
                    "Missing closing paren when reading list (eof encountered)");
       return list_head;
     } else if (reader->token->kind == HLL_TOK_RPAREN) {
@@ -606,7 +601,7 @@ static hll_value read_list(hll_reader *reader) {
 
       peek_token(reader);
       if (reader->token->kind != HLL_TOK_RPAREN) {
-        reader_error(reader, head_offset, head_length,
+        reader_error(reader, head_offset,
                      "Missing closing paren after dot when reading list");
         return list_head;
       }
@@ -662,7 +657,7 @@ static hll_value read_expr(hll_reader *reader) {
     HLL_UNREACHABLE;
     break;
   default:
-    reader_error(reader, reader->token->offset, reader->token->length,
+    reader_error(reader, reader->token->offset,
                  "Unexpected token when parsing s-expression");
     eat_token(reader);
     break;
@@ -715,10 +710,9 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(
-      compiler->tu->vm->debug,
-      (hll_loc){compiler->tu->translation_unit, loc->offset, loc->length}, fmt,
-      args);
+  hll_report_error(compiler->tu->vm->debug,
+                   (hll_loc){compiler->tu->translation_unit, loc->offset}, fmt,
+                   args);
   va_end(args);
 }
 
@@ -737,8 +731,10 @@ static void compiler_push_location(hll_compiler *compiler, hll_value value) {
 
   size_t current_op_idx = hll_bytecode_op_idx(compiler->bytecode);
   size_t section_size = current_op_idx - compiler->loc_op_idx;
-  hll_bytecode_add_loc(compiler->bytecode, section_size, e.cu, e.offset,
-                       e.length);
+  if (section_size) {
+    hll_bytecode_add_loc(compiler->bytecode, section_size, e.cu, e.offset);
+    compiler->loc_op_idx = current_op_idx;
+  }
 }
 
 static void compiler_pop_location(hll_compiler *compiler) {
@@ -748,6 +744,15 @@ static void compiler_pop_location(hll_compiler *compiler) {
 
   assert(hll_sb_len(compiler->loc_stack));
   (void)hll_sb_pop(compiler->loc_stack);
+  size_t current_op_idx = hll_bytecode_op_idx(compiler->bytecode);
+  if (hll_sb_len(compiler->loc_stack)) {
+    hll_compiler_loc_stack_entry *e = &hll_sb_last(compiler->loc_stack);
+    size_t section_size = current_op_idx - compiler->loc_op_idx;
+    if (section_size) {
+      hll_bytecode_add_loc(compiler->bytecode, section_size, e->cu, e->offset);
+    }
+  }
+  compiler->loc_op_idx = current_op_idx;
 }
 
 static hll_form_kind get_form_kind(const char *symb) {
@@ -908,7 +913,7 @@ static void compile_progn(hll_compiler *compiler, hll_value prog) {
 
   for (; hll_is_cons(prog); prog = hll_unwrap_cdr(prog)) {
     compile_eval_expression(compiler, hll_unwrap_car(prog));
-    if (hll_get_value_kind(hll_unwrap_cdr(prog)) != HLL_VALUE_NIL) {
+    if (!hll_is_nil(hll_unwrap_cdr(prog))) {
       hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
     }
   }
@@ -1632,7 +1637,20 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
 hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   hll_value result =
       hll_new_func(compiler->tu->vm, hll_nil(), compiler->bytecode);
-  compile_progn(compiler, ast);
+  compiler->bytecode->translation_unit = compiler->tu->translation_unit;
+  if (hll_is_nil(ast)) {
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  } else {
+    for (; hll_is_cons(ast); ast = hll_unwrap_cdr(ast)) {
+      hll_value expr = hll_unwrap_car(ast);
+      compiler_push_location(compiler, expr);
+      compile_eval_expression(compiler, expr);
+      if (!hll_is_nil(hll_unwrap_cdr(ast))) {
+        hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+      }
+      compiler_pop_location(compiler);
+    }
+  }
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
   return result;
 }

@@ -16,10 +16,12 @@
 
 #include "hll_hololisp.h"
 
+struct hll_bytecode;
+struct hll_call_frame;
+
 typedef struct hll_loc {
   uint32_t translation_unit;
   uint32_t offset;
-  uint32_t length;
 } hll_loc;
 
 // Debug Translation Unit.
@@ -58,6 +60,9 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
                        va_list args);
 void hll_report_error(hll_debug_storage *debug, hll_loc loc, const char *fmt,
                       ...) __attribute__((format(printf, 3, 4)));
+
+void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
+                               va_list args);
 
 void hll_debug_print_summary(hll_debug_storage *debug);
 

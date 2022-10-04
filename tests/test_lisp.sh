@@ -385,5 +385,4 @@ pos_test "restargs macro" "1" "(defmacro (&& expr . rest)
               x)))
 x"
 
-
 exit $failed

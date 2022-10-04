@@ -119,6 +119,7 @@ typedef struct hll_bytecode {
   // error message.
   struct hll_loc *locs;
   hll_bytecode_rle *loc_rle;
+  uint32_t translation_unit;
 } hll_bytecode;
 
 //
@@ -135,14 +136,14 @@ void hll_bytecode_dec_refcount(hll_bytecode *bytecode);
 
 size_t hll_get_bytecode_op_body_size(hll_bytecode_op op);
 
-size_t hll_bytecode_op_idx(hll_bytecode *bytecode);
+size_t hll_bytecode_op_idx(const hll_bytecode *bytecode);
 size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte);
 size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value);
 size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op);
 
 void hll_bytecode_add_loc(hll_bytecode *bc, size_t op_length,
-                          uint32_t compilation_unit, uint32_t offset,
-                          uint32_t length);
+                          uint32_t compilation_unit, uint32_t offset);
+uint32_t hll_bytecode_get_loc(const hll_bytecode *bc, size_t op_idx);
 
 //
 // Debug routines

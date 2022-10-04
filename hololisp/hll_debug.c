@@ -4,8 +4,47 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "hll_bytecode.h"
 #include "hll_mem.h"
 #include "hll_vm.h"
+
+typedef struct {
+  const char *line_start;
+  const char *line_end;
+  size_t line;
+  size_t column;
+} hll_src_loc_info;
+
+static hll_src_loc_info get_src_loc_info(const char *src, size_t offset) {
+  size_t line_number = 0;
+  size_t column_number = 0;
+  const char *cursor = src;
+  const char *last_line_start = src;
+  while (cursor < src + offset) {
+    int symb = *cursor++;
+    assert(symb != '\0');
+
+    if (symb == '\n') {
+      ++line_number;
+      column_number = 0;
+      last_line_start = cursor;
+    } else {
+      ++column_number;
+    }
+  }
+
+  ++line_number;
+  ++column_number;
+  const char *line_end = last_line_start;
+  while (*line_end && *line_end != '\n') {
+    ++line_end;
+  }
+
+  return (hll_src_loc_info){.line_start = last_line_start,
+                            .line_end = line_end,
+                            .line = line_number,
+                            .column = column_number};
+}
 
 void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
                        va_list args) {
@@ -26,39 +65,14 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
 
   assert(loc.translation_unit <= hll_sb_len(debug->dtus));
   hll_dtu *dtu = debug->dtus + loc.translation_unit - 1;
-
-  const char *dtu_source = dtu->source;
-
-  size_t line_number = 0;
-  size_t column_number = 0;
-  const char *cursor = dtu_source;
-  const char *last_line_start = dtu_source;
-  while (cursor < dtu_source + loc.offset) {
-    int symb = *cursor++;
-    assert(symb != '\0');
-
-    if (symb == '\n') {
-      ++line_number;
-      column_number = 0;
-      last_line_start = cursor;
-    } else {
-      ++column_number;
-    }
-  }
-
-  ++line_number;
-  ++column_number;
-  const char *line_end = last_line_start;
-  while (*line_end && *line_end != '\n') {
-    ++line_end;
-  }
+  hll_src_loc_info info = get_src_loc_info(dtu->source, loc.offset);
 
   if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
     error_fn(debug->vm, "\033[1m");
   }
   char buffer[4096];
-  snprintf(buffer, sizeof(buffer), "%s:%zu:%zu: ", dtu->name, line_number,
-           column_number);
+  snprintf(buffer, sizeof(buffer), "%s:%zu:%zu: ", dtu->name, info.line,
+           info.column);
   error_fn(debug->vm, buffer);
 
   if (debug->flags & HLL_DEBUG_DIAGNOSTICS_COLORED) {
@@ -78,8 +92,8 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
     error_fn(debug->vm, "\033[0m");
   }
 
-  snprintf(buffer, sizeof(buffer), "%.*s\n", (int)(line_end - last_line_start),
-           last_line_start);
+  snprintf(buffer, sizeof(buffer), "%.*s\n",
+           (int)(info.line_end - info.line_start), info.line_start);
 
   error_fn(debug->vm, buffer);
 
@@ -87,9 +101,8 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
     error_fn(debug->vm, "\033[32;1m");
   }
 
-  if (cursor - last_line_start != 0) {
-    snprintf(buffer, sizeof(buffer), "%*c^\n", (int)(cursor - last_line_start),
-             ' ');
+  if (info.column != 1) {
+    snprintf(buffer, sizeof(buffer), "%*c^\n", (int)info.column - 1, ' ');
     error_fn(debug->vm, buffer);
   } else {
     snprintf(buffer, sizeof(buffer), "^\n");
@@ -145,4 +158,17 @@ void hll_debug_print_summary(hll_debug_storage *debug) {
   if (error_fn != NULL) {
     error_fn(debug->vm, buffer);
   }
+}
+
+void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
+                               va_list args) {
+  hll_call_frame *f = &hll_sb_last(debug->vm->call_stack);
+  size_t op_idx = f->ip - f->bytecode->ops;
+  assert(op_idx);
+  --op_idx;
+  uint32_t offset = hll_bytecode_get_loc(f->bytecode, op_idx);
+  uint32_t translation_unit = f->bytecode->translation_unit;
+  hll_report_errorv(
+      debug, (hll_loc){.offset = offset, .translation_unit = translation_unit},
+      fmt, args);
 }

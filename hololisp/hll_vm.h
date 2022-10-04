@@ -7,10 +7,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <setjmp.h>
 
 #include "hll_hololisp.h"
 
-typedef struct {
+typedef struct hll_call_frame {
   const struct hll_bytecode *bytecode;
   const uint8_t *ip;
   hll_value env;
@@ -34,6 +35,8 @@ typedef struct hll_vm {
   hll_value *stack;
   hll_call_frame *call_stack;
   hll_value env;
+
+  jmp_buf err_jmp;
 } hll_vm;
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
@@ -59,5 +62,13 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled);
 
 void hll_print(hll_vm *vm, const char *str);
+
+//
+// Accessor overriding functions. By lisp standards, car returns car of object
+// if object is cons, nil if object is nil and panics otherwise.
+//
+
+HLL_PUB hll_value hll_car(hll_vm *vm, hll_value lis);
+HLL_PUB hll_value hll_cdr(hll_vm *vm, hll_value lis);
 
 #endif

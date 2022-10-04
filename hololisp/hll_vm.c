@@ -195,12 +195,18 @@ __attribute__((format(printf, 2, 3))) void
 hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(vm->debug, (hll_loc){0}, fmt, args);
+  hll_report_runtime_errorv(vm->debug, fmt, args);
   va_end(args);
+
+  longjmp(vm->err_jmp, 1);
 }
 
 hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled) {
+  if (setjmp(vm->err_jmp) == 1) {
+    goto bail;
+  }
+
   hll_gc_push_temp_root(vm->gc, compiled);
   hll_bytecode *initial_bytecode;
   if (hll_get_value_kind(compiled) == HLL_VALUE_FUNC) {
@@ -267,7 +273,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
           hll_runtime_error(vm,
                             "tail operand of APPEND is not a cons (found %s)",
                             hll_get_value_kind_str(hll_get_value_kind(*tailp)));
-          goto bail;
         }
         hll_unwrap_cons(*tailp)->cdr = cons;
         *tailp = cons;
@@ -280,7 +285,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_VALUE_SYMB)) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
                           hll_get_value_kind_str(hll_get_value_kind(symb)));
-        goto bail;
       }
 
       hll_value found;
@@ -328,7 +332,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                param_value = hll_unwrap_cdr(param_value)) {
             if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
               hll_runtime_error(vm, "number of arguments does not match");
-              goto bail;
             }
             hll_value name = hll_unwrap_car(param_name);
             assert(hll_is_symb(name));
@@ -365,7 +368,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       default:
         hll_runtime_error(vm, "object is not callable (got %s)",
                           hll_get_value_kind_str(hll_get_value_kind(callable)));
-        goto bail;
         break;
       }
 
@@ -412,7 +414,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, cons);
-      hll_value car = hll_car(cons);
+      hll_value car = hll_car(vm, cons);
       hll_gc_pop_temp_root(vm->gc); // cons
       hll_sb_push(vm->stack, car);
     } break;
@@ -420,7 +422,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, cons);
-      hll_value cdr = hll_cdr(cons);
+      hll_value cdr = hll_cdr(vm, cons);
       hll_gc_pop_temp_root(vm->gc); // cons
       hll_sb_push(vm->stack, cdr);
     } break;
@@ -466,7 +468,8 @@ hll_interpret_result hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
                                             bool print_result) {
   hll_value result =
       hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
-  if (print_result) {
+
+  if (print_result && !vm->debug->error_count) {
     hll_print_value(vm, result);
     printf("\n");
   }
@@ -511,3 +514,30 @@ void hll_print(hll_vm *vm, const char *str) {
     vm->config.write_fn(vm, str);
   }
 }
+
+hll_value hll_car(hll_vm *vm, hll_value lis) {
+  if (hll_is_nil(lis)) {
+    return lis;
+  }
+
+  if (hll_is_cons(lis)) {
+    return hll_unwrap_car(lis);
+  }
+
+  hll_runtime_error(vm, "'car' argument is not a list");
+  return lis;
+}
+
+hll_value hll_cdr(hll_vm *vm, hll_value lis) {
+  if (hll_is_nil(lis)) {
+    return lis;
+  }
+
+  if (hll_is_cons(lis)) {
+    return hll_unwrap_cdr(lis);
+  }
+
+  hll_runtime_error(vm, "'cdr' argument is not a list");
+  return lis;
+}
+

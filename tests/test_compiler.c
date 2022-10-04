@@ -3,6 +3,7 @@
 #include "../hololisp/hll_mem.h"
 #include "../hololisp/hll_value.h"
 #include "../hololisp/hll_vm.h"
+#include "../hololisp/hll_debug.h"
 
 #define TEST_MSG_MAXSIZE 16384
 #include "acutest.h"
@@ -495,6 +496,30 @@ static void test_compiler_compiles_lambda(void) {
                        function_bytecode_compiled);
 }
 
+static void test_compiler_generates_location_info(void) {
+  const char *source = "(car 1)";
+  uint8_t bytecode[] = {HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_CAR,
+                        HLL_BYTECODE_END};
+
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_value result;
+  bool is_compiled = hll_compile(vm, source, "", &result);
+  TEST_ASSERT(is_compiled);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
+
+  /* __builtin_dump_struct(compiled, &printf); */
+
+  TEST_ASSERT(hll_sb_len(compiled->loc_rle) == 1);
+  TEST_ASSERT(hll_sb_len(compiled->locs) == 1);
+  /* __builtin_dump_struct(compiled->locs, &printf); */
+  /* __builtin_dump_struct(compiled->loc_rle, &printf); */
+  TEST_ASSERT(compiled->loc_rle->loc_idx == 0);
+  TEST_ASSERT(compiled->loc_rle->length = 4);
+  TEST_ASSERT(compiled->locs->offset == 1);
+  
+}
+
 #define TCASE(_name)                                                           \
   { #_name, _name }
 
@@ -510,4 +535,5 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_setf_cdr),
              TCASE(test_compiler_compiles_macro),
              TCASE(test_compiler_compiles_lambda),
+             TCASE(test_compiler_generates_location_info),
              {NULL, NULL}};
