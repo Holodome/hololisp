@@ -15,7 +15,7 @@ LOCAL_CFLAGS = -std=c99 -I$(SRC_DIR) -pedantic -Wshadow -Wextra -Wall -Werror
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OUT_DIR)/$*.d
 
 ifneq (,$(ASAN))
-	CFLAGS += -fsanitize=address
+	CFLAGS += -fsanitize=address 
 	LDFLAGS += -fsanitize=address
 endif
 

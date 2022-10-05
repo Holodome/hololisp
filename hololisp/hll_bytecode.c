@@ -283,4 +283,3 @@ void dump_function_info(void *file, hll_value value) {
 void hll_dump_program_info(void *file, hll_value program) {
   hll_dump_value(file, program);
 }
-

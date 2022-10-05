@@ -449,13 +449,16 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   }
 
   goto out;
+#define _FREE                                                                  \
+  hll_sb_free(vm->stack);                                                      \
+  hll_sb_free(vm->call_stack);
 bail:
+  _FREE
   return hll_nil();
 out:
   assert(hll_sb_len(vm->stack));
   hll_value result = vm->stack[0];
-  hll_sb_free(vm->stack);
-  hll_sb_free(vm->call_stack);
+  _FREE
   vm->call_stack = NULL;
   vm->stack = NULL;
 
@@ -540,4 +543,3 @@ hll_value hll_cdr(hll_vm *vm, hll_value lis) {
   hll_runtime_error(vm, "'cdr' argument is not a list");
   return lis;
 }
-

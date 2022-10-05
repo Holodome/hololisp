@@ -1,9 +1,9 @@
 #include "../hololisp/hll_bytecode.h"
 #include "../hololisp/hll_compiler.h"
+#include "../hololisp/hll_debug.h"
 #include "../hololisp/hll_mem.h"
 #include "../hololisp/hll_value.h"
 #include "../hololisp/hll_vm.h"
-#include "../hololisp/hll_debug.h"
 
 #define TEST_MSG_MAXSIZE 16384
 #include "acutest.h"
@@ -517,7 +517,6 @@ static void test_compiler_generates_location_info(void) {
   TEST_ASSERT(compiled->loc_rle->loc_idx == 0);
   TEST_ASSERT(compiled->loc_rle->length = 4);
   TEST_ASSERT(compiled->locs->offset == 1);
-  
 }
 
 #define TCASE(_name)                                                           \

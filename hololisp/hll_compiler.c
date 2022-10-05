@@ -716,9 +716,13 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
   va_end(args);
 }
 
-static void compiler_push_location(hll_compiler *compiler, hll_value value) {
+static bool compiler_push_location(hll_compiler *compiler, hll_value value) {
   if (compiler->tu == NULL || !(compiler->tu->flags & HLL_TU_FLAG_DEBUG)) {
-    return;
+    return false;
+  }
+
+  if (!hll_is_obj(value)) {
+    return false;
   }
 
   uint64_t hash = hash_value(value);
@@ -735,9 +739,15 @@ static void compiler_push_location(hll_compiler *compiler, hll_value value) {
     hll_bytecode_add_loc(compiler->bytecode, section_size, e.cu, e.offset);
     compiler->loc_op_idx = current_op_idx;
   }
+
+  return true;
 }
 
-static void compiler_pop_location(hll_compiler *compiler) {
+static void compiler_pop_location(hll_compiler *compiler, bool skip) {
+  if (!skip) {
+    return;
+  }
+
   if (compiler->tu == NULL || !(compiler->tu->flags & HLL_TU_FLAG_DEBUG)) {
     return;
   }
@@ -1565,7 +1575,7 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_VALUE_CONS: {
-    compiler_push_location(compiler, ast);
+    bool pop = compiler_push_location(compiler, ast);
     hll_value fn = hll_unwrap_car(ast);
     hll_form_kind kind = HLL_FORM_REGULAR;
     if (hll_is_symb(fn)) {
@@ -1573,7 +1583,7 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
     }
 
     compile_form(compiler, ast, kind);
-    compiler_pop_location(compiler);
+    compiler_pop_location(compiler, pop);
   } break;
   case HLL_VALUE_SYMB:
     compile_symbol(compiler, ast);
@@ -1607,7 +1617,7 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
 
     hll_value obj = ast;
-    compiler_push_location(compiler, obj);
+    bool pop = compiler_push_location(compiler, obj);
     while (!hll_is_nil(obj)) {
       assert(hll_is_cons(obj));
       compile_expression(compiler, hll_unwrap_car(obj));
@@ -1622,7 +1632,7 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
 
       obj = cdr;
     }
-    compiler_pop_location(compiler);
+    compiler_pop_location(compiler, pop);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   } break;
   case HLL_VALUE_SYMB:
@@ -1643,12 +1653,12 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   } else {
     for (; hll_is_cons(ast); ast = hll_unwrap_cdr(ast)) {
       hll_value expr = hll_unwrap_car(ast);
-      compiler_push_location(compiler, expr);
+      bool pop = compiler_push_location(compiler, expr);
       compile_eval_expression(compiler, expr);
       if (!hll_is_nil(hll_unwrap_cdr(ast))) {
         hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
       }
-      compiler_pop_location(compiler);
+      compiler_pop_location(compiler, pop);
     }
   }
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);

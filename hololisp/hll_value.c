@@ -287,4 +287,3 @@ bool hll_is_symb(hll_value value) {
 bool hll_is_list(hll_value value) {
   return hll_is_cons(value) || hll_is_nil(value);
 }
-

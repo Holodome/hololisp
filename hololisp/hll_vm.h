@@ -5,9 +5,9 @@
 #ifndef HLL_VM_H
 #define HLL_VM_H
 
+#include <setjmp.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <setjmp.h>
 
 #include "hll_hololisp.h"
 
