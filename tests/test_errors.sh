@@ -15,15 +15,15 @@ panic () {
 test_error () {
   echo -n "Testing $1 ... "
 
-  error=$($EXECUTABLE -m -e "$3" 2>&1 > /dev/null)
-  if [ -z "$error" ]; then 
+  result=$($EXECUTABLE -m -e "$3" 2>&1 > /dev/null)
+  error=$?
+  if [ "$error" != 1 ]; then
     echo FAILED error code
     panic "$1"
     return
   fi 
 
-  result=$(($EXECUTABLE -m -e "$3" 1> /dev/null) 2>&1)
-  if [ "$result" != "$2" ]; then 
+  if [ "$result" != "$2" ]; then
     echo FAILED
     panic "'$2' expected, but got '$result'"
     return 

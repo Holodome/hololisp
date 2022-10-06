@@ -364,7 +364,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
       }
     }
   } else {
-    hll_runtime_error(vm, "'range' form expects at least single argument");
+    hll_runtime_error(vm, "'range' form expects at least 1 argument");
     return hll_nil();
   }
 
@@ -402,7 +402,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
 
 static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
   if (HLL_UNLIKELY(hll_get_value_kind(args) != HLL_VALUE_CONS)) {
-    hll_runtime_error(vm, "min' form expects at least single argument");
+    hll_runtime_error(vm, "min' form expects at least 1 argument");
     return hll_nil();
   }
 
@@ -425,7 +425,7 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
 
 static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
   if (HLL_UNLIKELY(hll_get_value_kind(args) != HLL_VALUE_CONS)) {
-    hll_runtime_error(vm, "max' form expects at least single argument");
+    hll_runtime_error(vm, "max' form expects at least 1 argument");
     return hll_nil();
   }
 

@@ -484,6 +484,8 @@ hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
   hll_translation_unit tu = {0};
   tu.vm = vm;
   tu.flags = flags;
+  tu.name = name;
+  tu.source = source;
 
   if (flags & HLL_TU_FLAG_DEBUG) {
     tu.locs = hll_alloc(sizeof(*tu.locs));
@@ -695,6 +697,7 @@ void hll_compiler_init(hll_compiler *compiler, hll_value env,
   compiler->tu = tu;
   compiler->env = env;
   compiler->bytecode = hll_new_bytecode();
+  compiler->bytecode->translation_unit = tu->translation_unit;
 }
 
 __attribute__((format(printf, 3, 4))) static void
@@ -904,10 +907,11 @@ static void compile_function_call(hll_compiler *compiler, hll_value list) {
 }
 
 static void compile_quote(hll_compiler *compiler, hll_value args) {
-  if (!hll_is_cons(args)) {
+  if (hll_list_length(args) == 1) {
     compiler_error(compiler, args, "'quote' form must have an argument");
     return;
   }
+  args = hll_unwrap_cdr(args);
   if (!hll_is_nil(hll_unwrap_cdr(args))) {
     compiler_error(compiler, args,
                    "'quote' form must have exactly one argument");
@@ -915,7 +919,7 @@ static void compile_quote(hll_compiler *compiler, hll_value args) {
   compile_expression(compiler, hll_unwrap_car(args));
 }
 
-static void compile_progn(hll_compiler *compiler, hll_value prog) {
+static void compile_progn_internal(hll_compiler *compiler, hll_value prog) {
   if (hll_is_nil(prog)) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
@@ -929,12 +933,16 @@ static void compile_progn(hll_compiler *compiler, hll_value prog) {
   }
 }
 
+static void compile_progn(hll_compiler *compiler, hll_value prog) {
+  compile_progn_internal(compiler, hll_unwrap_cdr(prog));
+}
+
 static void compile_if(hll_compiler *compiler, hll_value args) {
-  size_t length = hll_list_length(args);
-  if (length < 2) {
+  if (hll_list_length(args) < 3) {
     compiler_error(compiler, args, "'if' form expects at least 2 arguments");
     return;
   }
+  args = hll_unwrap_cdr(args);
 
   hll_value cond = hll_unwrap_car(args);
   compile_eval_expression(compiler, cond);
@@ -951,18 +959,18 @@ static void compile_if(hll_compiler *compiler, hll_value args) {
   size_t jump_out = hll_bytecode_emit_u16(compiler->bytecode, 0);
   write_u16_be(compiler->bytecode->ops + jump_false,
                hll_bytecode_op_idx(compiler->bytecode) - jump_false - 2);
-  compile_progn(compiler, neg_arm);
+  compile_progn_internal(compiler, neg_arm);
   write_u16_be(compiler->bytecode->ops + jump_out,
                hll_bytecode_op_idx(compiler->bytecode) - jump_out - 2);
 }
 
 static void compile_let(hll_compiler *compiler, hll_value args) {
-  size_t length = hll_list_length(args);
-  if (length < 1) {
+  if (hll_list_length(args) < 2) {
     compiler_error(compiler, args,
                    "'let' special form requires variable declarations");
     return;
   }
+  args = hll_unwrap_cdr(args);
 
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
   for (hll_value let = hll_unwrap_car(args); !hll_is_nil(let);
@@ -983,16 +991,17 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
   }
 
-  compile_progn(compiler, hll_unwrap_cdr(args));
+  compile_progn_internal(compiler, hll_unwrap_cdr(args));
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
 }
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
   static void compile_c##_lower##r(hll_compiler *compiler, hll_value args) {   \
-    if (hll_list_length(args) != 1) {                                          \
+    if (hll_list_length(args) != 2) {                                          \
       compiler_error(compiler, args,                                           \
                      "'c" #_lower "r' expects exactly 1 argument");            \
     } else {                                                                   \
+      args = hll_unwrap_cdr(args);                                             \
       compile_eval_expression(compiler, hll_unwrap_car(args));                 \
       const char *ops = #_lower;                                               \
       const char *op = ops + sizeof(#_lower) - 2;                              \
@@ -1039,12 +1048,12 @@ static hll_location_form get_location_form(hll_value location) {
   return kind;
 }
 
-static void compile_set_location(hll_compiler *compiler, hll_value location,
-                                 hll_value value) {
+static void compile_set_location(hll_compiler *compiler, hll_value location, 
+                                 hll_value value, hll_value reporter) {
   hll_location_form kind = get_location_form(location);
   switch (kind) {
   case HLL_LOC_NONE:
-    compiler_error(compiler, location, "location is not valid");
+    compiler_error(compiler, reporter, "location is not valid");
     break;
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
@@ -1054,7 +1063,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     break;
   case HLL_LOC_FORM_NTHCDR:
     if (hll_list_length(location) != 3) {
-      compiler_error(compiler, location,
+      compiler_error(compiler, reporter,
                      "'nthcdr' expects exactly 2 arguments");
       break;
     }
@@ -1069,7 +1078,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     break;
   case HLL_LOC_FORM_NTH: {
     if (hll_list_length(location) != 3) {
-      compiler_error(compiler, location, "'nth' expects exactly 2 arguments");
+      compiler_error(compiler, reporter, "'nth' expects exactly 2 arguments");
       break;
     }
     // get the nth function
@@ -1084,7 +1093,7 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_LOC_FORM_C##_upper##R: {                                            \
     if (hll_list_length(location) != 2) {                                      \
-      compiler_error(compiler, location,                                       \
+      compiler_error(compiler, reporter,                                       \
                      "'c" #_lower "r' expects exactly 1 argument");            \
       break;                                                                   \
     }                                                                          \
@@ -1124,29 +1133,29 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
 }
 
 static void compile_setf(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) < 1) {
+  if (hll_list_length(args) < 2) {
     compiler_error(compiler, args, "'set!' expects at least 1 argument");
     return;
   }
 
-  hll_value location = hll_unwrap_car(args);
-  hll_value value = hll_unwrap_cdr(args);
+  hll_value location = hll_unwrap_car(hll_unwrap_cdr(args));
+  hll_value value = hll_unwrap_cdr(hll_unwrap_cdr(args));
   if (hll_is_cons(value)) {
     assert(hll_is_nil(hll_unwrap_cdr(value)));
     value = hll_unwrap_car(value);
   }
 
-  compile_set_location(compiler, location, value);
+  compile_set_location(compiler, location, value, args);
 }
 
 static void compile_setcar(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) != 2) {
+  if (hll_list_length(args) != 3) {
     compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
-  hll_value location = hll_unwrap_car(args);
-  hll_value value = hll_unwrap_cdr(args);
+  hll_value location = hll_unwrap_car(hll_unwrap_cdr(args));
+  hll_value value = hll_unwrap_cdr(hll_unwrap_cdr(args));
   if (hll_is_cons(value)) {
     assert(hll_is_nil(hll_unwrap_cdr(value)));
     value = hll_unwrap_car(value);
@@ -1158,13 +1167,13 @@ static void compile_setcar(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_setcdr(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) != 2) {
+  if (hll_list_length(args) != 3) {
     compiler_error(compiler, args, "'setcar!' expects exactly 2 arguments");
     return;
   }
 
-  hll_value location = hll_unwrap_car(args);
-  hll_value value = hll_unwrap_cdr(args);
+  hll_value location = hll_unwrap_car(hll_unwrap_cdr(args));
+  hll_value value = hll_unwrap_cdr(hll_unwrap_cdr(args));
   if (hll_is_cons(value)) {
     assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
     value = hll_unwrap_car(value);
@@ -1176,6 +1185,7 @@ static void compile_setcdr(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_list(hll_compiler *compiler, hll_value args) {
+  args = hll_unwrap_cdr(args);
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   for (hll_value arg = args; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
@@ -1188,10 +1198,11 @@ static void compile_list(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_cons(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) != 2) {
+  if (hll_list_length(args) != 3) {
     compiler_error(compiler, args, "'cons' expects exactly 2 arguments");
     return;
   }
+  args = hll_unwrap_cdr(args);
 
   hll_value car = hll_unwrap_car(args);
   hll_value cdr = hll_unwrap_car(hll_unwrap_cdr(args));
@@ -1225,13 +1236,12 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 }
 
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
-                                      hll_value body, bool is_macro,
-                                      hll_value *compiled_) {
-  // TODO: Locations
-  hll_translation_unit tu = hll_make_tu(compiler->tu->vm, NULL, NULL, 0);
+                                      hll_value report, hll_value body,
+                                      bool is_macro, hll_value *compiled_) {
   hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->tu->vm->env, &tu);
+  hll_compiler_init(&new_compiler, compiler->tu->vm->env, compiler->tu);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
+  hll_sb_free(new_compiler.loc_stack);
   if (new_compiler.error_count != 0) {
     compiler->error_count += new_compiler.error_count;
     return false;
@@ -1246,7 +1256,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       &param_list_tail);
   } else {
     if (!hll_is_list(params)) {
-      compiler_error(compiler, params, "param list must be a list");
+      compiler_error(compiler, report, "param list must be a list");
       return false;
     }
 
@@ -1254,7 +1264,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     for (; hll_is_cons(obj); obj = hll_unwrap_cdr(obj)) {
       hll_value car = hll_unwrap_car(obj);
       if (!hll_is_symb(car)) {
-        compiler_error(compiler, car, "function param name is not a symbol");
+        compiler_error(compiler, obj, "function param name is not a symbol");
         return false;
       }
 
@@ -1289,9 +1299,11 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
 }
 
 static bool compile_function(hll_compiler *compiler, hll_value params,
-                             hll_value body, uint16_t *idx) {
+                             hll_value reporter, hll_value body,
+                             uint16_t *idx) {
   hll_value func;
-  if (!compile_function_internal(compiler, params, body, false, &func)) {
+  if (!compile_function_internal(compiler, params, reporter, body, false,
+                                 &func)) {
     return true;
   }
 
@@ -1305,17 +1317,17 @@ static bool compile_function(hll_compiler *compiler, hll_value params,
 }
 
 static void compile_lambda(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) < 2) {
+  if (hll_list_length(args) < 3) {
     compiler_error(compiler, args, "'lambda' expects at least 2 arguments");
     return;
   }
 
-  hll_value params = hll_unwrap_car(args);
-  args = hll_unwrap_cdr(args);
+  hll_value params = hll_unwrap_car(hll_unwrap_cdr(args));
+  args = hll_unwrap_cdr(hll_unwrap_cdr(args));
   hll_value body = args;
 
   uint16_t function_idx;
-  if (compile_function(compiler, params, body, &function_idx)) {
+  if (compile_function(compiler, params, args, body, &function_idx)) {
     return;
   }
 
@@ -1324,10 +1336,11 @@ static void compile_lambda(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_and(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 0) {
+  if (hll_list_length(args) == 1) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
     return;
   }
+  args = hll_unwrap_cdr(args);
 
   size_t last_jump = 0;
   size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
@@ -1364,10 +1377,11 @@ static void compile_and(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_or(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 0) {
+  if (hll_list_length(args) == 1) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
     return;
   }
+  args = hll_unwrap_cdr(args);
 
   size_t previous_jump = 0;
   size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
@@ -1411,14 +1425,14 @@ static void compile_or(hll_compiler *compiler, hll_value args) {
 }
 
 static void process_defmacro(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) < 2) {
+  if (hll_list_length(args) < 3) {
     compiler_error(compiler, args, "'defmacro' expects at least 2 arguments");
     return;
   }
 
-  hll_value control = hll_unwrap_car(args);
+  hll_value control = hll_unwrap_car(hll_unwrap_cdr(args));
   if (!hll_is_cons(control)) {
-    compiler_error(compiler, control,
+    compiler_error(compiler, args,
                    "'defmacro' first argument must be list of macro name and "
                    "its parameters");
     return;
@@ -1426,17 +1440,17 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
 
   hll_value name = hll_unwrap_car(control);
   if (hll_get_value_kind(name) != HLL_VALUE_SYMB) {
-    compiler_error(compiler, name, "'defmacro' name should be a symbol");
+    compiler_error(compiler, args, "'defmacro' name should be a symbol");
     return;
   }
 
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   hll_value params = hll_unwrap_cdr(control);
-  hll_value body = hll_unwrap_cdr(args);
+  hll_value body = hll_unwrap_cdr(hll_unwrap_cdr(args));
 
   hll_value macro_expansion;
 
-  if (compile_function_internal(compiler, params, body, true,
+  if (compile_function_internal(compiler, params, args, body, true,
                                 &macro_expansion)) {
     /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
     /*   compiler_error(compiler, name, "Macro with same name already exists
@@ -1449,19 +1463,19 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
 }
 
 static void compile_define(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 0) {
+  if (hll_list_length(args) == 1) {
     compiler_error(compiler, args,
-                   "'define' form expects at least one argument");
+                   "'define' form expects at least 1 argument");
     return;
   }
 
-  hll_value decide = hll_unwrap_car(args);
-  hll_value rest = hll_unwrap_cdr(args);
+  hll_value decide = hll_unwrap_car(hll_unwrap_cdr(args));
+  hll_value rest = hll_unwrap_cdr(hll_unwrap_cdr(args));
 
   if (hll_is_cons(decide)) {
     hll_value name = hll_unwrap_car(decide);
     if (!hll_is_symb(name)) {
-      compiler_error(compiler, name, "'define' name should be a symbol");
+      compiler_error(compiler, args, "'define' name should be a symbol");
       return;
     }
 
@@ -1471,7 +1485,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     compile_expression(compiler, name);
 
     uint16_t function_idx;
-    if (compile_function(compiler, params, body, &function_idx)) {
+    if (compile_function(compiler, params, args, body, &function_idx)) {
       return;
     }
 
@@ -1498,11 +1512,6 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
 
 static void compile_form(hll_compiler *compiler, hll_value args,
                          hll_form_kind kind) {
-  if (kind != HLL_FORM_REGULAR) {
-    assert(hll_is_cons(args));
-    args = hll_unwrap_cdr(args);
-  }
-
   switch (kind) {
   case HLL_FORM_REGULAR:
     compile_function_call(compiler, args);
@@ -1647,7 +1656,6 @@ static void compile_expression(hll_compiler *compiler, hll_value ast) {
 hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   hll_value result =
       hll_new_func(compiler->tu->vm, hll_nil(), compiler->bytecode);
-  compiler->bytecode->translation_unit = compiler->tu->translation_unit;
   if (hll_is_nil(ast)) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
   } else {

@@ -72,6 +72,8 @@ typedef struct {
   // Pointer to location table. Location table is populated during parsing,
   // and information stored in it is later used when building bytecode.
   hll_location_table *locs;
+  const char *name;
+  const char *source;
   struct hll_vm *vm;
   hll_tu_flags flags;
 } hll_translation_unit;

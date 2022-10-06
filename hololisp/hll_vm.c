@@ -471,6 +471,9 @@ hll_interpret_result hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
                                             bool print_result) {
   hll_value result =
       hll_interpret_bytecode_internal(vm, vm->global_env, compiled);
+  if (vm->debug->error_count != 0) {
+    return HLL_RESULT_ERROR;
+  }
 
   if (print_result && !vm->debug->error_count) {
     hll_print_value(vm, result);

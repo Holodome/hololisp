@@ -15,17 +15,18 @@ panic () {
 pos_test () {
   echo -n "Testing $1 ... "
 
-  error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
-  if [ -n "$error" ]; then
-    echo FAILED
-    panic "$error"
+  result=$($EXECUTABLE -e "$3" 2> /dev/null)
+  error=$?
+  if [ "$error" != 0 ]; then
+    echo FAILED 
+    panic "return code $1"
     return 
   fi
 
-  result=$($EXECUTABLE -e "$3" 2> /dev/null | tail -1)
+  result=$(echo "$result" | tail -1)
   if [ "$result" != "$2" ]; then
     echo FAILED
-    panic "'$2' expected, but got '$result'"
+    panic "'$2' expected, but got '$result' $1"
     return 
   fi
 
@@ -34,9 +35,10 @@ pos_test () {
 
 neg_test () {
   echo -n "Testing $1 ... "
-  error=$($EXECUTABLE -e "$2" 2>&1 > /dev/null)
-  if [ -z "$error" ]; then
-    echo FAILED
+  $EXECUTABLE -e "$2" > /dev/null 2>&1 
+  error=$?
+  if [ "$error" != 1 ]; then
+    echo FAILED 
     panic "$1"
     return
   fi

@@ -1,5 +1,7 @@
 # Compiler 
 
+hololisp compiles to bytecode prior to execution, similar to python. This allows language to run much faster at cost of having number of restrictions.
+
 ## Lexer 
 
 Lexer is coded using FSM based on two-action loop parsing and finaliziation of token after that. For more information please refer to [Some Strategies For Fast Lexical Analysis when Parsing Programming Languages](https://nothings.org/computer/lexing.html).
@@ -36,6 +38,8 @@ switch (state) {
 ## Bytecode generator 
 
 ## Diagnostics 
+
+The more interesting fact about the process of compiling is that it is trivial to do until you want to get something user-friendly out of it. This is only understood when writing diagnostic messages. In the last years a lot of research has been done in this theme. Generating good error messages is generally considered extremely complex task. Complexity mostly arises because diagnostic messages are executed in environment separate from execution. This is very important for compiler design. For example, compiler that is heavily optimized for speed likely will not generate even remotely meaningful error messages, as well as it is very hard to write efficient compiler when generating debug information.
 
 Generation of decent error messages is arguably the single most complicated part
 of virtual machine. The difficulty comes from the need to minimize slowdown 
