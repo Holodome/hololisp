@@ -138,6 +138,11 @@ hll_debug_storage *hll_make_debug(hll_vm *vm, hll_debug_flags flags) {
 }
 
 void hll_delete_debug(hll_debug_storage *ds) {
+  for (size_t i = 0; i < hll_sb_len(ds->dtus); ++i) {
+    hll_dtu *dtu = ds->dtus + i;
+    hll_sb_free(dtu->locs);
+    hll_sb_free(dtu->loc_rle);
+  }
   hll_sb_free(ds->dtus);
   hll_free(ds, sizeof(*ds));
 }
@@ -166,9 +171,47 @@ void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
   size_t op_idx = f->ip - f->bytecode->ops;
   assert(op_idx);
   --op_idx;
-  uint32_t offset = hll_bytecode_get_loc(f->bytecode, op_idx);
+  uint32_t offset =
+      hll_bytecode_get_loc(debug, f->bytecode->translation_unit, op_idx);
   uint32_t translation_unit = f->bytecode->translation_unit;
   hll_report_errorv(
       debug, (hll_loc){.offset = offset, .translation_unit = translation_unit},
       fmt, args);
+}
+
+void hll_bytecode_add_loc(hll_debug_storage *debug, uint32_t translation_unit,
+                          size_t op_length, uint32_t compilation_unit,
+                          uint32_t offset) {
+  hll_dtu *dtu = debug->dtus + translation_unit - 1;
+  assert(dtu <= &hll_sb_last(debug->dtus));
+  hll_loc bc_loc = {
+      .translation_unit = compilation_unit,
+      .offset = offset,
+  };
+  hll_sb_push(dtu->locs, bc_loc);
+
+  assert(op_length);
+  hll_bytecode_rle rle = {.length = op_length,
+                          .loc_idx = hll_sb_len(dtu->locs) - 1};
+  hll_sb_push(dtu->loc_rle, rle);
+}
+
+uint32_t hll_bytecode_get_loc(hll_debug_storage *debug,
+                              uint32_t translation_unit, size_t op_idx) {
+  hll_dtu *dtu = debug->dtus + translation_unit - 1;
+  assert(dtu <= &hll_sb_last(debug->dtus));
+  size_t cursor = 0;
+  hll_bytecode_rle *rle = dtu->loc_rle;
+  assert(rle);
+  for (;;) {
+    if (cursor <= op_idx && op_idx < cursor + rle->length) {
+      break;
+    }
+    cursor += rle->length;
+    ++rle;
+
+    assert(rle <= &hll_sb_last(dtu->loc_rle));
+  }
+
+  return dtu->locs[rle->loc_idx].offset;
 }

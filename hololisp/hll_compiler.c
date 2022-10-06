@@ -739,7 +739,9 @@ static bool compiler_push_location(hll_compiler *compiler, hll_value value) {
   size_t current_op_idx = hll_bytecode_op_idx(compiler->bytecode);
   size_t section_size = current_op_idx - compiler->loc_op_idx;
   if (section_size) {
-    hll_bytecode_add_loc(compiler->bytecode, section_size, e.cu, e.offset);
+    hll_bytecode_add_loc(compiler->tu->vm->debug,
+                         compiler->tu->translation_unit, section_size, e.cu,
+                         e.offset);
     compiler->loc_op_idx = current_op_idx;
   }
 
@@ -762,7 +764,9 @@ static void compiler_pop_location(hll_compiler *compiler, bool skip) {
     hll_compiler_loc_stack_entry *e = &hll_sb_last(compiler->loc_stack);
     size_t section_size = current_op_idx - compiler->loc_op_idx;
     if (section_size) {
-      hll_bytecode_add_loc(compiler->bytecode, section_size, e->cu, e->offset);
+      hll_bytecode_add_loc(compiler->tu->vm->debug,
+                           compiler->tu->translation_unit, section_size, e->cu,
+                           e->offset);
     }
   }
   compiler->loc_op_idx = current_op_idx;
@@ -1048,7 +1052,7 @@ static hll_location_form get_location_form(hll_value location) {
   return kind;
 }
 
-static void compile_set_location(hll_compiler *compiler, hll_value location, 
+static void compile_set_location(hll_compiler *compiler, hll_value location,
                                  hll_value value, hll_value reporter) {
   hll_location_form kind = get_location_form(location);
   switch (kind) {
@@ -1464,8 +1468,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
 
 static void compile_define(hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) == 1) {
-    compiler_error(compiler, args,
-                   "'define' form expects at least 1 argument");
+    compiler_error(compiler, args, "'define' form expects at least 1 argument");
     return;
   }
 

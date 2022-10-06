@@ -99,8 +99,6 @@ void hll_bytecode_dec_refcount(hll_bytecode *bytecode) {
   if (bytecode->refcount == 0) {
     hll_sb_free(bytecode->ops);
     hll_sb_free(bytecode->constant_pool);
-    hll_sb_free(bytecode->locs);
-    hll_sb_free(bytecode->loc_rle);
     hll_free(bytecode, sizeof(hll_bytecode));
   }
 }
@@ -124,37 +122,6 @@ size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value) {
 size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op) {
   assert(op <= 0xFF);
   return hll_bytecode_emit_u8(bytecode, op);
-}
-
-void hll_bytecode_add_loc(hll_bytecode *bc, size_t op_length,
-                          uint32_t compilation_unit, uint32_t offset) {
-  hll_loc bc_loc = {
-      .translation_unit = compilation_unit,
-      .offset = offset,
-  };
-  hll_sb_push(bc->locs, bc_loc);
-
-  assert(op_length);
-  hll_bytecode_rle rle = {.length = op_length,
-                          .loc_idx = hll_sb_len(bc->locs) - 1};
-  hll_sb_push(bc->loc_rle, rle);
-}
-
-uint32_t hll_bytecode_get_loc(const hll_bytecode *bc, size_t op_idx) {
-  size_t cursor = 0;
-  hll_bytecode_rle *rle = bc->loc_rle;
-  assert(rle);
-  for (;;) {
-    if (cursor <= op_idx && op_idx < cursor + rle->length) {
-      break;
-    }
-    cursor += rle->length;
-    ++rle;
-
-    assert(rle <= &hll_sb_last(bc->loc_rle));
-  }
-
-  return bc->locs[rle->loc_idx].offset;
 }
 
 void make_ident(void *file, size_t ident) {
@@ -213,6 +180,7 @@ void dump_function_info(void *file, hll_value value) {
   }
   fprintf(file, "],"); // params
 
+#if 0
   hll_bytecode *bc = func->bytecode;
   fprintf(file,
           "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu, \"locs\": "
@@ -278,6 +246,7 @@ void dump_function_info(void *file, hll_value value) {
     }
   }
   fprintf(file, "]"); // loc_rle
+#endif
 }
 
 void hll_dump_program_info(void *file, hll_value program) {
