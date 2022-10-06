@@ -3,8 +3,8 @@
 ;; hololisp version
 ;;
 
-(define *width* 5)
-(define *height* 5)
+(define *width* 30)
+(define *height* 30)
 
 (define (range-lo lo hi)
   (unless (<= hi lo)

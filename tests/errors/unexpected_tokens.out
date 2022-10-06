@@ -1,0 +1,7 @@
+cli:3:3: error: Unexpected token
+  фывофыолв
+  ^
+cli:5:3: error: Unexpected token
+  фыв)
+  ^
+2 errors generated.

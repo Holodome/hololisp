@@ -1,0 +1,4 @@
+cli:1:2: error: '/' zero division error
+(/ 1 0)
+ ^
+1 error generated.

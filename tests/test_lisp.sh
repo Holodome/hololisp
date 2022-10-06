@@ -7,41 +7,43 @@ fi
 failed=0
 
 panic () {
-    echo -n -e '\e[1;31m[ERROR]\e[0m '
-    echo "$1"
-    failed=1
+  echo -n -e '\e[1;31m[ERROR]\e[0m '
+  echo "$1"
+  failed=1
 }
 
 pos_test () {
-    echo -n "Testing $1 ... "
+  echo -n "Testing $1 ... "
 
-    error=$($EXECUTABLE -e "$3" 2>&1 > /dev/null)
-    if [ -n "$error" ]; then
-        echo FAILED
-        panic "$error"
-        return 
-    fi
+  result=$($EXECUTABLE -e "$3" 2> /dev/null)
+  error=$?
+  if [ "$error" != 0 ]; then
+    echo FAILED 
+    panic "return code $1"
+    return 
+  fi
 
-    result=$($EXECUTABLE -e "$3" 2> /dev/null | tail -1)
-    if [ "$result" != "$2" ]; then
-        echo FAILED
-        panic "'$2' expected, but got '$result'"
-        return 
-    fi
+  result=$(echo "$result" | tail -1)
+  if [ "$result" != "$2" ]; then
+    echo FAILED
+    panic "'$2' expected, but got '$result' $1"
+    return 
+  fi
 
-    echo "ok"
+  echo "ok"
 }
 
 neg_test () {
-    echo -n "Testing $1 ... "
-     error=$($EXECUTABLE -e "$2" 2>&1 > /dev/null)
-    if [ -z "$error" ]; then
-        echo FAILED
-        panic "$1"
-        return
-    fi
+  echo -n "Testing $1 ... "
+  $EXECUTABLE -e "$2" > /dev/null 2>&1 
+  error=$?
+  if [ "$error" != 1 ]; then
+    echo FAILED 
+    panic "$1"
+    return
+  fi
 
-    echo "ok"
+  echo "ok"
 }
 
 pos_test comment 5 "
@@ -141,15 +143,19 @@ pos_test "list" "(1 2 3 4)" "(list (+ 0 1) (* 2 1) (/ 9 3) (- 0 -4))"
 neg_test "setcar! args" "(setcar!)"
 neg_test "setcar! args" "(setcar! '(1))"
 pos_test "setcar!" "(0 1)" "(setcar! '(() 1) 0)"
+pos_test "setcar!" "(() 1)" "(setcar! '(0 1) ())"
 neg_test "setcdr! args" "(setcdr!)"
 neg_test "setcdr! args" "(setcdr! '(1))"
 pos_test "setcdr!" "(1 2)" "(setcdr! '(1) '(2))"
+pos_test "setcdr!" "(1)" "(setcdr! '(1 2) ())"
 
 neg_test "define args" "(define)"
 neg_test "define name" "(define (1) ())"
 neg_test "define args" "(define (1))"
 pos_test "define" "double" "(define (double x) (+ x x))"
 pos_test "define & call" "12" "(define (double x) (+ x x)) (double 6)"
+neg_test "define" "(define (fn a) (car 2 3))"
+neg_test "define args" "(define (1) ())"
 
 neg_test "let args" "(let)"
 pos_test "let" "t" "(let ((x t)) x)"
@@ -324,16 +330,19 @@ pos_test "nth first" "0" "(nth 0 '(0 1 2 3))"
 pos_test "nth second" "1" "(nth 1 '(0 1 2 3))"
 pos_test "nth more than length" "()" "(nth 100 '(0 1 2 3))"
 
-pos_test "set! nth" "(100 2 3)" "(define x '(1 2 3)) (set! (nth 0 x) 100) x"
+neg_test "set! args" "(set! 1)"
+neg_test "set! bogus" "(set! 1 2)"
+pos_test "set! nth" "(1 2 4)" "(define a '(1 2 3)) (set! (nth 2 a) 4) a"
+neg_test "set! nth args" "(define a '(1 2 3)) (set! (nth 2 a 1) 4) a"
+pos_test "set! nthcdr" "(1 2 3 100)" "(define x '(1 2 3)) (set! (nthcdr 2 x) '(100)) x"
+neg_test "set! nthcdr args" "(define x '(1 2 3)) (set! (nthcdr 2) '(100)) x"
 
 pos_test "macro" "19" "(defmacro (mac1 a b) (list '+ a (list '* b 3))) (mac1 4 5)"
 pos_test "macro" "7" "(defmacro (seven) 7) ((lambda () (seven)))"
 pos_test "macro" "42" "(defmacro (if-zero x then) (list 'if (list '= x 0) then))
   (if-zero 0 42)"
-
-pos_test "macroexpand" '(if (= x 0) (print x))' "
-  (defmacro (if-zero x then) (list 'if (list '= x 0) then))
-  (macroexpand (if-zero x (print x)))"
+neg_test "defmacro args" "(defmacro)"
+neg_test "defmacro args" "(defmacro (1) ())"
 
 pos_test "restargs" "(3 5 7)" "(define (f x . y) (cons x y)) (f 3 5 7)"
 pos_test "restargs" "(3)" "(define (f x . y) (cons x y)) (f 3)"
@@ -350,6 +359,8 @@ pos_test "scopes" "10" "(define (f) y) (define y 10) (f)"
 neg_test "scopes" "(define (f x) (g)) (define (g) x) (f 10)"
 pos_test "closure scopes" "10" "(define (f) (define fn (lambda () x)) (define x 10) fn) ((f))"
 
+pos_test "heads" "(1 3 5 7)" "(heads '((1) (3 2 4) (5 5 5) (7 1 2 34)))"
+
 pos_test "map" "(2 4 6 8)" "(map (lambda (it) (* 2 it)) (list 1 2 3 4))"
 pos_test "amap" "(2 4 6 8)" "(amap (* 2 it) (list 1 2 3 4))"
 
@@ -359,9 +370,21 @@ pos_test "reduce max" "6" "(reduce (lambda (a b) (if (> a b) a b)) (list 1 3 5 6
 pos_test "range" "(0 1 2 3 4)" "(range 5)"
 pos_test "range" "(5 6 7 8 9)" "(range 5 10)"
 
-#pos_test "restargs macro" "(if 1 (if 2 3))" "(defmacro (&& expr . rest)
-#                                 (if rest
-#                                    (list 'if expr (&& rest))
-#                                    (list expr))) (macroexpand (&& 1 2 3))"
+pos_test "restargs macro" "1" "(defmacro (&& expr . rest)
+  (if rest
+    (list 'if expr (cons 'and rest))
+    expr))
+(define x 0)
+(print (&& (progn
+              (set! x 1)
+              x)
+           ()
+           (progn
+              (set! x 2)
+              x)
+           (progn
+              (set! x 3)
+              x)))
+x"
 
 exit $failed

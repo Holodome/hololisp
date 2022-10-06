@@ -1,0 +1,4 @@
+cli:3:11: error: 'cons' expects exactly 2 arguments
+          cons 1
+          ^
+1 error generated.

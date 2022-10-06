@@ -1,0 +1,4 @@
+cli:2:9: error: Missing closing paren when reading list (eof encountered)
+        (+ (* 1 123) 0
+        ^
+1 error generated.

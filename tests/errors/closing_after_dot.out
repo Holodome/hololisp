@@ -1,0 +1,4 @@
+cli:1:1: error: Missing closing paren after dot when reading list
+( 1 .
+^
+1 error generated.

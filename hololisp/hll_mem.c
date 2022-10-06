@@ -1,12 +1,12 @@
 #include "hll_mem.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
   if (arr == NULL) {
     void *result = hll_alloc(sizeof(struct hll_sb_header) + stride * inc);
-    assert(result != NULL);
     struct hll_sb_header *header = result;
     header->size = 0;
     header->capacity = inc;
@@ -42,7 +42,12 @@ void *hll_realloc(void *ptr, size_t old_size, size_t new_size) {
 #endif
   if (old_size == 0) {
     assert(ptr == NULL);
-    return calloc(1, new_size);
+    void *result = calloc(1, new_size);
+    if (result == NULL) {
+      perror("failed to allocate memory");
+      exit(EXIT_FAILURE);
+    }
+    return result;
   }
 
   if (new_size == 0) {
@@ -50,5 +55,10 @@ void *hll_realloc(void *ptr, size_t old_size, size_t new_size) {
     return NULL;
   }
 
-  return realloc(ptr, new_size);
+  void *result = realloc(ptr, new_size);
+  if (result == NULL) {
+    perror("failed to allocate memory");
+    exit(EXIT_FAILURE);
+  }
+  return result;
 }
