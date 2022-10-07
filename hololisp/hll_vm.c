@@ -63,6 +63,7 @@ hll_vm *hll_make_vm(const hll_config *config) {
   vm->rng_state = rand();
 
   vm->global_env = hll_new_env(vm, hll_nil(), hll_nil());
+  vm->macro_env = hll_new_env(vm, hll_nil(), hll_nil());
   vm->env = vm->global_env;
 
   add_builtins(vm);
@@ -116,8 +117,7 @@ void hll_add_binding(hll_vm *vm, const char *symb_str,
   hll_gc_pop_temp_root(vm->gc); // symb
 }
 
-bool hll_find_var(hll_vm *vm, hll_value env, hll_value car, hll_value *found) {
-  (void)vm;
+bool hll_find_var(hll_value env, hll_value car, hll_value *found) {
   assert(hll_get_value_kind(car) == HLL_VALUE_SYMB &&
          "argument is not a symbol");
   hll_obj_symb *symb = hll_unwrap_symb(car);
@@ -208,12 +208,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   }
 
   hll_gc_push_temp_root(vm->gc, compiled);
-  hll_bytecode *initial_bytecode;
-  if (hll_get_value_kind(compiled) == HLL_VALUE_FUNC) {
-    initial_bytecode = hll_unwrap_func(compiled)->bytecode;
-  } else {
-    initial_bytecode = hll_unwrap_macro(compiled)->bytecode;
-  }
+  hll_bytecode *initial_bytecode = hll_unwrap_func(compiled)->bytecode;
   vm->call_stack = NULL;
   vm->stack = NULL;
   vm->env = env_;
@@ -288,7 +283,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       }
 
       hll_value found;
-      bool is_found = hll_find_var(vm, vm->env, symb, &found);
+      bool is_found = hll_find_var(vm->env, symb, &found);
       if (HLL_UNLIKELY(!is_found)) {
         hll_runtime_error(vm, "failed to find variable '%s' in current scope",
                           hll_unwrap_zsymb(symb));
@@ -484,7 +479,7 @@ hll_interpret_result hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
 }
 
 hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
-  hll_obj_func *func = hll_unwrap_macro(macro);
+  hll_obj_func *func = hll_unwrap_func(macro);
   hll_value new_env = hll_new_env(vm, vm->global_env, hll_nil());
   hll_gc_push_temp_root(vm->gc, new_env);
   hll_value param_name = func->param_names;

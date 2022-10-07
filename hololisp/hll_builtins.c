@@ -805,11 +805,6 @@ void add_builtins(struct hll_vm *vm) {
                 "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
                 "(defmacro (unless expr . body)\n"
                 "  (cons 'if (cons expr (cons () body))))\n"
-                "(defmacro (not x) (list 'if x () 't))\n"
-                "(defmacro (when expr . body)\n"
-                "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
-                "(defmacro (unless expr . body)\n"
-                "  (cons 'if (cons expr (cons () body))))\n"
                 "(define (tail lis)\n"
                 "  (if (cdr lis)\n"
                 "      (tail (cdr lis))\n"
@@ -844,7 +839,6 @@ void add_builtins(struct hll_vm *vm) {
                 "      t))\n",
                 "builtins1", 0);
   hll_interpret(vm,
-
                 "(define (any pred lis)\n"
                 "  (when lis\n"
                 "    (or (pred (car lis))\n"

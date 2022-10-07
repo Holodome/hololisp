@@ -30,6 +30,7 @@ typedef struct hll_vm {
   // Global env. It is stored across calls to interpret, allowing defining
   // toplevel functions.
   hll_value global_env;
+  hll_value macro_env;
 
   // Current execution state
   hll_value *stack;
@@ -53,8 +54,7 @@ HLL_PUB hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args);
 
 HLL_PUB void hll_print_value(hll_vm *vm, hll_value obj);
 
-HLL_PUB bool hll_find_var(hll_vm *vm, hll_value env, hll_value car,
-                          hll_value *found);
+HLL_PUB bool hll_find_var(hll_value env, hll_value car, hll_value *found);
 
 HLL_PUB void hll_runtime_error(hll_vm *vm, const char *fmt, ...);
 

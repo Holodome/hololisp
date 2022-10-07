@@ -193,7 +193,7 @@ bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
   hll_value ast = hll_read_ast(&reader);
 
   hll_compiler compiler;
-  hll_compiler_init(&compiler, vm->env, &tu);
+  hll_compiler_init(&compiler, &tu);
   *compiled = hll_compile_ast(&compiler, ast);
   hll_pop_forbid_gc(vm->gc);
 
@@ -374,9 +374,9 @@ lexer_error(hll_lexer *lexer, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(lexer->tu->vm->debug,
-                   (hll_loc){lexer->tu->translation_unit, lexer->next.offset},
-                   fmt, args);
+  hll_report_errorv(lexer->tu->vm->debug,
+                    (hll_loc){lexer->tu->translation_unit, lexer->next.offset},
+                    fmt, args);
   va_end(args);
 }
 
@@ -691,11 +691,9 @@ hll_value hll_read_ast(hll_reader *reader) {
   return list_head;
 }
 
-void hll_compiler_init(hll_compiler *compiler, hll_value env,
-                       hll_translation_unit *tu) {
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu) {
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->tu = tu;
-  compiler->env = env;
   compiler->bytecode = hll_new_bytecode();
   compiler->bytecode->translation_unit = tu->translation_unit;
 }
@@ -713,9 +711,9 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(compiler->tu->vm->debug,
-                   (hll_loc){compiler->tu->translation_unit, loc->offset}, fmt,
-                   args);
+  hll_report_errorv(compiler->tu->vm->debug,
+                    (hll_loc){compiler->tu->translation_unit, loc->offset}, fmt,
+                    args);
   va_end(args);
 }
 
@@ -839,7 +837,6 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
                                size_t length) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     hll_value test = compiler->bytecode->constant_pool[i];
-    // TODO: Hashes
     if (hll_is_symb(test) && strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
       uint16_t narrowed = i;
       assert(i == narrowed);
@@ -887,8 +884,7 @@ static bool expand_macro(hll_compiler *compiler, hll_value macro,
   }
 
   hll_value macro_body;
-  if (!hll_find_var(compiler->tu->vm, compiler->env, macro, &macro_body) ||
-      hll_get_value_kind(hll_unwrap_cdr(macro_body)) != HLL_VALUE_MACRO) {
+  if (!hll_find_var(compiler->tu->vm->macro_env, macro, &macro_body)) {
     return false;
   } else {
     macro_body = hll_unwrap_cdr(macro_body);
@@ -1241,9 +1237,9 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value report, hll_value body,
-                                      bool is_macro, hll_value *compiled_) {
+                                      hll_value *compiled_) {
   hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->tu->vm->env, compiler->tu);
+  hll_compiler_init(&new_compiler, compiler->tu);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   hll_sb_free(new_compiler.loc_stack);
   if (new_compiler.error_count != 0) {
@@ -1286,19 +1282,8 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     }
   }
 
-  hll_value func;
-  if (!is_macro) {
-    func = compiled;
-    hll_unwrap_func(func)->param_names = param_list;
-  } else {
-    func = compiled;
-    // TODO: Remove ub
-    ((struct hll_obj *)((char *)hll_unwrap_func(func) - sizeof(struct hll_obj)))
-        ->kind = HLL_VALUE_MACRO;
-    hll_unwrap_macro(func)->param_names = param_list;
-  }
-
-  *compiled_ = func;
+  hll_unwrap_func(compiled)->param_names = param_list;
+  *compiled_ = compiled;
   return true;
 }
 
@@ -1306,8 +1291,7 @@ static bool compile_function(hll_compiler *compiler, hll_value params,
                              hll_value reporter, hll_value body,
                              uint16_t *idx) {
   hll_value func;
-  if (!compile_function_internal(compiler, params, reporter, body, false,
-                                 &func)) {
+  if (!compile_function_internal(compiler, params, reporter, body, &func)) {
     return true;
   }
 
@@ -1443,7 +1427,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   }
 
   hll_value name = hll_unwrap_car(control);
-  if (hll_get_value_kind(name) != HLL_VALUE_SYMB) {
+  if (!hll_is_symb(name)) {
     compiler_error(compiler, args, "'defmacro' name should be a symbol");
     return;
   }
@@ -1454,15 +1438,15 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
 
   hll_value macro_expansion;
 
-  if (compile_function_internal(compiler, params, args, body, true,
+  if (compile_function_internal(compiler, params, args, body,
                                 &macro_expansion)) {
-    /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
-    /*   compiler_error(compiler, name, "Macro with same name already exists
-     * (%s)", */
-    /*                  hll_unwrap_zsymb(name)); */
-    /*   return; */
-    /* } */
-    hll_add_variable(compiler->tu->vm, compiler->env, name, macro_expansion);
+    if (hll_find_var(compiler->tu->vm->macro_env, name, NULL)) {
+      compiler_error(compiler, args, "Macro with same name already exists (%s)",
+                     hll_unwrap_zsymb(name));
+      return;
+    }
+    hll_add_variable(compiler->tu->vm, compiler->tu->vm->macro_env, name,
+                     macro_expansion);
   }
 }
 

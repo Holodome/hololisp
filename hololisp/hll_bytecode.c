@@ -161,9 +161,6 @@ void hll_dump_value(void *file, hll_value value) {
     dump_function_info(file, value);
     fprintf(file, "}");
     break;
-  case HLL_VALUE_MACRO:
-    // TODO
-    break;
   }
   fprintf(file, "}");
 }

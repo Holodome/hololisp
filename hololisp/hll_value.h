@@ -25,7 +25,6 @@ enum {
   HLL_VALUE_BIND = 0x5,
   HLL_VALUE_ENV = 0x6,
   HLL_VALUE_FUNC = 0x7,
-  HLL_VALUE_MACRO = 0x8,
 };
 
 HLL_PUB const char *hll_get_value_kind_str(hll_value_kind kind);
@@ -81,8 +80,6 @@ HLL_PUB hll_value hll_new_bind(struct hll_vm *vm,
                                                  hll_value args));
 HLL_PUB hll_value hll_new_func(struct hll_vm *vm, hll_value params,
                                struct hll_bytecode *bytecode);
-HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
-                                struct hll_bytecode *bytecode);
 
 void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
@@ -106,8 +103,6 @@ HLL_PUB hll_obj_symb *hll_unwrap_symb(hll_value value)
 HLL_PUB hll_obj_bind *hll_unwrap_bind(hll_value value)
     __attribute__((returns_nonnull));
 HLL_PUB hll_obj_func *hll_unwrap_func(hll_value value)
-    __attribute__((returns_nonnull));
-HLL_PUB hll_obj_func *hll_unwrap_macro(hll_value value)
     __attribute__((returns_nonnull));
 
 hll_obj *hll_unwrap_obj(hll_value value);

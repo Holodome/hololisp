@@ -167,7 +167,6 @@ typedef struct {
 typedef struct {
   uint32_t error_count;
 
-  hll_value env;
   // Bytecode that is currently being generated.
   struct hll_bytecode *bytecode;
 
@@ -182,8 +181,8 @@ typedef struct {
   size_t loc_op_idx;
 } hll_compiler;
 
-void hll_compiler_init(hll_compiler *compiler, hll_value env,
-                       hll_translation_unit *tu) __attribute__((nonnull(1)));
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu)
+    __attribute__((nonnull(1)));
 
 // Compiles ast into a function object. Garbage collection is forbidden to
 // happen during execution of this function.

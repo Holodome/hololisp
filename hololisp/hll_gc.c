@@ -56,15 +56,6 @@ static void hll_blacken_value(hll_gc *gc, hll_value value) {
       hll_gray_value(gc, bytecode->constant_pool[i]);
     }
   } break;
-  case HLL_VALUE_MACRO: {
-    gc->bytes_allocated += sizeof(hll_obj_func);
-    hll_gray_value(gc, hll_unwrap_macro(value)->param_names);
-    hll_gray_value(gc, hll_unwrap_macro(value)->env);
-    hll_bytecode *bytecode = hll_unwrap_macro(value)->bytecode;
-    for (size_t i = 0; i < hll_sb_len(bytecode->constant_pool); ++i) {
-      hll_gray_value(gc, bytecode->constant_pool[i]);
-    }
-  } break;
   default:
     HLL_UNREACHABLE;
     break;
@@ -78,6 +69,7 @@ static void hll_collect_garbage(hll_gc *gc) {
   gc->bytes_allocated = 0;
   hll_sb_purge(gc->gray_objs);
   hll_gray_value(gc, vm->global_env);
+  hll_gray_value(gc, vm->macro_env);
   for (size_t i = 0; i < hll_sb_len(gc->temp_roots); ++i) {
     hll_gray_value(gc, gc->temp_roots[i]);
   }
