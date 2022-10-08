@@ -34,6 +34,7 @@ static void test_compiler_compiles_integer(void) {
   bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  TEST_ASSERT(hll_is_nil(compiled->name));
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
@@ -55,6 +56,7 @@ static void test_compiler_compiles_addition(void) {
   bool is_compiled = hll_compile(vm, source, "", &result);
   TEST_ASSERT(is_compiled);
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  TEST_ASSERT(hll_is_nil(compiled->name));
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
@@ -165,12 +167,9 @@ static void test_compiler_compiles_if(void) {
 
 static void test_compiler_compiles_quote(void) {
   const char *source = "'(1 2)";
-  uint8_t bytecode[] = {HLL_BC_NIL, HLL_BC_NIL,
-                        // 1
-                        HLL_BC_CONST, 0x00, 0x00, HLL_BC_APPEND,
-                        // 2
-                        HLL_BC_CONST, 0x00, 0x01, HLL_BC_APPEND, HLL_BC_POP,
-                        HLL_BC_END};
+  uint8_t bytecode[] = {HLL_BC_NIL, HLL_BC_NIL,    HLL_BC_CONST, 0x00,
+                        0x00,       HLL_BC_APPEND, HLL_BC_CONST, 0x00,
+                        0x01,       HLL_BC_APPEND, HLL_BC_POP,   HLL_BC_END};
   struct hll_vm *vm = hll_make_vm(NULL);
 
   hll_value result;
@@ -180,25 +179,31 @@ static void test_compiler_compiles_quote(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), compiled);
 }
 
-static void test_compiler_compiles_defun(void) {
+static void test_compiler_compiles_define(void) {
   const char *source = "(define (f x) (* x 2))";
-  uint8_t function_bytecode[] = {
-      HLL_BC_CONST,  0x00,       0x00,          HLL_BC_FIND,
-      HLL_BC_CDR, // *
+  uint8_t function_bytecode[] = {HLL_BC_CONST,
+                                 0x00,
+                                 0x00,
+                                 HLL_BC_FIND,
+                                 HLL_BC_CDR,
+                                 HLL_BC_NIL,
+                                 HLL_BC_NIL,
+                                 HLL_BC_CONST,
+                                 0x00,
+                                 0x01,
+                                 HLL_BC_FIND,
+                                 HLL_BC_CDR,
+                                 HLL_BC_APPEND,
+                                 HLL_BC_CONST,
+                                 0x00,
+                                 0x02,
+                                 HLL_BC_APPEND,
+                                 HLL_BC_POP,
+                                 HLL_BC_MBTRCALL,
+                                 HLL_BC_END};
 
-      HLL_BC_NIL,    HLL_BC_NIL, HLL_BC_CONST,  0x00,
-      0x01, // x
-      HLL_BC_FIND,   HLL_BC_CDR, HLL_BC_APPEND, HLL_BC_CONST, 0x00,
-      0x02, // 2
-      HLL_BC_APPEND, HLL_BC_POP,
-
-      HLL_BC_CALL,   HLL_BC_END};
-
-  uint8_t program_bytecode[] = {HLL_BC_CONST,   0x00,
-                                0x00, // f
-                                HLL_BC_MAKEFUN, 0x00,
-                                0x01, // function object
-                                HLL_BC_LET,     HLL_BC_END};
+  uint8_t program_bytecode[] = {HLL_BC_CONST, 0x00, 0x00,       HLL_BC_MAKEFUN,
+                                0x00,         0x01, HLL_BC_LET, HLL_BC_END};
 
   (void)function_bytecode;
 
@@ -454,8 +459,7 @@ static void test_compiler_compiles_lambda(void) {
                        function_bytecode_compiled);
 }
 
-static void test_compiler_generates_bmtr(void) {
-
+static void test_compiler_generates_mbtr(void) {
   const char *source = "(define (tr) (tr))";
   uint8_t bytecode[] = {HLL_BC_CONST,    0x00,       0x00,       HLL_BC_FIND,
                         HLL_BC_CDR,      HLL_BC_NIL, HLL_BC_NIL, HLL_BC_POP,
@@ -477,6 +481,51 @@ static void test_compiler_generates_bmtr(void) {
   test_bytecode_equals(bytecode, sizeof(bytecode), function_bytecode_compiled);
 }
 
+static void test_compiler_generates_mbtr_in_if(void) {
+  const char *source = "(define (tr a) (if a (tr a)))";
+  uint8_t bytecode[] = {HLL_BC_CONST,
+                        0x00,
+                        0x00,
+                        HLL_BC_FIND,
+                        HLL_BC_CDR,
+                        HLL_BC_JN,
+                        0x00,
+                        0x13,
+                        HLL_BC_CONST,
+                        0x00,
+                        0x01,
+                        HLL_BC_FIND,
+                        HLL_BC_CDR,
+                        HLL_BC_NIL,
+                        HLL_BC_NIL,
+                        HLL_BC_CONST,
+                        0x00,
+                        0x00,
+                        HLL_BC_FIND,
+                        HLL_BC_CDR,
+                        HLL_BC_APPEND,
+                        HLL_BC_POP,
+                        HLL_BC_MBTRCALL,
+                        HLL_BC_NIL,
+                        HLL_BC_JN,
+                        0x00,
+                        0x01,
+                        HLL_BC_NIL,
+                        HLL_BC_END};
+
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_value result;
+  bool is_compiled = hll_compile(vm, source, "", &result);
+  TEST_ASSERT(is_compiled);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
+  hll_value func = compiled->constant_pool[1];
+  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  struct hll_bytecode *function_bytecode_compiled =
+      hll_unwrap_func(func)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), function_bytecode_compiled);
+}
+
 #define TCASE(_name)                                                           \
   { #_name, _name }
 
@@ -485,12 +534,13 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_complex_arithmetic_operation),
              TCASE(test_compiler_compiles_if),
              TCASE(test_compiler_compiles_quote),
-             TCASE(test_compiler_compiles_defun),
+             TCASE(test_compiler_compiles_define),
              TCASE(test_compiler_compiles_let),
              TCASE(test_compiler_compiles_let_with_body),
              TCASE(test_compiler_compiles_setf_symbol),
              TCASE(test_compiler_compiles_setf_cdr),
              TCASE(test_compiler_compiles_macro),
              TCASE(test_compiler_compiles_lambda),
-             TCASE(test_compiler_generates_bmtr),
+             TCASE(test_compiler_generates_mbtr),
+             TCASE(test_compiler_generates_mbtr_in_if),
              {NULL, NULL}};

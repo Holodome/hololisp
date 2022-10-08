@@ -112,7 +112,7 @@ void hll_bytecode_dec_refcount(hll_bytecode *bytecode);
 // Functions used to generate bytecode
 //
 
-size_t hll_get_bytecode_op_body_size(hll_bytecode_op op);
+size_t hll_bytecode_op_body_size(hll_bytecode_op op);
 
 size_t hll_bytecode_op_idx(const hll_bytecode *bytecode);
 size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte);
