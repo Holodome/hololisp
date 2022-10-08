@@ -95,5 +95,13 @@ wasm-test: $(SRCS)
 	./scripts/replace_arguments_emcc.py
 	EXECUTABLE="emrun --browser firefox build/test.html --" ./tests/test_lisp.sh
 
+FUZZ = $(OUT_DIR)/fuzz
 
-.PHONY: all test tests clean wasm-test
+$(FUZZ): $(filter-out $(SRC_DIR)/main.c, $(SRCS)) tests/fuzz/fuzz.c
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -g -O2 -fsanitize=fuzzer,address $^ -o $@
+
+fuzz: $(FUZZ)
+	$(shell rm -r crash-*)
+	$(FUZZ) -merge
+
+.PHONY: all test tests clean wasm-test fuzz

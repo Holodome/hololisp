@@ -149,12 +149,11 @@ static size_t *get_location_entry_idx(hll_location_table *table,
 static void set_location_entry(hll_location_table *table, uint64_t hash,
                                uint32_t offset, uint32_t length) {
   assert(table);
-  size_t *entry_idx = get_location_entry_idx(table, hash);
-
-  assert(!*entry_idx);
   hll_location_entry new_entry = {
       .hash = hash, .offset = offset, .length = length};
   hll_sb_push(table->entries, new_entry);
+  size_t *entry_idx = get_location_entry_idx(table, hash);
+  assert(!*entry_idx);
   hll_location_entry *e = &hll_sb_last(table->entries);
   e->next = *entry_idx;
   *entry_idx = e - table->entries;
@@ -190,18 +189,21 @@ bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
   hll_push_forbid_gc(vm->gc);
   hll_value ast = hll_read_ast(&reader);
 
-  hll_compiler compiler;
-  hll_compiler_init(&compiler, &tu, hll_nil());
-  *compiled = hll_compile_ast(&compiler, ast);
-  hll_pop_forbid_gc(vm->gc);
+  if (lexer.error_count == 0 && reader.error_count == 0) {
+    hll_compiler compiler;
+    hll_compiler_init(&compiler, &tu, hll_nil());
+    *compiled = hll_compile_ast(&compiler, ast);
+    hll_sb_free(compiler.loc_stack);
 
-  if (lexer.error_count != 0 || reader.error_count != 0 ||
-      compiler.error_count != 0) {
+    if (compiler.error_count != 0) {
+      result = false;
+    }
+  } else {
     result = false;
   }
 
+  hll_pop_forbid_gc(vm->gc);
   hll_delete_tu(&tu);
-  hll_sb_free(compiler.loc_stack);
 
   return result;
 }
@@ -680,6 +682,7 @@ hll_value hll_read_ast(hll_reader *reader) {
 
     if (hll_is_nil(list_head)) {
       list_head = list_tail = cons;
+      add_reader_meta_info(reader, list_head);
     } else {
       hll_unwrap_cons(list_tail)->cdr = cons;
       list_tail = cons;
@@ -727,7 +730,9 @@ static bool compiler_push_location(hll_compiler *compiler, hll_value value) {
 
   uint64_t hash = hash_value(value);
   hll_location_entry *loc = get_location_entry(compiler->tu->locs, hash);
-  assert(loc);
+  if (loc == NULL) {
+    return false;
+  }
   hll_compiler_loc_stack_entry e = {.cu = compiler->tu->translation_unit,
                                     .offset = loc->offset,
                                     .length = loc->length};
@@ -873,8 +878,10 @@ static void compile_function_call_internal(hll_compiler *compiler,
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CALL);
 }
 
-static bool expand_macro(hll_compiler *compiler, hll_value macro,
-                         hll_value args, hll_value *expanded) {
+static bool expand_macro(hll_compiler *compiler, hll_value list,
+                         hll_value *expanded) {
+  hll_value macro = hll_unwrap_car(list);
+  hll_value args = hll_unwrap_cdr(list);
   if (hll_get_value_kind(macro) != HLL_VALUE_SYMB) {
     return false;
   }
@@ -886,18 +893,24 @@ static bool expand_macro(hll_compiler *compiler, hll_value macro,
     macro_body = hll_unwrap_cdr(macro_body);
   }
 
-  *expanded = hll_expand_macro(compiler->tu->vm, macro_body, args);
+  hll_expand_macro_result res =
+      hll_expand_macro(compiler->tu->vm, macro_body, args, expanded);
+  if (res == HLL_EXPAND_MACRO_ERR_ARGS) {
+    compiler_error(compiler, list,
+                   "macro invocation argument count does not match");
+    return false;
+  }
   return true;
 }
 
 static void compile_function_call(hll_compiler *compiler, hll_value list) {
-  hll_value fn = hll_unwrap_car(list);
-  hll_value args = hll_unwrap_cdr(list);
   hll_value expanded;
-  if (expand_macro(compiler, fn, args, &expanded)) {
+  if (expand_macro(compiler, list, &expanded)) {
     compile_eval_expression(compiler, expanded);
     return;
   }
+  hll_value fn = hll_unwrap_car(list);
+  hll_value args = hll_unwrap_cdr(list);
   compile_eval_expression(compiler, fn);
   compile_function_call_internal(compiler, args);
 }
@@ -1388,6 +1401,11 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     hll_bytecode_emit_u16(compiler->bytecode, function_idx);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
   } else if (hll_get_value_kind(decide) == HLL_VALUE_SYMB) {
+    if (hll_list_length(args) > 3) {
+      compiler_error(compiler, args,
+                     "'define' variable expects exactly 2 or 3 arguments");
+      return;
+    }
     hll_value value = rest;
     if (hll_is_cons(value)) {
       assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
@@ -1548,6 +1566,8 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   if (hll_is_nil(ast)) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   } else {
+    bool pop_ = compiler_push_location(compiler, ast);
+    assert(pop_);
     for (; hll_is_cons(ast); ast = hll_unwrap_cdr(ast)) {
       hll_value expr = hll_unwrap_car(ast);
       bool pop = compiler_push_location(compiler, expr);
@@ -1557,8 +1577,10 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
       }
       compiler_pop_location(compiler, pop);
     }
+    compiler_pop_location(compiler, pop_);
   }
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_END);
   hll_optimize_bytecode(compiler->bytecode);
+  assert(hll_sb_len(compiler->loc_stack) == 0);
   return result;
 }

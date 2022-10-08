@@ -66,6 +66,8 @@ typedef struct hll_config {
   void *user_data;
 } hll_config;
 
+void hll_initialize_default_config(hll_config *config);
+
 // Result of calling hll_interpret.
 // Contains minimal information about source of error.
 typedef enum {

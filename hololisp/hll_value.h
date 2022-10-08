@@ -11,8 +11,6 @@
 
 #include "hll_hololisp.h"
 
-#define HLL_MAX_SYMB_LENGTH 128
-
 typedef uint8_t hll_value_kind;
 enum {
   // Singleton values. These are not heap-allocated.

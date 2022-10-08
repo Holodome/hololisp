@@ -94,10 +94,6 @@ hll_value hll_num(double num) {
 hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   assert(symbol != NULL);
   assert(length != 0);
-  if (length >= HLL_MAX_SYMB_LENGTH) {
-    // todo error
-    assert(0);
-  }
 
   void *memory =
       hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);

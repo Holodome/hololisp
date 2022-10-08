@@ -41,13 +41,18 @@ static hll_value builtin_add(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'-' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
   hll_value first = hll_car(vm, args);
+  if (!hll_is_num(first)) {
+    hll_runtime_error(vm, "'-' form expects integer arguments (got %s)",
+                      hll_get_value_kind_str(hll_get_value_kind(first)));
+  }
   if (hll_is_nil(hll_unwrap_cdr(args))) {
     return hll_num(-hll_unwrap_num(first));
   }
-  // CHECK_TYPE(first, struct hll_obj_INT, "arguments");
   double result = hll_unwrap_num(first);
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
        obj = hll_cdr(vm, obj)) {
@@ -62,9 +67,15 @@ static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'/' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
   hll_value first = hll_car(vm, args);
-  // CHECK_TYPE(first, struct hll_obj_INT, "arguments");
+  if (!hll_is_num(first)) {
+    hll_runtime_error(vm, "'/' form expects integer arguments (got %s)",
+                      hll_get_value_kind_str(hll_get_value_kind(first)));
+  }
   double result = hll_unwrap_num(first);
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
        obj = hll_cdr(vm, obj)) {
@@ -95,8 +106,10 @@ static hll_value builtin_mul(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'/=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
        obj1 = hll_cdr(vm, obj1)) {
@@ -127,8 +140,10 @@ static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
        obj1 = hll_cdr(vm, obj1)) {
@@ -160,8 +175,10 @@ static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'>' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -188,8 +205,10 @@ static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'>=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -215,8 +234,10 @@ static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'<' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -242,8 +263,10 @@ static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'<=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -269,8 +292,10 @@ static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_rem(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_N_ARGS(2);
+  if (hll_list_length(args) != 2) {
+    hll_runtime_error(vm, "'rem' form expects exactly 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value x = hll_car(vm, args);
   if (!hll_is_num(x)) {

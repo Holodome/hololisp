@@ -50,7 +50,14 @@ HLL_PUB hll_interpret_result hll_interpret_bytecode(hll_vm *vm,
 HLL_PUB void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
                               hll_value value);
 
-HLL_PUB hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args);
+typedef enum {
+  HLL_EXPAND_MACRO_OK,
+  HLL_EXPAND_MACRO_ERR_ARGS
+} hll_expand_macro_result;
+
+HLL_PUB hll_expand_macro_result hll_expand_macro(hll_vm *vm, hll_value macro,
+                                                 hll_value args,
+                                                 hll_value *dst);
 
 HLL_PUB void hll_print_value(hll_vm *vm, hll_value obj);
 

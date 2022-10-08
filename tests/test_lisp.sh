@@ -149,6 +149,7 @@ neg_test "setcdr! args" "(setcdr! '(1))"
 pos_test "setcdr!" "(1 2)" "(setcdr! '(1) '(2))"
 pos_test "setcdr!" "(1)" "(setcdr! '(1 2) ())"
 
+neg_test "define args" "(define a 1 b 2)"
 neg_test "define args" "(define)"
 neg_test "define name" "(define (1) ())"
 neg_test "define args" "(define (1))"

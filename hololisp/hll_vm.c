@@ -28,7 +28,7 @@ static void default_write_fn(hll_vm *vm, const char *text) {
   fflush(stdout);
 }
 
-static void initialize_default_config(hll_config *config) {
+void hll_initialize_default_config(hll_config *config) {
   config->write_fn = default_write_fn;
   config->error_fn = default_error_fn;
 
@@ -52,7 +52,7 @@ hll_vm *hll_make_vm(const hll_config *config) {
   hll_vm *vm = hll_alloc(sizeof(hll_vm));
 
   if (config == NULL) {
-    initialize_default_config(&vm->config);
+    hll_initialize_default_config(&vm->config);
   } else {
     vm->config = *config;
   }
@@ -161,7 +161,7 @@ void hll_print_value(hll_vm *vm, hll_value value) {
     hll_print(vm, ")");
     break;
   case HLL_VALUE_SYMB: {
-    char buffer[HLL_MAX_SYMB_LENGTH + 1];
+    char buffer[1024];
     snprintf(buffer, sizeof(buffer), "%s", hll_unwrap_zsymb(value));
     hll_print(vm, buffer);
   } break;
@@ -539,7 +539,8 @@ hll_interpret_result hll_interpret_bytecode(hll_vm *vm, hll_value compiled,
   return HLL_RESULT_OK;
 }
 
-hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
+hll_expand_macro_result hll_expand_macro(hll_vm *vm, hll_value macro,
+                                         hll_value args, hll_value *dst) {
   hll_obj_func *func = hll_unwrap_func(macro);
   hll_value new_env = hll_new_env(vm, vm->global_env, hll_nil());
   hll_gc_push_temp_root(vm->gc, new_env);
@@ -549,8 +550,7 @@ hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
     for (; hll_is_cons(param_name); param_name = hll_unwrap_cdr(param_name),
                                     param_value = hll_unwrap_cdr(param_value)) {
       if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
-        hll_runtime_error(vm, "number of arguments does not match");
-        return hll_nil();
+        return HLL_EXPAND_MACRO_ERR_ARGS;
       }
       hll_value name = hll_unwrap_car(param_name);
       assert(hll_is_symb(name));
@@ -568,7 +568,8 @@ hll_value hll_expand_macro(hll_vm *vm, hll_value macro, hll_value args) {
   }
 
   hll_gc_pop_temp_root(vm->gc); // env
-  return hll_interpret_bytecode_internal(vm, new_env, macro);
+  *dst = hll_interpret_bytecode_internal(vm, new_env, macro);
+  return HLL_EXPAND_MACRO_OK;
 }
 
 void hll_print(hll_vm *vm, const char *str) {
