@@ -105,8 +105,6 @@ typedef enum {
   HLL_FORM_SETCDR,
   HLL_FORM_PROGN,
   HLL_FORM_LAMBDA,
-  HLL_FORM_OR,
-  HLL_FORM_AND,
   HLL_FORM_DEFINE,
   HLL_FORM_DEFMACRO,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
@@ -795,10 +793,6 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_PROGN;
   } else if (strcmp(symb, "lambda") == 0) {
     kind = HLL_FORM_LAMBDA;
-  } else if (strcmp(symb, "or") == 0) {
-    kind = HLL_FORM_OR;
-  } else if (strcmp(symb, "and") == 0) {
-    kind = HLL_FORM_AND;
   } else if (strcmp(symb, "defmacro") == 0) {
     kind = HLL_FORM_DEFMACRO;
   }
@@ -1327,95 +1321,6 @@ static void compile_lambda(hll_compiler *compiler, hll_value args) {
   hll_bytecode_emit_u16(compiler->bytecode, function_idx);
 }
 
-static void compile_and(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 1) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
-    return;
-  }
-  args = hll_unwrap_cdr(args);
-
-  size_t last_jump = 0;
-  size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
-  for (hll_value arg_slot = args; hll_is_cons(arg_slot);
-       arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_value item = hll_unwrap_car(arg_slot);
-    compile_eval_expression(compiler, item);
-    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_VALUE_CONS) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    }
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-    last_jump = hll_bytecode_emit_u16(compiler->bytecode, 0);
-  }
-  size_t short_circuit = hll_bytecode_op_idx(compiler->bytecode);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  size_t total_out = hll_bytecode_op_idx(compiler->bytecode);
-
-  assert(last_jump != 0);
-
-  uint8_t *cursor = compiler->bytecode->ops + original_idx;
-  while (cursor < compiler->bytecode->ops + total_out) {
-    uint8_t op = *cursor++;
-    if (op == HLL_BYTECODE_JN) {
-      uint16_t value;
-      if (cursor != compiler->bytecode->ops + last_jump) {
-        value = short_circuit - (cursor - compiler->bytecode->ops) - 2;
-      } else {
-        value = total_out - (cursor - compiler->bytecode->ops) - 2;
-      }
-      write_u16_be(cursor, value);
-    }
-    cursor += hll_get_bytecode_op_body_size(op);
-  }
-}
-
-static void compile_or(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 1) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    return;
-  }
-  args = hll_unwrap_cdr(args);
-
-  size_t previous_jump = 0;
-  size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
-  for (hll_value arg_slot = args; hll_is_cons(arg_slot);
-       arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_value item = hll_unwrap_car(arg_slot);
-
-    if (arg_slot != args) {
-      assert(previous_jump != 0);
-      write_u16_be(compiler->bytecode->ops + previous_jump,
-                   hll_bytecode_op_idx(compiler->bytecode) - previous_jump - 2);
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-    }
-
-    compile_eval_expression(compiler, item);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_DUP);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN); // jump to next
-    previous_jump = hll_bytecode_emit_u16(compiler->bytecode, 0);
-    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_VALUE_NIL) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-      hll_bytecode_emit_u16(compiler->bytecode, 0);
-    }
-  }
-
-  size_t total_out = hll_bytecode_op_idx(compiler->bytecode);
-
-  uint8_t *cursor = compiler->bytecode->ops + original_idx;
-  while (cursor < compiler->bytecode->ops + total_out) {
-    uint8_t op = *cursor++;
-    if (op == HLL_BYTECODE_JN) {
-      uint16_t current;
-      memcpy(&current, cursor, sizeof(uint16_t));
-      if (current == 0) {
-        write_u16_be(cursor,
-                     total_out - (cursor - compiler->bytecode->ops) - 2);
-      }
-    }
-    cursor += hll_get_bytecode_op_body_size(op);
-  }
-}
-
 static void process_defmacro(hll_compiler *compiler, hll_value args) {
   if (hll_list_length(args) < 3) {
     compiler_error(compiler, args, "'defmacro' expects at least 2 arguments");
@@ -1545,12 +1450,6 @@ static void compile_form(hll_compiler *compiler, hll_value args,
     break;
     HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
-  case HLL_FORM_OR:
-    compile_or(compiler, args);
-    break;
-  case HLL_FORM_AND:
-    compile_and(compiler, args);
-    break;
   case HLL_FORM_DEFMACRO:
     process_defmacro(compiler, args);
     break;

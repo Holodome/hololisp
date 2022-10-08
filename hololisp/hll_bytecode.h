@@ -84,8 +84,6 @@ typedef enum {
   // stack.
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
-  // Duplicate stack item. Currently this is only used in 'or' form
-  HLL_BYTECODE_DUP,
 } hll_bytecode_op;
 
 // Contains unit of bytecode. This is typically some compiled function

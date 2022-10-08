@@ -4,6 +4,7 @@
 #include "hll_vm.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -742,6 +743,14 @@ static hll_value builtin_length(struct hll_vm *vm, hll_value args) {
   return hll_num(hll_list_length(hll_car(vm, args)));
 }
 
+static hll_value builtin_gensym(struct hll_vm *vm, hll_value args) {
+  (void)args;
+  static int64_t count = 0;
+  char buf[16];
+  snprintf(buf, sizeof(buf), "__gsym%" PRId64, count++);
+  return hll_new_symbolz(vm, buf);
+}
+
 static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
   (void)vm;
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
@@ -796,10 +805,19 @@ void add_builtins(struct hll_vm *vm) {
   hll_add_binding(vm, "sleep", builtin_sleep);
   hll_add_binding(vm, "length", builtin_length);
   hll_add_binding(vm, "range", builtin_range);
-
+  hll_add_binding(vm, "gensym", builtin_gensym);
   hll_add_binding(vm, "eq?", builtin_eq);
-#if 1
   hll_interpret(vm,
+                "(defmacro (and expr . rest)\n"
+                "  (if rest\n"
+                "    (list 'if expr (cons 'and rest))\n"
+                "  expr))\n"
+                "(defmacro (or expr . rest)\n"
+                "  (if rest\n"
+                "      (let ((var (gensym)))\n"
+                "           (list 'let (list (list var expr))\n"
+                "                 (list 'if var var (cons 'or rest))))\n"
+                "      expr))\n"
                 "(defmacro (not x) (list 'if x () 't))\n"
                 "(defmacro (when expr . body)\n"
                 "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
@@ -880,5 +898,4 @@ void add_builtins(struct hll_vm *vm) {
                 "    (cons (fn (car lis))\n"
                 "          (map fn (cdr lis)))))\n",
                 "builtins2", 0);
-#endif
 }

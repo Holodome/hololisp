@@ -369,11 +369,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // args
       hll_gc_pop_temp_root(vm->gc); // callable
     } break;
-    case HLL_BYTECODE_DUP: {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value last = hll_sb_last(vm->stack);
-      hll_sb_push(vm->stack, last);
-    } break;
     case HLL_BYTECODE_JN: {
       uint16_t offset =
           (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];

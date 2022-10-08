@@ -285,10 +285,8 @@ pos_test "unless false" "t" "(unless () t)"
 
 pos_test "or true" "1" "(or () () 1)"
 pos_test "or false" "()" "(or () () ())"
-pos_test "or empty" "()" "(or)"
 pos_test "and true" "3" "(and 1 2 3)"
 pos_test "and false" "()" "(and () () ())"
-pos_test "and empty" "t" "(and)"
 
 pos_test "not true" "()" "(not t)"
 pos_test "not nil" "t" "(not ())"
