@@ -260,6 +260,11 @@ static void remove_nil_pops(hll_bytecode *bytecode) {
       ++read;
     } else {
       bytecode->ops[write++] = op;
+      // Account for instructions that have arbitrary data after themselves
+      size_t c = hll_get_bytecode_op_body_size(op);
+      while (c--) {
+        bytecode->ops[write++] = bytecode->ops[read++];
+      }
     }
   }
 
