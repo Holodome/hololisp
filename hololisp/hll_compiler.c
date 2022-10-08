@@ -874,6 +874,7 @@ static void compile_function_call_internal(hll_compiler *compiler,
     hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
   }
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
 }
 
@@ -1264,7 +1265,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     for (; hll_is_cons(obj); obj = hll_unwrap_cdr(obj)) {
       hll_value car = hll_unwrap_car(obj);
       if (!hll_is_symb(car)) {
-        compiler_error(compiler, obj, "function param name is not a symbol");
+        compiler_error(compiler, report, "function param name is not a symbol");
         return false;
       }
 
@@ -1274,7 +1275,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
 
     if (!hll_is_nil(obj)) {
       if (!hll_is_symb(obj)) {
-        compiler_error(compiler, obj, "function param name is not a symbol");
+        compiler_error(compiler, report, "function param name is not a symbol");
         return false;
       }
       assert(hll_is_cons(param_list_tail));
@@ -1657,91 +1658,6 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
     }
   }
   hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
+  hll_optimize_bytecode(compiler->bytecode);
   return result;
 }
-
-#if 0
-
-enum hll_tail_recursive_form_kind {
-  HLL_TAIL_RECURIVE_FORM_OTHER,
-  HLL_TAIL_RECURSIVE_FORM_IF,
-  HLL_TAIL_RECURSIVE_FORM_PROGN,
-  HLL_TAIL_RECURSIVE_FORM_AND,
-  HLL_TAIL_RECURSIVE_FORM_OR,
-  HLL_TAIL_RECURSIVE_FORM_LET,
-};
-
-static enum hll_tail_recursive_form_kind
-get_tail_recursive_form_kind(hll_value form) {
-  assert(hll_is_symb(form));
-  const char *symb = hll_unwrap_zsymb(form);
-
-  enum hll_tail_recursive_form_kind kind = HLL_TAIL_RECURIVE_FORM_OTHER;
-  if (strcmp(symb, "if") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_IF;
-  } else if (strcmp(symb, "progn") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_PROGN;
-  } else if (strcmp(symb, "and") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_AND;
-  } else if (strcmp(symb, "or") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_OR;
-  } else if (strcmp(symb, "let") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_LET;
-  }
-
-  return kind;
-}
-
-static bool is_if_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_and_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_or_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_let_tail_recurive(hll_value form, hll_value name_symb) {}
-
-bool is_progn_tail_recursive(hll_value progn, hll_value name_symb) {
-  assert(hll_is_symb(name_symb));
-  // skip to the last statement
-  for (; hll_is_cons(progn) && !hll_is_nil(hll_unwrap_cdr(progn));
-       progn = hll_unwrap_cdr(progn))
-    ;
-
-  // Now progn has either last element or some bogus value.
-  if (!hll_is_cons(progn) || !hll_is_nil(hll_unwrap_cdr(progn))) {
-    return false;
-  }
-
-  hll_value last = hll_unwrap_car(progn);
-  if (!hll_is_cons(last)) {
-    return false;
-  }
-
-  hll_value form = hll_unwrap_car(last);
-  if (!hll_is_symb(form)) {
-    return false;
-  }
-
-  enum hll_tail_recursive_form_kind kind = get_tail_recursive_form_kind(form);
-  switch (kind) {
-  case HLL_TAIL_RECURIVE_FORM_OTHER: {
-    const char *name = hll_unwrap_zsymb(name_symb);
-    if (strcmp(name, hll_unwrap_zsymb(form)) == 0) {
-      return true;
-    }
-  } break;
-  case HLL_TAIL_RECURSIVE_FORM_IF:
-    return is_if_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_PROGN:
-    return is_progn_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_AND:
-    return is_and_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_OR:
-    return is_or_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_LET:
-    return is_let_tail_recurive(form, name_symb);
-  }
-
-  return false;
-}
-#endif

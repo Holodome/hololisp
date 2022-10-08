@@ -11,9 +11,9 @@
 
 static const char *get_op_str(hll_bytecode_op op) {
   static const char *strs[] = {
-      "END",  "NIL",  "TRUE",   "CONST",  "APPEND",  "POP",
-      "FIND", "CALL", "JN",     "LET",    "PUSHENV", "POPENV",
-      "CAR",  "CDR",  "SETCAR", "SETCDR", "MAKEFUN", "DUP",
+      "END",  "NIL",      "TRUE",   "CONST",   "APPEND",  "POP",    "FIND",
+      "CALL", "MBTRCALL", "JN",     "LET",     "PUSHENV", "POPENV", "CAR",
+      "CDR",  "SETCAR",   "SETCDR", "MAKEFUN", "DUP",
   };
 
   assert(op < sizeof(strs) / sizeof(strs[0]));
@@ -248,4 +248,27 @@ void dump_function_info(void *file, hll_value value) {
 
 void hll_dump_program_info(void *file, hll_value program) {
   hll_dump_value(file, program);
+}
+
+static void remove_nil_pops(hll_bytecode *bytecode) {
+  size_t read = 0;
+  size_t write = 0;
+  size_t length = hll_sb_len(bytecode->ops);
+  while (read < length) {
+    hll_bytecode_op op = bytecode->ops[read++];
+    if (op == HLL_BYTECODE_NIL && bytecode->ops[read] == HLL_BYTECODE_POP) {
+      ++read;
+    } else {
+      bytecode->ops[write++] = op;
+    }
+  }
+
+  while (read > write) {
+    hll_sb_pop(bytecode->ops);
+    --read;
+  }
+}
+
+void hll_optimize_bytecode(hll_bytecode *bytecode) {
+  remove_nil_pops(bytecode);
 }

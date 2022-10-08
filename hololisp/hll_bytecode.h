@@ -32,9 +32,8 @@ struct hll_loc; // hll_debug.h
 
 typedef enum {
   // Bytecode must be terminated with 0. This means return from currently
-  // executed function
-  // and go up call stack
-  HLL_BYTECODE_END = 0x0,
+  // executed function and go up call stack
+  HLL_BYTECODE_END,
   // Pushes nil on stack
   HLL_BYTECODE_NIL,
   // Pushes true on stack
@@ -57,6 +56,9 @@ typedef enum {
   // First is callable object. This is lisp object either a function (lambda)
   // or C binding. In first case creates new env and calls that function.
   HLL_BYTECODE_CALL,
+  // Maybe tail recursive call. Compiler marks calls that are tail-ones,
+  // and when vm sees this instruction it possibly do self tail recursion.
+  HLL_BYTECODE_MBTRCALL,
   // Jump if nil (u16 offset, two's complement).
   HLL_BYTECODE_JN,
   // Defines new variable with given name in current env (lexical env).
@@ -82,6 +84,7 @@ typedef enum {
   // stack.
   // Then all symbols referenced in function definition are captured.
   HLL_BYTECODE_MAKEFUN,
+  // Duplicate stack item. Currently this is only used in 'or' form
   HLL_BYTECODE_DUP,
 } hll_bytecode_op;
 
@@ -116,6 +119,8 @@ size_t hll_bytecode_op_idx(const hll_bytecode *bytecode);
 size_t hll_bytecode_emit_u8(hll_bytecode *bytecode, uint8_t byte);
 size_t hll_bytecode_emit_u16(hll_bytecode *bytecode, uint16_t value);
 size_t hll_bytecode_emit_op(hll_bytecode *bytecode, hll_bytecode_op op);
+
+void hll_optimize_bytecode(hll_bytecode *bytecode);
 
 //
 // Debug routines

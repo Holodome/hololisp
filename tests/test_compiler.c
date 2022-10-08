@@ -418,7 +418,7 @@ static void test_compiler_compiles_setf_cdr(void) {
 static void test_compiler_compiles_macro(void) {
   const char *source = "(defmacro (hello) (+ 1 2 3)) (hello)";
   uint8_t bytecode[] = {
-      HLL_BYTECODE_NIL, HLL_BYTECODE_POP, HLL_BYTECODE_CONST, 0x00, 0x00,
+      HLL_BYTECODE_CONST, 0x00, 0x00,
       HLL_BYTECODE_END};
 
   struct hll_vm *vm = hll_make_vm(NULL);
@@ -496,6 +496,31 @@ static void test_compiler_compiles_lambda(void) {
                        function_bytecode_compiled);
 }
 
+static void test_compiler_generates_bmtr(void) {
+
+  const char *source = "(define (tr) (tr))";
+  uint8_t bytecode[] = {HLL_BYTECODE_CONST,
+                        0x00,
+                        0x00,
+                        HLL_BYTECODE_FIND,
+                        HLL_BYTECODE_CDR,
+                        HLL_BYTECODE_NIL,
+                        HLL_BYTECODE_MBTRCALL,
+                        HLL_BYTECODE_END};
+
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_value result;
+  bool is_compiled = hll_compile(vm, source, "", &result);
+  TEST_ASSERT(is_compiled);
+  struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
+  TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
+  hll_value func = compiled->constant_pool[1];
+  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  struct hll_bytecode *function_bytecode_compiled =
+      hll_unwrap_func(func)->bytecode;
+  test_bytecode_equals(bytecode, sizeof(bytecode), function_bytecode_compiled);
+}
+
 #define TCASE(_name)                                                           \
   { #_name, _name }
 
@@ -511,4 +536,5 @@ TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_setf_cdr),
              TCASE(test_compiler_compiles_macro),
              TCASE(test_compiler_compiles_lambda),
+             TCASE(test_compiler_generates_bmtr),
              {NULL, NULL}};
