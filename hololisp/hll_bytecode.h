@@ -99,13 +99,14 @@ typedef struct hll_bytecode {
   // Constant pool dynamic array
   hll_value *constant_pool;
   uint32_t translation_unit;
+  hll_value name;
 } hll_bytecode;
 
 //
 // Accessors
 //
 
-hll_bytecode *hll_new_bytecode(void);
+hll_bytecode *hll_new_bytecode(hll_value name);
 void hll_bytecode_inc_refcount(hll_bytecode *bytecode);
 void hll_bytecode_dec_refcount(hll_bytecode *bytecode);
 

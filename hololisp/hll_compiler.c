@@ -193,7 +193,7 @@ bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
   hll_value ast = hll_read_ast(&reader);
 
   hll_compiler compiler;
-  hll_compiler_init(&compiler, &tu);
+  hll_compiler_init(&compiler, &tu, hll_nil());
   *compiled = hll_compile_ast(&compiler, ast);
   hll_pop_forbid_gc(vm->gc);
 
@@ -691,10 +691,11 @@ hll_value hll_read_ast(hll_reader *reader) {
   return list_head;
 }
 
-void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu) {
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu,
+                       hll_value name) {
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->tu = tu;
-  compiler->bytecode = hll_new_bytecode();
+  compiler->bytecode = hll_new_bytecode(name);
   compiler->bytecode->translation_unit = tu->translation_unit;
 }
 
@@ -1238,9 +1239,9 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value report, hll_value body,
-                                      hll_value *compiled_) {
+                                      hll_value name, hll_value *compiled_) {
   hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->tu);
+  hll_compiler_init(&new_compiler, compiler->tu, name);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   hll_sb_free(new_compiler.loc_stack);
   if (new_compiler.error_count != 0) {
@@ -1289,10 +1290,11 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
 }
 
 static bool compile_function(hll_compiler *compiler, hll_value params,
-                             hll_value reporter, hll_value body,
+                             hll_value reporter, hll_value body, hll_value name,
                              uint16_t *idx) {
   hll_value func;
-  if (!compile_function_internal(compiler, params, reporter, body, &func)) {
+  if (!compile_function_internal(compiler, params, reporter, body, name,
+                                 &func)) {
     return true;
   }
 
@@ -1316,7 +1318,8 @@ static void compile_lambda(hll_compiler *compiler, hll_value args) {
   hll_value body = args;
 
   uint16_t function_idx;
-  if (compile_function(compiler, params, args, body, &function_idx)) {
+  if (compile_function(compiler, params, args, body, hll_nil(),
+                       &function_idx)) {
     return;
   }
 
@@ -1438,8 +1441,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   hll_value body = hll_unwrap_cdr(hll_unwrap_cdr(args));
 
   hll_value macro_expansion;
-
-  if (compile_function_internal(compiler, params, args, body,
+  if (compile_function_internal(compiler, params, args, body, name,
                                 &macro_expansion)) {
     if (hll_find_var(compiler->tu->vm->macro_env, name, NULL)) {
       compiler_error(compiler, args, "Macro with same name already exists (%s)",
@@ -1473,7 +1475,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     compile_expression(compiler, name);
 
     uint16_t function_idx;
-    if (compile_function(compiler, params, args, body, &function_idx)) {
+    if (compile_function(compiler, params, args, body, name, &function_idx)) {
       return;
     }
 

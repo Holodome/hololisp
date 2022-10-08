@@ -417,9 +417,7 @@ static void test_compiler_compiles_setf_cdr(void) {
 
 static void test_compiler_compiles_macro(void) {
   const char *source = "(defmacro (hello) (+ 1 2 3)) (hello)";
-  uint8_t bytecode[] = {
-      HLL_BYTECODE_CONST, 0x00, 0x00,
-      HLL_BYTECODE_END};
+  uint8_t bytecode[] = {HLL_BYTECODE_CONST, 0x00, 0x00, HLL_BYTECODE_END};
 
   struct hll_vm *vm = hll_make_vm(NULL);
   hll_value result;
@@ -518,6 +516,9 @@ static void test_compiler_generates_bmtr(void) {
   TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
+  TEST_ASSERT(hll_is_symb(function_bytecode_compiled->name));
+  TEST_ASSERT(
+      strcmp(hll_unwrap_zsymb(function_bytecode_compiled->name), "tr") == 0);
   test_bytecode_equals(bytecode, sizeof(bytecode), function_bytecode_compiled);
 }
 

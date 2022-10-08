@@ -85,7 +85,11 @@ size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   return s;
 }
 
-hll_bytecode *hll_new_bytecode(void) { return hll_alloc(sizeof(hll_bytecode)); }
+hll_bytecode *hll_new_bytecode(hll_value name) {
+  hll_bytecode *bc = hll_alloc(sizeof(hll_bytecode));
+  bc->name = name;
+  return bc;
+}
 
 void hll_bytecode_inc_refcount(hll_bytecode *bytecode) {
   assert(bytecode->refcount != UINT32_MAX);
@@ -274,6 +278,12 @@ static void remove_nil_pops(hll_bytecode *bytecode) {
   }
 }
 
+static void mark_tail_calls(hll_bytecode *bytecode) { (void)bytecode; }
+
 void hll_optimize_bytecode(hll_bytecode *bytecode) {
   remove_nil_pops(bytecode);
+
+  if (!hll_is_nil(bytecode->name)) {
+    mark_tail_calls(bytecode);
+  }
 }

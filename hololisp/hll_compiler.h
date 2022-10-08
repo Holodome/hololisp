@@ -181,8 +181,8 @@ typedef struct {
   size_t loc_op_idx;
 } hll_compiler;
 
-void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu)
-    __attribute__((nonnull(1)));
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu,
+                       hll_value name) __attribute__((nonnull(1)));
 
 // Compiles ast into a function object. Garbage collection is forbidden to
 // happen during execution of this function.
