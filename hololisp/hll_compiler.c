@@ -849,7 +849,7 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
 
 static void compile_symbol(hll_compiler *compiler, hll_value ast) {
   assert(hll_get_value_kind(ast) == HLL_VALUE_SYMB);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
   hll_bytecode_emit_u16(compiler->bytecode,
                         add_symb_const(compiler, hll_unwrap_zsymb(ast),
                                        hll_unwrap_symb(ast)->length));
@@ -860,17 +860,17 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast);
 
 static void compile_function_call_internal(hll_compiler *compiler,
                                            hll_value list) {
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   for (hll_value arg = list; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
     assert(hll_is_cons(arg));
     hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CALL);
 }
 
 static bool expand_macro(hll_compiler *compiler, hll_value macro,
@@ -917,14 +917,14 @@ static void compile_quote(hll_compiler *compiler, hll_value args) {
 
 static void compile_progn_internal(hll_compiler *compiler, hll_value prog) {
   if (hll_is_nil(prog)) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     return;
   }
 
   for (; hll_is_cons(prog); prog = hll_unwrap_cdr(prog)) {
     compile_eval_expression(compiler, hll_unwrap_car(prog));
     if (!hll_is_nil(hll_unwrap_cdr(prog))) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+      hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
     }
   }
 }
@@ -947,11 +947,11 @@ static void compile_if(hll_compiler *compiler, hll_value args) {
   hll_value neg_arm = hll_unwrap_cdr(pos_arm);
   pos_arm = hll_unwrap_car(pos_arm);
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_JN);
   size_t jump_false = hll_bytecode_emit_u16(compiler->bytecode, 0);
   compile_eval_expression(compiler, pos_arm);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_JN);
   size_t jump_out = hll_bytecode_emit_u16(compiler->bytecode, 0);
   write_u16_be(compiler->bytecode->ops + jump_false,
                hll_bytecode_op_idx(compiler->bytecode) - jump_false - 2);
@@ -968,7 +968,7 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
   }
   args = hll_unwrap_cdr(args);
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_PUSHENV);
   for (hll_value let = hll_unwrap_car(args); !hll_is_nil(let);
        let = hll_unwrap_cdr(let)) {
     hll_value pair = hll_unwrap_car(let);
@@ -983,12 +983,12 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
     assert(hll_get_value_kind(name) == HLL_VALUE_SYMB);
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
   }
 
   compile_progn_internal(compiler, hll_unwrap_cdr(args));
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POPENV);
 }
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
@@ -1003,9 +1003,9 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
       const char *op = ops + sizeof(#_lower) - 2;                              \
       for (;;) {                                                               \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CAR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CAR);                \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);                \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
@@ -1053,9 +1053,9 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     break;
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
     break;
   case HLL_LOC_FORM_NTHCDR:
     if (hll_list_length(location) != 3) {
@@ -1065,12 +1065,12 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     }
     // get the nth function
     compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     // call nth
     compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
     break;
   case HLL_LOC_FORM_NTH: {
     if (hll_list_length(location) != 3) {
@@ -1079,12 +1079,12 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     }
     // get the nth function
     compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     // call nth
     compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);
   } break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_LOC_FORM_C##_upper##R: {                                            \
@@ -1101,18 +1101,18 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       if (op == ops) {                                                         \
         compile_eval_expression(compiler, value);                              \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);       \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);             \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);       \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);             \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
         break;                                                                 \
       } else {                                                                 \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CAR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CAR);                \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);                \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
@@ -1159,7 +1159,7 @@ static void compile_setcar(hll_compiler *compiler, hll_value args) {
 
   compile_eval_expression(compiler, location);
   compile_eval_expression(compiler, value);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);
 }
 
 static void compile_setcdr(hll_compiler *compiler, hll_value args) {
@@ -1177,20 +1177,20 @@ static void compile_setcdr(hll_compiler *compiler, hll_value args) {
 
   compile_eval_expression(compiler, location);
   compile_eval_expression(compiler, value);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
 }
 
 static void compile_list(hll_compiler *compiler, hll_value args) {
   args = hll_unwrap_cdr(args);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   for (hll_value arg = args; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
     assert(hll_is_cons(arg));
     hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
 }
 
 static void compile_cons(hll_compiler *compiler, hll_value args) {
@@ -1202,13 +1202,13 @@ static void compile_cons(hll_compiler *compiler, hll_value args) {
 
   hll_value car = hll_unwrap_car(args);
   hll_value cdr = hll_unwrap_car(hll_unwrap_cdr(args));
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   compile_eval_expression(compiler, car);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   compile_eval_expression(compiler, cdr);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
 }
 
 static void add_symbol_to_function_param_list(hll_compiler *compiler,
@@ -1317,7 +1317,7 @@ static void compile_lambda(hll_compiler *compiler, hll_value args) {
     return;
   }
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_MAKEFUN);
   hll_bytecode_emit_u16(compiler->bytecode, function_idx);
 }
 
@@ -1341,7 +1341,7 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
     return;
   }
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   hll_value params = hll_unwrap_cdr(control);
   hll_value body = hll_unwrap_cdr(hll_unwrap_cdr(args));
 
@@ -1384,9 +1384,9 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
       return;
     }
 
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_MAKEFUN);
     hll_bytecode_emit_u16(compiler->bytecode, function_idx);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
   } else if (hll_get_value_kind(decide) == HLL_VALUE_SYMB) {
     hll_value value = rest;
     if (hll_is_cons(value)) {
@@ -1396,7 +1396,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
 
     compile_expression(compiler, decide);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
   } else {
     compiler_error(compiler, args,
                    "'define' first argument must either be a function name and "
@@ -1462,13 +1462,13 @@ static void compile_form(hll_compiler *compiler, hll_value args,
 static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
   switch (hll_get_value_kind(ast)) {
   case HLL_VALUE_NIL:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
   case HLL_VALUE_TRUE:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_TRUE);
     break;
   case HLL_VALUE_NUM:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
     hll_bytecode_emit_u16(compiler->bytecode,
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
@@ -1485,8 +1485,8 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
   } break;
   case HLL_VALUE_SYMB:
     compile_symbol(compiler, ast);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     break;
   default:
     HLL_UNREACHABLE;
@@ -1500,38 +1500,38 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
 static void compile_expression(hll_compiler *compiler, hll_value ast) {
   switch (hll_get_value_kind(ast)) {
   case HLL_VALUE_NIL:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
   case HLL_VALUE_TRUE:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_TRUE);
     break;
   case HLL_VALUE_NUM:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
     hll_bytecode_emit_u16(compiler->bytecode,
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_VALUE_CONS: {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
 
     hll_value obj = ast;
     bool pop = compiler_push_location(compiler, obj);
     while (!hll_is_nil(obj)) {
       assert(hll_is_cons(obj));
       compile_expression(compiler, hll_unwrap_car(obj));
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+      hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
 
       hll_value cdr = hll_unwrap_cdr(obj);
       if (!hll_is_nil(cdr) && !hll_is_cons(cdr)) {
         compile_expression(compiler, cdr);
-        hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+        hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
         break;
       }
 
       obj = cdr;
     }
     compiler_pop_location(compiler, pop);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
   } break;
   case HLL_VALUE_SYMB:
     compile_symbol(compiler, ast);
@@ -1546,19 +1546,19 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   hll_value result =
       hll_new_func(compiler->tu->vm, hll_nil(), compiler->bytecode);
   if (hll_is_nil(ast)) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   } else {
     for (; hll_is_cons(ast); ast = hll_unwrap_cdr(ast)) {
       hll_value expr = hll_unwrap_car(ast);
       bool pop = compiler_push_location(compiler, expr);
       compile_eval_expression(compiler, expr);
       if (!hll_is_nil(hll_unwrap_cdr(ast))) {
-        hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+        hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
       }
       compiler_pop_location(compiler, pop);
     }
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_END);
   hll_optimize_bytecode(compiler->bytecode);
   return result;
 }

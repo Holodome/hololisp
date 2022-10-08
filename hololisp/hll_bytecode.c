@@ -11,9 +11,9 @@
 
 static const char *get_op_str(hll_bytecode_op op) {
   static const char *strs[] = {
-      "END",  "NIL",      "TRUE",   "CONST",   "APPEND",  "POP",    "FIND",
-      "CALL", "MBTRCALL", "JN",     "LET",     "PUSHENV", "POPENV", "CAR",
-      "CDR",  "SETCAR",   "SETCDR", "MAKEFUN", 
+      "END",    "NIL",  "TRUE",     "CONST",  "APPEND", "POP",
+      "FIND",   "CALL", "MBTRCALL", "JN",     "LET",    "PUSHENV",
+      "POPENV", "CAR",  "CDR",      "SETCAR", "SETCDR", "MAKEFUN",
   };
 
   assert(op < sizeof(strs) / sizeof(strs[0]));
@@ -29,21 +29,21 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
 
   hll_bytecode_op op;
   size_t op_idx = 0;
-  while ((op = *instruction++) != HLL_BYTECODE_END) {
+  while ((op = *instruction++) != HLL_BC_END) {
     fprintf(file, "%4llX:#%-4llX ", (long long unsigned)op_idx,
             (long long unsigned)(instruction - bytecode->ops - 1));
     ++op_idx;
 
     fprintf(file, "%s", get_op_str(op));
     switch (op) {
-    case HLL_BYTECODE_JN: {
+    case HLL_BC_JN: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t offset = ((uint16_t)high) << 8 | low;
       fprintf(file, "%" PRIx16 " (->#%llX)", offset,
               (long long unsigned)(instruction + offset - bytecode->ops));
     } break;
-    case HLL_BYTECODE_MAKEFUN: {
+    case HLL_BC_MAKEFUN: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t idx = ((uint16_t)high) << 8 | low;
@@ -54,7 +54,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
         hll_dump_value(file, bytecode->constant_pool[idx]);
       }
     } break;
-    case HLL_BYTECODE_CONST: {
+    case HLL_BC_CONST: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t idx = ((uint16_t)high) << 8 | low;
@@ -77,8 +77,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
 
 size_t hll_get_bytecode_op_body_size(hll_bytecode_op op) {
   size_t s = 0;
-  if (op == HLL_BYTECODE_CONST || op == HLL_BYTECODE_MAKEFUN ||
-      op == HLL_BYTECODE_JN) {
+  if (op == HLL_BC_CONST || op == HLL_BC_MAKEFUN || op == HLL_BC_JN) {
     s = 2;
   }
 
@@ -197,9 +196,9 @@ void dump_function_info(void *file, hll_value value) {
     fprintf(file, "{ \"idx\": %zu, \"offset\": %zu, \"op\": \"%s\"", op_idx++,
             instruction - bc->ops, get_op_str(op));
     switch (op) {
-    case HLL_BYTECODE_CONST:
-    case HLL_BYTECODE_MAKEFUN:
-    case HLL_BYTECODE_JN: {
+    case HLL_BC_CONST:
+    case HLL_BC_MAKEFUN:
+    case HLL_BC_JN: {
       uint8_t high = *instruction++;
       uint8_t low = *instruction++;
       uint16_t offset = ((uint16_t)high) << 8 | low;
@@ -254,7 +253,11 @@ void hll_dump_program_info(void *file, hll_value program) {
   hll_dump_value(file, program);
 }
 
-static void mark_tail_calls(hll_bytecode *bytecode) { (void)bytecode; }
+static void investigate_call_op(hll_bytecode *bytecode, size_t call_idx) {
+  assert(bytecode->ops[call_idx] == HLL_BC_CALL);
+}
+
+static void mark_tail_calls(hll_bytecode *bytecode) {}
 
 void hll_optimize_bytecode(hll_bytecode *bytecode) {
   if (!hll_is_nil(bytecode->name)) {

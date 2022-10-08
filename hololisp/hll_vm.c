@@ -227,24 +227,24 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   while (hll_sb_len(vm->call_stack)) {
     uint8_t op = *current_call_frame->ip++;
     switch (op) {
-    case HLL_BYTECODE_END:
+    case HLL_BC_END:
       assert(hll_sb_len(vm->stack) != 0);
       vm->env = current_call_frame->env;
       assert(vm->env);
       (void)hll_sb_pop(vm->call_stack);
       current_call_frame = &hll_sb_last(vm->call_stack);
       break;
-    case HLL_BYTECODE_POP:
+    case HLL_BC_POP:
       assert(hll_sb_len(vm->stack) != 0);
       (void)hll_sb_pop(vm->stack);
       break;
-    case HLL_BYTECODE_NIL:
+    case HLL_BC_NIL:
       hll_sb_push(vm->stack, hll_nil());
       break;
-    case HLL_BYTECODE_TRUE:
+    case HLL_BC_TRUE:
       hll_sb_push(vm->stack, hll_true());
       break;
-    case HLL_BYTECODE_CONST: {
+    case HLL_BC_CONST: {
       uint16_t idx =
           (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
       current_call_frame->ip += 2;
@@ -252,7 +252,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_value value = current_call_frame->bytecode->constant_pool[idx];
       hll_sb_push(vm->stack, value);
     } break;
-    case HLL_BYTECODE_APPEND: {
+    case HLL_BC_APPEND: {
       assert(hll_sb_len(vm->stack) >= 3);
       hll_value *headp = &hll_sb_last(vm->stack) + -2;
       hll_value *tailp = &hll_sb_last(vm->stack) + -1;
@@ -274,7 +274,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       }
       hll_gc_pop_temp_root(vm->gc); // obj
     } break;
-    case HLL_BYTECODE_FIND: {
+    case HLL_BC_FIND: {
       hll_value symb = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, symb);
       if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_VALUE_SYMB)) {
@@ -292,7 +292,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // symb
       hll_sb_push(vm->stack, found);
     } break;
-    case HLL_BYTECODE_MAKEFUN: {
+    case HLL_BC_MAKEFUN: {
       uint16_t idx =
           (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
       current_call_frame->ip += 2;
@@ -307,7 +307,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
 
       hll_sb_push(vm->stack, value);
     } break;
-    case HLL_BYTECODE_CALL: {
+    case HLL_BC_CALL: {
       hll_value args = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, args);
       hll_value callable = hll_sb_pop(vm->stack);
@@ -369,7 +369,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // args
       hll_gc_pop_temp_root(vm->gc); // callable
     } break;
-    case HLL_BYTECODE_JN: {
+    case HLL_BC_JN: {
       uint16_t offset =
           (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
       current_call_frame->ip += 2;
@@ -384,7 +384,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       }
       hll_gc_pop_temp_root(vm->gc);
     } break;
-    case HLL_BYTECODE_LET: {
+    case HLL_BC_LET: {
       assert(hll_sb_len(vm->stack) != 0);
       hll_value value = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, value);
@@ -392,15 +392,15 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_add_variable(vm, vm->env, name, value);
       hll_gc_pop_temp_root(vm->gc); // value
     } break;
-    case HLL_BYTECODE_PUSHENV:
+    case HLL_BC_PUSHENV:
       vm->env = hll_new_env(vm, vm->env, hll_nil());
       break;
-    case HLL_BYTECODE_POPENV:
+    case HLL_BC_POPENV:
       vm->env = hll_unwrap_env(vm->env)->up;
       assert(vm->env);
       assert(hll_get_value_kind(vm->env) == HLL_VALUE_ENV);
       break;
-    case HLL_BYTECODE_CAR: {
+    case HLL_BC_CAR: {
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, cons);
@@ -408,7 +408,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // cons
       hll_sb_push(vm->stack, car);
     } break;
-    case HLL_BYTECODE_CDR: {
+    case HLL_BC_CDR: {
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cons = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, cons);
@@ -416,7 +416,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // cons
       hll_sb_push(vm->stack, cdr);
     } break;
-    case HLL_BYTECODE_SETCAR: {
+    case HLL_BC_SETCAR: {
       assert(hll_sb_len(vm->stack) != 0);
       hll_value car = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, car);
@@ -424,7 +424,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // car
       hll_unwrap_cons(cons)->car = car;
     } break;
-    case HLL_BYTECODE_SETCDR: {
+    case HLL_BC_SETCDR: {
       assert(hll_sb_len(vm->stack) != 0);
       hll_value cdr = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, cdr);
