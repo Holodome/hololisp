@@ -98,10 +98,9 @@ wasm-test: $(SRCS)
 FUZZ = $(OUT_DIR)/fuzz
 
 $(FUZZ): $(filter-out $(SRC_DIR)/main.c, $(SRCS)) tests/fuzz/fuzz.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -g -O2 -fsanitize=fuzzer,address $^ -o $@
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -g -O0 -fsanitize=fuzzer,address $^ -o $@
 
 fuzz: $(FUZZ)
 	$(shell rm -r crash-*)
-	$(FUZZ) -merge
 
 .PHONY: all test tests clean wasm-test fuzz

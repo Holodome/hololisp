@@ -651,7 +651,7 @@ static hll_value read_expr(hll_reader *reader) {
     ast = hll_new_cons(
         reader->tu->vm, hll_new_symbolz(reader->tu->vm, "quote"),
         hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil()));
-    add_reader_meta_info(reader, ast);
+    /* add_reader_meta_info(reader, ast); */
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -867,8 +867,7 @@ static void compile_function_call_internal(hll_compiler *compiler,
                                            hll_value list) {
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
-  for (hll_value arg = list; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
-    assert(hll_is_cons(arg));
+  for (hll_value arg = list; hll_is_cons(arg); arg = hll_unwrap_cdr(arg)) {
     hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
@@ -982,10 +981,14 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
   args = hll_unwrap_cdr(args);
 
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_PUSHENV);
-  for (hll_value let = hll_unwrap_car(args); !hll_is_nil(let);
+  for (hll_value let = hll_unwrap_car(args); hll_is_cons(let);
        let = hll_unwrap_cdr(let)) {
     hll_value pair = hll_unwrap_car(let);
-    assert(hll_is_cons(pair));
+    if (!hll_is_cons(pair)) {
+      compiler_error(compiler, args,
+                     "'let' special form requires lists as variable bindings");
+      return;
+    }
     hll_value name = hll_unwrap_car(pair);
     hll_value value = hll_unwrap_cdr(pair);
     if (hll_is_cons(value)) {
