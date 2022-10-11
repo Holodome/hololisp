@@ -108,10 +108,7 @@ pos_test "cdr" "(2)" "(cdr '(1 2))"
 pos_test "cadr" "2" "(cadr '(1 2))" 
 pos_test "car" "a" "(car '(a b c))" 
 pos_test "cdr" "(b c)" "(cdr '(a b c))"
-
 pos_test "cadr" "2" "(cadr '(1 2 3 4))"
-pos_test "caddr" "3" "(caddr '(1 2 3 4))"
-pos_test "cadddr" "4" "(cadddr '(1 2 3 4))"
 
 neg_test "if args" "(if)"
 neg_test "if args" "(if t)"

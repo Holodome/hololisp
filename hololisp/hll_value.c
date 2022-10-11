@@ -231,6 +231,14 @@ hll_obj *hll_unwrap_obj(hll_value value) {
   return nan_unbox_ptr(value);
 }
 
+void hll_setcar(hll_value cons, hll_value car) {
+  hll_unwrap_cons(cons)->car = car;
+}
+
+void hll_setcdr(hll_value cons, hll_value cdr) {
+  hll_unwrap_cons(cons)->cdr = cdr;
+}
+
 size_t hll_list_length(hll_value value) {
   size_t length = 0;
   while (hll_is_cons(value)) {

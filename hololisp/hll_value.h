@@ -79,8 +79,6 @@ HLL_PUB hll_value hll_new_bind(struct hll_vm *vm,
 HLL_PUB hll_value hll_new_func(struct hll_vm *vm, hll_value params,
                                struct hll_bytecode *bytecode);
 
-void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
-
 //
 // Unwrapper functions.
 // Unwrappers are used to get internal contents of value of expected type.
@@ -90,6 +88,8 @@ void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 HLL_PUB double hll_unwrap_num(hll_value value);
 HLL_PUB hll_value hll_unwrap_cdr(hll_value value);
 HLL_PUB hll_value hll_unwrap_car(hll_value value);
+HLL_PUB void hll_setcar(hll_value cons, hll_value car);
+HLL_PUB void hll_setcdr(hll_value cons, hll_value cdr);
 HLL_PUB hll_obj_cons *hll_unwrap_cons(hll_value value)
     __attribute__((returns_nonnull));
 HLL_PUB hll_obj_env *hll_unwrap_env(hll_value value)
@@ -104,6 +104,7 @@ HLL_PUB hll_obj_func *hll_unwrap_func(hll_value value)
     __attribute__((returns_nonnull));
 
 hll_obj *hll_unwrap_obj(hll_value value);
+void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'

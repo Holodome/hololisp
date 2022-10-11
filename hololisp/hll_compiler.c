@@ -57,31 +57,7 @@ typedef enum {
   HLL_CAR_CDR(aa, AA)                                                          \
   HLL_CAR_CDR(ad, AD)                                                          \
   HLL_CAR_CDR(da, DA)                                                          \
-  HLL_CAR_CDR(dd, DD)                                                          \
-  HLL_CAR_CDR(aaa, AAA)                                                        \
-  HLL_CAR_CDR(aad, AAD)                                                        \
-  HLL_CAR_CDR(ada, ADA)                                                        \
-  HLL_CAR_CDR(add, ADD)                                                        \
-  HLL_CAR_CDR(daa, DAA)                                                        \
-  HLL_CAR_CDR(dad, DAD)                                                        \
-  HLL_CAR_CDR(dda, DDA)                                                        \
-  HLL_CAR_CDR(ddd, DDD)                                                        \
-  HLL_CAR_CDR(aaaa, AAAA)                                                      \
-  HLL_CAR_CDR(aaad, AAAD)                                                      \
-  HLL_CAR_CDR(aada, AADA)                                                      \
-  HLL_CAR_CDR(aadd, AADD)                                                      \
-  HLL_CAR_CDR(adaa, ADAA)                                                      \
-  HLL_CAR_CDR(adad, ADAD)                                                      \
-  HLL_CAR_CDR(adda, ADDA)                                                      \
-  HLL_CAR_CDR(addd, ADDD)                                                      \
-  HLL_CAR_CDR(daaa, DAAA)                                                      \
-  HLL_CAR_CDR(daad, DAAD)                                                      \
-  HLL_CAR_CDR(dada, DADA)                                                      \
-  HLL_CAR_CDR(dadd, DADD)                                                      \
-  HLL_CAR_CDR(ddaa, DDAA)                                                      \
-  HLL_CAR_CDR(ddad, DDAD)                                                      \
-  HLL_CAR_CDR(ddda, DDDA)                                                      \
-  HLL_CAR_CDR(dddd, DDDD)
+  HLL_CAR_CDR(dd, DD)
 
 // Denotes special forms in language.
 // Special forms are different from other lisp constructs because they require
@@ -122,10 +98,6 @@ typedef enum {
 #undef HLL_CAR_CDR
 } hll_location_form;
 
-typedef struct {
-  uint32_t offset;
-} hll_location_sample;
-
 static size_t *get_location_entry_idx(hll_location_table *table,
                                       uint64_t hash) {
   assert(table);
@@ -146,8 +118,8 @@ static size_t *get_location_entry_idx(hll_location_table *table,
   return entry;
 }
 
-static void set_location_entry(hll_location_table *table, uint64_t hash,
-                               uint32_t offset, uint32_t length) {
+static void store_location(hll_location_table *table, uint64_t hash,
+                           uint32_t offset, uint32_t length) {
   assert(table);
   hll_location_entry new_entry = {
       .hash = hash, .offset = offset, .length = length};
@@ -359,7 +331,7 @@ static inline hll_lexer_state get_next_state(hll_lexer_state state,
     }
     break;
   default:
-    assert(0);
+    HLL_UNREACHABLE;
   }
 
   return state;
@@ -514,13 +486,13 @@ reader_error(hll_reader *reader, uint32_t offset, const char *fmt, ...) {
   if (!reader->tu) {
     return;
   }
-  ++reader->error_count;
 
+  hll_loc loc = {.translation_unit = reader->tu->translation_unit, offset};
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(reader->tu->vm->debug,
-                    (hll_loc){reader->tu->translation_unit, offset}, fmt, args);
+  hll_report_errorv(reader->tu->vm->debug, loc, fmt, args);
   va_end(args);
+  ++reader->error_count;
 }
 
 static void peek_token(hll_reader *reader) {
@@ -550,25 +522,23 @@ static void eat_token(hll_reader *reader) {
 
 static hll_value read_expr(hll_reader *reader);
 
-static void add_reader_meta_info(hll_reader *reader, hll_value value) {
-  if (reader->tu->locs == NULL) {
+static void record_location(hll_reader *reader, hll_value value) {
+  if (!(reader->tu->flags & HLL_TU_FLAG_DEBUG)) {
     return;
   }
 
-  assert(hll_is_obj(value));
-  struct hll_obj *obj = hll_unwrap_obj(value);
-  uint64_t hash = (uint64_t)(uintptr_t)obj;
-
+  uint64_t hash = hash_value(value);
   uint32_t offset = reader->token->offset;
   uint32_t length = reader->token->length;
-  set_location_entry(reader->tu->locs, hash, offset, length);
+  store_location(reader->tu->locs, hash, offset, length);
 }
 
 static hll_value read_list(hll_reader *reader) {
   peek_token(reader);
+  // This is used to report errors because I am lazy to do it properly
+  uint32_t head_offset = reader->token->offset;
   // This should be guaranteed by caller.
   assert(reader->token->kind == HLL_TOK_LPAREN);
-  uint32_t head_offset = reader->token->offset;
   eat_token(reader);
   // Now we expect at least one list element followed by others ending either
   // with right paren or dot, element and right paren Now check if we don't
@@ -585,7 +555,7 @@ static hll_value read_list(hll_reader *reader) {
   hll_value list_tail;
   list_head = list_tail =
       hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil());
-  add_reader_meta_info(reader, list_head);
+  record_location(reader, list_head);
 
   // Now enter the loop of parsing other list elements.
   for (;;) {
@@ -612,10 +582,10 @@ static hll_value read_list(hll_reader *reader) {
     }
 
     hll_value ast = read_expr(reader);
-    hll_unwrap_cons(list_tail)->cdr =
-        hll_new_cons(reader->tu->vm, ast, hll_nil());
-    list_tail = hll_unwrap_cdr(list_tail);
-    add_reader_meta_info(reader, list_tail);
+    hll_value cons = hll_new_cons(reader->tu->vm, ast, hll_nil());
+    hll_setcdr(list_tail, cons);
+    list_tail = cons;
+    record_location(reader, list_tail);
   }
 
   HLL_UNREACHABLE;
@@ -651,7 +621,6 @@ static hll_value read_expr(hll_reader *reader) {
     ast = hll_new_cons(
         reader->tu->vm, hll_new_symbolz(reader->tu->vm, "quote"),
         hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil()));
-    /* add_reader_meta_info(reader, ast); */
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -682,7 +651,7 @@ hll_value hll_read_ast(hll_reader *reader) {
 
     if (hll_is_nil(list_head)) {
       list_head = list_tail = cons;
-      add_reader_meta_info(reader, list_head);
+      record_location(reader, list_head);
     } else {
       hll_unwrap_cons(list_tail)->cdr = cons;
       list_tail = cons;
