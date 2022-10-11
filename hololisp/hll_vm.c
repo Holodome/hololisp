@@ -79,7 +79,7 @@ void hll_delete_vm(hll_vm *vm) {
 hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
                                    const char *name,
                                    hll_interpret_flags flags) {
-  hll_interpret_result result = HLL_RESULT_OK;
+  hll_interpret_result result;
 
   hll_reset_debug(vm->debug);
   // Set debug colored flag
@@ -92,7 +92,6 @@ hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
   if (!hll_compile(vm, source, name, &compiled)) {
     result = HLL_RESULT_ERROR;
   } else {
-
     bool print_result = (flags & HLL_INTERPRET_PRINT_RESULT) != 0;
     result = hll_interpret_bytecode(vm, compiled, print_result);
   }
@@ -121,15 +120,14 @@ bool hll_find_var(hll_value env, hll_value car, hll_value *found) {
   assert(hll_get_value_kind(car) == HLL_VALUE_SYMB &&
          "argument is not a symbol");
   hll_obj_symb *symb = hll_unwrap_symb(car);
-  for (; hll_get_value_kind(env) == HLL_VALUE_ENV;
-       env = hll_unwrap_env(env)->up) {
-    for (hll_value cons = hll_unwrap_env(env)->vars; !hll_is_nil(cons);
+  for (; !hll_is_nil(env); env = hll_unwrap_env(env)->up) {
+    for (hll_value cons = hll_unwrap_env(env)->vars; hll_is_cons(cons);
          cons = hll_unwrap_cdr(cons)) {
       hll_value test = hll_unwrap_car(cons);
       assert(hll_get_value_kind(hll_unwrap_car(test)) == HLL_VALUE_SYMB &&
              "Variable is not a cons of symbol and its value");
       if (symb->hash == hll_unwrap_symb(hll_unwrap_car(test))->hash) {
-        if (found) {
+        if (found != NULL) {
           *found = test;
         }
         return true;
@@ -201,8 +199,67 @@ hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   longjmp(vm->err_jmp, 1);
 }
 
+static void call_func(hll_vm *vm, hll_value callable, hll_value args,
+                      hll_call_frame **current_call_frame, bool mbtr) {
+  switch (hll_get_value_kind(callable)) {
+  case HLL_VALUE_FUNC: {
+    hll_obj_func *func = hll_unwrap_func(callable);
+    hll_value new_env = hll_new_env(vm, func->env, hll_nil());
+    hll_gc_push_temp_root(vm->gc, new_env);
+    hll_value param_name = func->param_names;
+    hll_value param_value = args;
+    if (hll_is_cons(param_name) && hll_is_symb(hll_unwrap_car(param_name))) {
+      for (; hll_is_cons(param_name);
+           param_name = hll_unwrap_cdr(param_name),
+           param_value = hll_unwrap_cdr(param_value)) {
+        if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
+          hll_runtime_error(vm, "number of arguments does not match");
+        }
+        hll_value name = hll_unwrap_car(param_name);
+        assert(hll_is_symb(name));
+        hll_value value = hll_unwrap_car(param_value);
+        hll_add_variable(vm, new_env, name, value);
+      }
+    } else if (hll_is_cons(param_name) &&
+               hll_is_nil(hll_unwrap_car(param_name))) {
+      param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
+    }
+
+    if (!hll_is_nil(param_name)) {
+      assert(hll_is_symb(param_name));
+      hll_add_variable(vm, new_env, param_name, param_value);
+    }
+
+    if (mbtr && func->bytecode == (*current_call_frame)->bytecode) {
+      (*current_call_frame)->ip = (*current_call_frame)->bytecode->ops;
+    } else {
+      hll_call_frame new_frame = {0};
+      new_frame.bytecode = func->bytecode;
+      new_frame.ip = func->bytecode->ops;
+      new_frame.env = vm->env;
+      new_frame.func = callable;
+      hll_sb_push(vm->call_stack, new_frame);
+    }
+    *current_call_frame = &hll_sb_last(vm->call_stack);
+    hll_gc_pop_temp_root(vm->gc); // new_env
+    vm->env = new_env;
+  } break;
+  case HLL_VALUE_BIND: {
+    hll_push_forbid_gc(vm->gc);
+    hll_value result = hll_unwrap_bind(callable)->bind(vm, args);
+    hll_pop_forbid_gc(vm->gc);
+    hll_sb_push(vm->stack, result);
+  } break;
+  default:
+    hll_runtime_error(vm, "object is not callable (got %s)",
+                      hll_get_value_kind_str(hll_get_value_kind(callable)));
+    break;
+  }
+}
+
 hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled) {
+  // Setup setjump for error handling
   if (setjmp(vm->err_jmp) == 1) {
     goto bail;
   }
@@ -219,7 +276,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
     original_frame.bytecode = initial_bytecode;
     original_frame.env = env_;
     original_frame.func = compiled;
-    assert(env_);
     hll_sb_push(vm->call_stack, original_frame);
   }
   hll_call_frame *current_call_frame = vm->call_stack;
@@ -302,8 +358,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       assert(hll_get_value_kind(value) == HLL_VALUE_FUNC);
       value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
                            hll_unwrap_func(value)->bytecode);
-      hll_obj_func *func = hll_unwrap_func(value);
-      func->env = vm->env;
+      hll_unwrap_func(value)->env = vm->env;
 
       hll_sb_push(vm->stack, value);
     } break;
@@ -313,62 +368,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_value callable = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, callable);
 
-      switch (hll_get_value_kind(callable)) {
-      case HLL_VALUE_FUNC: {
-        hll_obj_func *func = hll_unwrap_func(callable);
-        hll_value new_env = hll_new_env(vm, func->env, hll_nil());
-        hll_gc_push_temp_root(vm->gc, new_env);
-        hll_value param_name = func->param_names;
-        hll_value param_value = args;
-        if (hll_is_cons(param_name) &&
-            hll_is_symb(hll_unwrap_car(param_name))) {
-          for (; hll_is_cons(param_name);
-               param_name = hll_unwrap_cdr(param_name),
-               param_value = hll_unwrap_cdr(param_value)) {
-            if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
-              hll_runtime_error(vm, "number of arguments does not match");
-            }
-            hll_value name = hll_unwrap_car(param_name);
-            assert(hll_is_symb(name));
-            hll_value value = hll_unwrap_car(param_value);
-            hll_add_variable(vm, new_env, name, value);
-          }
-        } else if (hll_is_cons(param_name) &&
-                   hll_is_nil(hll_unwrap_car(param_name))) {
-          param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
-        }
-
-        if (!hll_is_nil(param_name)) {
-          assert(hll_is_symb(param_name));
-          hll_add_variable(vm, new_env, param_name, param_value);
-        }
-
-        if (func->bytecode == current_call_frame->bytecode) {
-          current_call_frame->ip = current_call_frame->bytecode->ops;
-        } else {
-          hll_call_frame new_frame = {0};
-          new_frame.bytecode = func->bytecode;
-          new_frame.ip = func->bytecode->ops;
-          new_frame.env = vm->env;
-          new_frame.func = callable;
-          hll_sb_push(vm->call_stack, new_frame);
-        }
-        current_call_frame = &hll_sb_last(vm->call_stack);
-        hll_gc_pop_temp_root(vm->gc); // new_env
-        vm->env = new_env;
-      } break;
-      case HLL_VALUE_BIND: {
-        hll_push_forbid_gc(vm->gc);
-        /* hll_print_value(vm, args); */
-        hll_value result = hll_unwrap_bind(callable)->bind(vm, args);
-        hll_pop_forbid_gc(vm->gc);
-        hll_sb_push(vm->stack, result);
-      } break;
-      default:
-        hll_runtime_error(vm, "object is not callable (got %s)",
-                          hll_get_value_kind_str(hll_get_value_kind(callable)));
-        break;
-      }
+      call_func(vm, callable, args, &current_call_frame, true);
 
       hll_gc_pop_temp_root(vm->gc); // args
       hll_gc_pop_temp_root(vm->gc); // callable
@@ -379,58 +379,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_value callable = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, callable);
 
-      switch (hll_get_value_kind(callable)) {
-      case HLL_VALUE_FUNC: {
-        hll_obj_func *func = hll_unwrap_func(callable);
-        hll_value new_env = hll_new_env(vm, func->env, hll_nil());
-        hll_gc_push_temp_root(vm->gc, new_env);
-        hll_value param_name = func->param_names;
-        hll_value param_value = args;
-        if (hll_is_cons(param_name) &&
-            hll_is_symb(hll_unwrap_car(param_name))) {
-          for (; hll_is_cons(param_name);
-               param_name = hll_unwrap_cdr(param_name),
-               param_value = hll_unwrap_cdr(param_value)) {
-            if (hll_get_value_kind(param_value) != HLL_VALUE_CONS) {
-              hll_runtime_error(vm, "number of arguments does not match");
-            }
-            hll_value name = hll_unwrap_car(param_name);
-            assert(hll_is_symb(name));
-            hll_value value = hll_unwrap_car(param_value);
-            hll_add_variable(vm, new_env, name, value);
-          }
-        } else if (hll_is_cons(param_name) &&
-                   hll_is_nil(hll_unwrap_car(param_name))) {
-          param_name = hll_unwrap_car(hll_unwrap_cdr(param_name));
-        }
-
-        if (!hll_is_nil(param_name)) {
-          assert(hll_is_symb(param_name));
-          hll_add_variable(vm, new_env, param_name, param_value);
-        }
-
-        hll_call_frame new_frame = {0};
-        new_frame.bytecode = func->bytecode;
-        new_frame.ip = func->bytecode->ops;
-        new_frame.env = vm->env;
-        new_frame.func = callable;
-        hll_sb_push(vm->call_stack, new_frame);
-        current_call_frame = &hll_sb_last(vm->call_stack);
-        hll_gc_pop_temp_root(vm->gc); // new_env
-        vm->env = new_env;
-      } break;
-      case HLL_VALUE_BIND: {
-        hll_push_forbid_gc(vm->gc);
-        /* hll_print_value(vm, args); */
-        hll_value result = hll_unwrap_bind(callable)->bind(vm, args);
-        hll_pop_forbid_gc(vm->gc);
-        hll_sb_push(vm->stack, result);
-      } break;
-      default:
-        hll_runtime_error(vm, "object is not callable (got %s)",
-                          hll_get_value_kind_str(hll_get_value_kind(callable)));
-        break;
-      }
+      call_func(vm, callable, args, &current_call_frame, false);
 
       hll_gc_pop_temp_root(vm->gc); // args
       hll_gc_pop_temp_root(vm->gc); // callable
@@ -499,26 +448,19 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // cdr
     } break;
     default:
-      assert(0);
+      HLL_UNREACHABLE;
       break;
     }
   }
 
-  goto out;
-#define _FREE                                                                  \
-  hll_sb_free(vm->stack);                                                      \
-  hll_sb_free(vm->call_stack);
+  hll_value result;
+  goto success;
+success:
+  result = vm->stack[0];
 bail:
-  _FREE
-  return hll_nil();
-out:
-  assert(hll_sb_len(vm->stack));
-  hll_value result = vm->stack[0];
-  _FREE
-  vm->call_stack = NULL;
-  vm->stack = NULL;
-
-  hll_gc_pop_temp_root(vm->gc);
+  hll_sb_free(vm->stack);
+  hll_sb_free(vm->call_stack);
+  hll_gc_pop_temp_root(vm->gc); // callable
 
   return result;
 }

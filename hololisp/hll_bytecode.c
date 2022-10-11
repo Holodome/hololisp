@@ -4,9 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "hll_debug.h"
 #include "hll_mem.h"
-#include "hll_util.h"
 #include "hll_value.h"
 
 static const char *get_op_str(hll_bytecode_op op) {
@@ -310,9 +308,6 @@ static void mark_tail_calls(hll_bytecode *bytecode) {
 
 void hll_optimize_bytecode(hll_bytecode *bytecode) {
   if (!hll_is_nil(bytecode->name)) {
-    /* printf("mark\n"); */
     mark_tail_calls(bytecode);
-  } else {
-    /* printf("dont mark\n"); */
   }
 }
