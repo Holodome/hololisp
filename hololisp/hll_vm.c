@@ -457,7 +457,10 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   goto success;
 success:
   result = vm->stack[0];
+  goto end;
 bail:
+  result = hll_nil();
+end:
   hll_sb_free(vm->stack);
   hll_sb_free(vm->call_stack);
   hll_gc_pop_temp_root(vm->gc); // callable
