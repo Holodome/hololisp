@@ -139,15 +139,6 @@ static void test_compiler_compiles_complex_arithmetic_operation(void) {
 }
 
 static void test_compiler_compiles_if(void) {
-  /*
-0:#0    TRUE
-1:#1    JN 9 (->#B)
-2:#4    CONST 1
-3:#7    TRUE
-4:#8    JT 5 (->#E)
-5:#B    CONST 0
-6:#E    END
-   */
   const char *source = "(if t 1 0)";
   uint8_t bytecode[] = {// t
                         HLL_BC_TRUE, HLL_BC_JN, 0x00, 0x07,

@@ -16,7 +16,6 @@
 - [Compiler](desc/compiler.md)
 - [Builtin forms](desc/builtin.md)
 - [Macro system](desc/macros.md)
-- [C FFI](desc/s-expr/c-ffi.md)
 
 # Conclusion
 
