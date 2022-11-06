@@ -60,12 +60,11 @@ typedef struct {
   hll_location_entry *entries;
 } hll_location_table;
 
+// Flags of translation unit.
 typedef uint32_t hll_tu_flags;
 enum { HLL_TU_FLAG_DEBUG = 0x1 };
 
-// Meta information used in reader.
-// It is named 'meta' because is not directly related to AST generation.
-// This is used to build debug information that is later embedded into bytecode.
+// Meta information used during compilation.
 typedef struct {
   // Index of compilation unit in global table.
   uint32_t translation_unit;
@@ -124,7 +123,7 @@ typedef struct {
 } hll_lexer;
 
 void hll_lexer_init(hll_lexer *lexer, const char *input,
-                    hll_translation_unit *tu) __attribute__((nonnull(1, 2)));
+                    hll_translation_unit *tu) __attribute__((nonnull));
 
 // Generate next token and return it. If EOF is reached, EOF token is
 // guaranteed to always be returned after that.
@@ -152,7 +151,7 @@ typedef struct {
 // Initialized reader to use given lexer. Lexer is taken as pointer to allow
 // used decide where it comes from.
 void hll_reader_init(hll_reader *reader, hll_lexer *lexer,
-                     hll_translation_unit *tu) __attribute__((nonnull(1, 2)));
+                     hll_translation_unit *tu) __attribute__((nonnull));
 
 // Reads whole ast tree.
 hll_value hll_read_ast(hll_reader *reader) __attribute__((nonnull));
@@ -167,7 +166,6 @@ typedef struct {
 typedef struct {
   uint32_t error_count;
 
-  hll_value env;
   // Bytecode that is currently being generated.
   struct hll_bytecode *bytecode;
 
@@ -182,8 +180,8 @@ typedef struct {
   size_t loc_op_idx;
 } hll_compiler;
 
-void hll_compiler_init(hll_compiler *compiler, hll_value env,
-                       hll_translation_unit *tu) __attribute__((nonnull(1)));
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu,
+                       hll_value name) __attribute__((nonnull));
 
 // Compiles ast into a function object. Garbage collection is forbidden to
 // happen during execution of this function.

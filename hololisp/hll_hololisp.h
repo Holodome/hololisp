@@ -66,6 +66,8 @@ typedef struct hll_config {
   void *user_data;
 } hll_config;
 
+void hll_initialize_default_config(hll_config *config);
+
 // Result of calling hll_interpret.
 // Contains minimal information about source of error.
 typedef enum {
@@ -79,17 +81,8 @@ enum {
   // for example, when execution REPL result print is needed, while when
   // executing files this is unwanted.
   HLL_INTERPRET_PRINT_RESULT = 0x1,
-  // Generate debug information. By default, hololisp executes with minimal
-  // debug information, making it very hard to debug errors. When this flag
-  // is set, hololisp is able to provide more meaningful both compiler and
-  // interpreter errors.
-  HLL_INTERPRET_DEBUG = 0x2,
-  // Generate program dump in json format. Program dump can be read using
-  // 'bytecode_viewer.py' script. Generating dumps can be useful for debugging.
-  // If HLL_INTERPRET_DEBUG flag is not set, dump is generated but is empty.
-  HLL_INTERPRET_DUMP_ON_FAILURE = 0x4,
   // Make output of error messages be colored using ANSI escape codes.
-  HLL_INTERPRET_DEBUG_COLORED = 0x8
+  HLL_INTERPRET_DEBUG_COLORED = 0x2
 };
 
 // If config is NULL, uses default config.

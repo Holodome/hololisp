@@ -202,7 +202,9 @@ uint32_t hll_bytecode_get_loc(hll_debug_storage *debug,
   assert(dtu <= &hll_sb_last(debug->dtus));
   size_t cursor = 0;
   hll_bytecode_rle *rle = dtu->loc_rle;
-  assert(rle);
+  if (rle == NULL) {
+    return 0;
+  }
   for (;;) {
     if (cursor <= op_idx && op_idx < cursor + rle->length) {
       break;

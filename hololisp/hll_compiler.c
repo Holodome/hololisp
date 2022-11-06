@@ -57,31 +57,7 @@ typedef enum {
   HLL_CAR_CDR(aa, AA)                                                          \
   HLL_CAR_CDR(ad, AD)                                                          \
   HLL_CAR_CDR(da, DA)                                                          \
-  HLL_CAR_CDR(dd, DD)                                                          \
-  HLL_CAR_CDR(aaa, AAA)                                                        \
-  HLL_CAR_CDR(aad, AAD)                                                        \
-  HLL_CAR_CDR(ada, ADA)                                                        \
-  HLL_CAR_CDR(add, ADD)                                                        \
-  HLL_CAR_CDR(daa, DAA)                                                        \
-  HLL_CAR_CDR(dad, DAD)                                                        \
-  HLL_CAR_CDR(dda, DDA)                                                        \
-  HLL_CAR_CDR(ddd, DDD)                                                        \
-  HLL_CAR_CDR(aaaa, AAAA)                                                      \
-  HLL_CAR_CDR(aaad, AAAD)                                                      \
-  HLL_CAR_CDR(aada, AADA)                                                      \
-  HLL_CAR_CDR(aadd, AADD)                                                      \
-  HLL_CAR_CDR(adaa, ADAA)                                                      \
-  HLL_CAR_CDR(adad, ADAD)                                                      \
-  HLL_CAR_CDR(adda, ADDA)                                                      \
-  HLL_CAR_CDR(addd, ADDD)                                                      \
-  HLL_CAR_CDR(daaa, DAAA)                                                      \
-  HLL_CAR_CDR(daad, DAAD)                                                      \
-  HLL_CAR_CDR(dada, DADA)                                                      \
-  HLL_CAR_CDR(dadd, DADD)                                                      \
-  HLL_CAR_CDR(ddaa, DDAA)                                                      \
-  HLL_CAR_CDR(ddad, DDAD)                                                      \
-  HLL_CAR_CDR(ddda, DDDA)                                                      \
-  HLL_CAR_CDR(dddd, DDDD)
+  HLL_CAR_CDR(dd, DD)
 
 // Denotes special forms in language.
 // Special forms are different from other lisp constructs because they require
@@ -105,8 +81,6 @@ typedef enum {
   HLL_FORM_SETCDR,
   HLL_FORM_PROGN,
   HLL_FORM_LAMBDA,
-  HLL_FORM_OR,
-  HLL_FORM_AND,
   HLL_FORM_DEFINE,
   HLL_FORM_DEFMACRO,
 #define HLL_CAR_CDR(_, _letters) HLL_FORM_C##_letters##R,
@@ -123,10 +97,6 @@ typedef enum {
   HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
 } hll_location_form;
-
-typedef struct {
-  uint32_t offset;
-} hll_location_sample;
 
 static size_t *get_location_entry_idx(hll_location_table *table,
                                       uint64_t hash) {
@@ -148,15 +118,14 @@ static size_t *get_location_entry_idx(hll_location_table *table,
   return entry;
 }
 
-static void set_location_entry(hll_location_table *table, uint64_t hash,
-                               uint32_t offset, uint32_t length) {
+static void store_location(hll_location_table *table, uint64_t hash,
+                           uint32_t offset, uint32_t length) {
   assert(table);
-  size_t *entry_idx = get_location_entry_idx(table, hash);
-
-  assert(!*entry_idx);
   hll_location_entry new_entry = {
       .hash = hash, .offset = offset, .length = length};
   hll_sb_push(table->entries, new_entry);
+  size_t *entry_idx = get_location_entry_idx(table, hash);
+  assert(!*entry_idx);
   hll_location_entry *e = &hll_sb_last(table->entries);
   e->next = *entry_idx;
   *entry_idx = e - table->entries;
@@ -192,18 +161,21 @@ bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
   hll_push_forbid_gc(vm->gc);
   hll_value ast = hll_read_ast(&reader);
 
-  hll_compiler compiler;
-  hll_compiler_init(&compiler, vm->env, &tu);
-  *compiled = hll_compile_ast(&compiler, ast);
-  hll_pop_forbid_gc(vm->gc);
+  if (lexer.error_count == 0 && reader.error_count == 0) {
+    hll_compiler compiler;
+    hll_compiler_init(&compiler, &tu, hll_nil());
+    *compiled = hll_compile_ast(&compiler, ast);
+    hll_sb_free(compiler.loc_stack);
 
-  if (lexer.error_count != 0 || reader.error_count != 0 ||
-      compiler.error_count != 0) {
+    if (compiler.error_count != 0) {
+      result = false;
+    }
+  } else {
     result = false;
   }
 
+  hll_pop_forbid_gc(vm->gc);
   hll_delete_tu(&tu);
-  hll_sb_free(compiler.loc_stack);
 
   return result;
 }
@@ -359,7 +331,7 @@ static inline hll_lexer_state get_next_state(hll_lexer_state state,
     }
     break;
   default:
-    assert(0);
+    HLL_UNREACHABLE;
   }
 
   return state;
@@ -374,9 +346,9 @@ lexer_error(hll_lexer *lexer, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(lexer->tu->vm->debug,
-                   (hll_loc){lexer->tu->translation_unit, lexer->next.offset},
-                   fmt, args);
+  hll_report_errorv(lexer->tu->vm->debug,
+                    (hll_loc){lexer->tu->translation_unit, lexer->next.offset},
+                    fmt, args);
   va_end(args);
 }
 
@@ -514,13 +486,13 @@ reader_error(hll_reader *reader, uint32_t offset, const char *fmt, ...) {
   if (!reader->tu) {
     return;
   }
-  ++reader->error_count;
 
+  hll_loc loc = {.translation_unit = reader->tu->translation_unit, offset};
   va_list args;
   va_start(args, fmt);
-  hll_report_errorv(reader->tu->vm->debug,
-                    (hll_loc){reader->tu->translation_unit, offset}, fmt, args);
+  hll_report_errorv(reader->tu->vm->debug, loc, fmt, args);
   va_end(args);
+  ++reader->error_count;
 }
 
 static void peek_token(hll_reader *reader) {
@@ -550,25 +522,23 @@ static void eat_token(hll_reader *reader) {
 
 static hll_value read_expr(hll_reader *reader);
 
-static void add_reader_meta_info(hll_reader *reader, hll_value value) {
-  if (reader->tu->locs == NULL) {
+static void record_location(hll_reader *reader, hll_value value) {
+  if (!(reader->tu->flags & HLL_TU_FLAG_DEBUG)) {
     return;
   }
 
-  assert(hll_is_obj(value));
-  struct hll_obj *obj = hll_unwrap_obj(value);
-  uint64_t hash = (uint64_t)(uintptr_t)obj;
-
+  uint64_t hash = hash_value(value);
   uint32_t offset = reader->token->offset;
   uint32_t length = reader->token->length;
-  set_location_entry(reader->tu->locs, hash, offset, length);
+  store_location(reader->tu->locs, hash, offset, length);
 }
 
 static hll_value read_list(hll_reader *reader) {
   peek_token(reader);
+  // This is used to report errors because I am lazy to do it properly
+  uint32_t head_offset = reader->token->offset;
   // This should be guaranteed by caller.
   assert(reader->token->kind == HLL_TOK_LPAREN);
-  uint32_t head_offset = reader->token->offset;
   eat_token(reader);
   // Now we expect at least one list element followed by others ending either
   // with right paren or dot, element and right paren Now check if we don't
@@ -585,7 +555,7 @@ static hll_value read_list(hll_reader *reader) {
   hll_value list_tail;
   list_head = list_tail =
       hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil());
-  add_reader_meta_info(reader, list_head);
+  record_location(reader, list_head);
 
   // Now enter the loop of parsing other list elements.
   for (;;) {
@@ -612,10 +582,10 @@ static hll_value read_list(hll_reader *reader) {
     }
 
     hll_value ast = read_expr(reader);
-    hll_unwrap_cons(list_tail)->cdr =
-        hll_new_cons(reader->tu->vm, ast, hll_nil());
-    list_tail = hll_unwrap_cdr(list_tail);
-    add_reader_meta_info(reader, list_tail);
+    hll_value cons = hll_new_cons(reader->tu->vm, ast, hll_nil());
+    hll_setcdr(list_tail, cons);
+    list_tail = cons;
+    record_location(reader, list_tail);
   }
 
   HLL_UNREACHABLE;
@@ -651,7 +621,6 @@ static hll_value read_expr(hll_reader *reader) {
     ast = hll_new_cons(
         reader->tu->vm, hll_new_symbolz(reader->tu->vm, "quote"),
         hll_new_cons(reader->tu->vm, read_expr(reader), hll_nil()));
-    add_reader_meta_info(reader, ast);
   } break;
   case HLL_TOK_COMMENT:
   case HLL_TOK_UNEXPECTED:
@@ -682,6 +651,7 @@ hll_value hll_read_ast(hll_reader *reader) {
 
     if (hll_is_nil(list_head)) {
       list_head = list_tail = cons;
+      record_location(reader, list_head);
     } else {
       hll_unwrap_cons(list_tail)->cdr = cons;
       list_tail = cons;
@@ -691,12 +661,11 @@ hll_value hll_read_ast(hll_reader *reader) {
   return list_head;
 }
 
-void hll_compiler_init(hll_compiler *compiler, hll_value env,
-                       hll_translation_unit *tu) {
+void hll_compiler_init(hll_compiler *compiler, hll_translation_unit *tu,
+                       hll_value name) {
   memset(compiler, 0, sizeof(hll_compiler));
   compiler->tu = tu;
-  compiler->env = env;
-  compiler->bytecode = hll_new_bytecode();
+  compiler->bytecode = hll_new_bytecode(name);
   compiler->bytecode->translation_unit = tu->translation_unit;
 }
 
@@ -713,9 +682,9 @@ compiler_error(hll_compiler *compiler, hll_value ast, const char *fmt, ...) {
 
   va_list args;
   va_start(args, fmt);
-  hll_report_error(compiler->tu->vm->debug,
-                   (hll_loc){compiler->tu->translation_unit, loc->offset}, fmt,
-                   args);
+  hll_report_errorv(compiler->tu->vm->debug,
+                    (hll_loc){compiler->tu->translation_unit, loc->offset}, fmt,
+                    args);
   va_end(args);
 }
 
@@ -730,7 +699,9 @@ static bool compiler_push_location(hll_compiler *compiler, hll_value value) {
 
   uint64_t hash = hash_value(value);
   hll_location_entry *loc = get_location_entry(compiler->tu->locs, hash);
-  assert(loc);
+  if (loc == NULL) {
+    return false;
+  }
   hll_compiler_loc_stack_entry e = {.cu = compiler->tu->translation_unit,
                                     .offset = loc->offset,
                                     .length = loc->length};
@@ -796,10 +767,6 @@ static hll_form_kind get_form_kind(const char *symb) {
     kind = HLL_FORM_PROGN;
   } else if (strcmp(symb, "lambda") == 0) {
     kind = HLL_FORM_LAMBDA;
-  } else if (strcmp(symb, "or") == 0) {
-    kind = HLL_FORM_OR;
-  } else if (strcmp(symb, "and") == 0) {
-    kind = HLL_FORM_AND;
   } else if (strcmp(symb, "defmacro") == 0) {
     kind = HLL_FORM_DEFMACRO;
   }
@@ -839,7 +806,6 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
                                size_t length) {
   for (size_t i = 0; i < hll_sb_len(compiler->bytecode->constant_pool); ++i) {
     hll_value test = compiler->bytecode->constant_pool[i];
-    // TODO: Hashes
     if (hll_is_symb(test) && strcmp(hll_unwrap_zsymb(test), symb_) == 0) {
       uint16_t narrowed = i;
       assert(i == narrowed);
@@ -857,7 +823,7 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
 
 static void compile_symbol(hll_compiler *compiler, hll_value ast) {
   assert(hll_get_value_kind(ast) == HLL_VALUE_SYMB);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
   hll_bytecode_emit_u16(compiler->bytecode,
                         add_symb_const(compiler, hll_unwrap_zsymb(ast),
                                        hll_unwrap_symb(ast)->length));
@@ -868,44 +834,51 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast);
 
 static void compile_function_call_internal(hll_compiler *compiler,
                                            hll_value list) {
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  for (hll_value arg = list; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
-    assert(hll_is_cons(arg));
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  for (hll_value arg = list; hll_is_cons(arg); arg = hll_unwrap_cdr(arg)) {
     hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CALL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
+
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CALL);
 }
 
-static bool expand_macro(hll_compiler *compiler, hll_value macro,
-                         hll_value args, hll_value *expanded) {
+static bool expand_macro(hll_compiler *compiler, hll_value list,
+                         hll_value *expanded) {
+  hll_value macro = hll_unwrap_car(list);
+  hll_value args = hll_unwrap_cdr(list);
   if (hll_get_value_kind(macro) != HLL_VALUE_SYMB) {
     return false;
   }
 
   hll_value macro_body;
-  if (!hll_find_var(compiler->tu->vm, compiler->env, macro, &macro_body) ||
-      hll_get_value_kind(hll_unwrap_cdr(macro_body)) != HLL_VALUE_MACRO) {
+  if (!hll_find_var(compiler->tu->vm->macro_env, macro, &macro_body)) {
     return false;
   } else {
     macro_body = hll_unwrap_cdr(macro_body);
   }
 
-  *expanded = hll_expand_macro(compiler->tu->vm, macro_body, args);
+  hll_expand_macro_result res =
+      hll_expand_macro(compiler->tu->vm, macro_body, args, expanded);
+  if (res == HLL_EXPAND_MACRO_ERR_ARGS) {
+    compiler_error(compiler, list,
+                   "macro invocation argument count does not match");
+    return false;
+  }
   return true;
 }
 
 static void compile_function_call(hll_compiler *compiler, hll_value list) {
-  hll_value fn = hll_unwrap_car(list);
-  hll_value args = hll_unwrap_cdr(list);
   hll_value expanded;
-  if (expand_macro(compiler, fn, args, &expanded)) {
+  if (expand_macro(compiler, list, &expanded)) {
     compile_eval_expression(compiler, expanded);
     return;
   }
+  hll_value fn = hll_unwrap_car(list);
+  hll_value args = hll_unwrap_cdr(list);
   compile_eval_expression(compiler, fn);
   compile_function_call_internal(compiler, args);
 }
@@ -925,14 +898,14 @@ static void compile_quote(hll_compiler *compiler, hll_value args) {
 
 static void compile_progn_internal(hll_compiler *compiler, hll_value prog) {
   if (hll_is_nil(prog)) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     return;
   }
 
   for (; hll_is_cons(prog); prog = hll_unwrap_cdr(prog)) {
     compile_eval_expression(compiler, hll_unwrap_car(prog));
     if (!hll_is_nil(hll_unwrap_cdr(prog))) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+      hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
     }
   }
 }
@@ -955,11 +928,11 @@ static void compile_if(hll_compiler *compiler, hll_value args) {
   hll_value neg_arm = hll_unwrap_cdr(pos_arm);
   pos_arm = hll_unwrap_car(pos_arm);
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_JN);
   size_t jump_false = hll_bytecode_emit_u16(compiler->bytecode, 0);
   compile_eval_expression(compiler, pos_arm);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_JN);
   size_t jump_out = hll_bytecode_emit_u16(compiler->bytecode, 0);
   write_u16_be(compiler->bytecode->ops + jump_false,
                hll_bytecode_op_idx(compiler->bytecode) - jump_false - 2);
@@ -976,11 +949,15 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
   }
   args = hll_unwrap_cdr(args);
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_PUSHENV);
-  for (hll_value let = hll_unwrap_car(args); !hll_is_nil(let);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_PUSHENV);
+  for (hll_value let = hll_unwrap_car(args); hll_is_cons(let);
        let = hll_unwrap_cdr(let)) {
     hll_value pair = hll_unwrap_car(let);
-    assert(hll_is_cons(pair));
+    if (!hll_is_cons(pair)) {
+      compiler_error(compiler, args,
+                     "'let' special form requires lists as variable bindings");
+      return;
+    }
     hll_value name = hll_unwrap_car(pair);
     hll_value value = hll_unwrap_cdr(pair);
     if (hll_is_cons(value)) {
@@ -991,12 +968,12 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
     assert(hll_get_value_kind(name) == HLL_VALUE_SYMB);
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
   }
 
   compile_progn_internal(compiler, hll_unwrap_cdr(args));
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POPENV);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POPENV);
 }
 
 #define HLL_CAR_CDR(_lower, _)                                                 \
@@ -1011,9 +988,9 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
       const char *op = ops + sizeof(#_lower) - 2;                              \
       for (;;) {                                                               \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CAR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CAR);                \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);                \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
@@ -1061,9 +1038,9 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     break;
   case HLL_LOC_FORM_SYMB:
     compile_symbol(compiler, location);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
     break;
   case HLL_LOC_FORM_NTHCDR:
     if (hll_list_length(location) != 3) {
@@ -1073,12 +1050,12 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     }
     // get the nth function
     compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     // call nth
     compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
     break;
   case HLL_LOC_FORM_NTH: {
     if (hll_list_length(location) != 3) {
@@ -1087,12 +1064,12 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
     }
     // get the nth function
     compile_symbol(compiler, hll_new_symbolz(compiler->tu->vm, "nthcdr"));
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     // call nth
     compile_function_call_internal(compiler, hll_unwrap_cdr(location));
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);
   } break;
 #define HLL_CAR_CDR(_lower, _upper)                                            \
   case HLL_LOC_FORM_C##_upper##R: {                                            \
@@ -1109,18 +1086,18 @@ static void compile_set_location(hll_compiler *compiler, hll_value location,
       if (op == ops) {                                                         \
         compile_eval_expression(compiler, value);                              \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);       \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);             \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);       \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);             \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
         break;                                                                 \
       } else {                                                                 \
         if (*op == 'a') {                                                      \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CAR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CAR);                \
         } else if (*op == 'd') {                                               \
-          hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);          \
+          hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);                \
         } else {                                                               \
           HLL_UNREACHABLE;                                                     \
         }                                                                      \
@@ -1167,7 +1144,7 @@ static void compile_setcar(hll_compiler *compiler, hll_value args) {
 
   compile_eval_expression(compiler, location);
   compile_eval_expression(compiler, value);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCAR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCAR);
 }
 
 static void compile_setcdr(hll_compiler *compiler, hll_value args) {
@@ -1185,20 +1162,20 @@ static void compile_setcdr(hll_compiler *compiler, hll_value args) {
 
   compile_eval_expression(compiler, location);
   compile_eval_expression(compiler, value);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
 }
 
 static void compile_list(hll_compiler *compiler, hll_value args) {
   args = hll_unwrap_cdr(args);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   for (hll_value arg = args; !hll_is_nil(arg); arg = hll_unwrap_cdr(arg)) {
     assert(hll_is_cons(arg));
     hll_value obj = hll_unwrap_car(arg);
     compile_eval_expression(compiler, obj);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
 }
 
 static void compile_cons(hll_compiler *compiler, hll_value args) {
@@ -1210,13 +1187,13 @@ static void compile_cons(hll_compiler *compiler, hll_value args) {
 
   hll_value car = hll_unwrap_car(args);
   hll_value cdr = hll_unwrap_car(hll_unwrap_cdr(args));
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   compile_eval_expression(compiler, car);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
   compile_eval_expression(compiler, cdr);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
 }
 
 static void add_symbol_to_function_param_list(hll_compiler *compiler,
@@ -1241,9 +1218,9 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value report, hll_value body,
-                                      bool is_macro, hll_value *compiled_) {
+                                      hll_value name, hll_value *compiled_) {
   hll_compiler new_compiler = {0};
-  hll_compiler_init(&new_compiler, compiler->tu->vm->env, compiler->tu);
+  hll_compiler_init(&new_compiler, compiler->tu, name);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   hll_sb_free(new_compiler.loc_stack);
   if (new_compiler.error_count != 0) {
@@ -1268,7 +1245,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     for (; hll_is_cons(obj); obj = hll_unwrap_cdr(obj)) {
       hll_value car = hll_unwrap_car(obj);
       if (!hll_is_symb(car)) {
-        compiler_error(compiler, obj, "function param name is not a symbol");
+        compiler_error(compiler, report, "function param name is not a symbol");
         return false;
       }
 
@@ -1278,7 +1255,7 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
 
     if (!hll_is_nil(obj)) {
       if (!hll_is_symb(obj)) {
-        compiler_error(compiler, obj, "function param name is not a symbol");
+        compiler_error(compiler, report, "function param name is not a symbol");
         return false;
       }
       assert(hll_is_cons(param_list_tail));
@@ -1286,27 +1263,16 @@ static bool compile_function_internal(hll_compiler *compiler, hll_value params,
     }
   }
 
-  hll_value func;
-  if (!is_macro) {
-    func = compiled;
-    hll_unwrap_func(func)->param_names = param_list;
-  } else {
-    func = compiled;
-    // TODO: Remove ub
-    ((struct hll_obj *)((char *)hll_unwrap_func(func) - sizeof(struct hll_obj)))
-        ->kind = HLL_VALUE_MACRO;
-    hll_unwrap_macro(func)->param_names = param_list;
-  }
-
-  *compiled_ = func;
+  hll_unwrap_func(compiled)->param_names = param_list;
+  *compiled_ = compiled;
   return true;
 }
 
 static bool compile_function(hll_compiler *compiler, hll_value params,
-                             hll_value reporter, hll_value body,
+                             hll_value reporter, hll_value body, hll_value name,
                              uint16_t *idx) {
   hll_value func;
-  if (!compile_function_internal(compiler, params, reporter, body, false,
+  if (!compile_function_internal(compiler, params, reporter, body, name,
                                  &func)) {
     return true;
   }
@@ -1331,101 +1297,13 @@ static void compile_lambda(hll_compiler *compiler, hll_value args) {
   hll_value body = args;
 
   uint16_t function_idx;
-  if (compile_function(compiler, params, args, body, &function_idx)) {
+  if (compile_function(compiler, params, args, body, hll_nil(),
+                       &function_idx)) {
     return;
   }
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_MAKEFUN);
   hll_bytecode_emit_u16(compiler->bytecode, function_idx);
-}
-
-static void compile_and(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 1) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
-    return;
-  }
-  args = hll_unwrap_cdr(args);
-
-  size_t last_jump = 0;
-  size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
-  for (hll_value arg_slot = args; hll_is_cons(arg_slot);
-       arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_value item = hll_unwrap_car(arg_slot);
-    compile_eval_expression(compiler, item);
-    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_VALUE_CONS) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    }
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-    last_jump = hll_bytecode_emit_u16(compiler->bytecode, 0);
-  }
-  size_t short_circuit = hll_bytecode_op_idx(compiler->bytecode);
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-  size_t total_out = hll_bytecode_op_idx(compiler->bytecode);
-
-  assert(last_jump != 0);
-
-  uint8_t *cursor = compiler->bytecode->ops + original_idx;
-  while (cursor < compiler->bytecode->ops + total_out) {
-    uint8_t op = *cursor++;
-    if (op == HLL_BYTECODE_JN) {
-      uint16_t value;
-      if (cursor != compiler->bytecode->ops + last_jump) {
-        value = short_circuit - (cursor - compiler->bytecode->ops) - 2;
-      } else {
-        value = total_out - (cursor - compiler->bytecode->ops) - 2;
-      }
-      write_u16_be(cursor, value);
-    }
-    cursor += hll_get_bytecode_op_body_size(op);
-  }
-}
-
-static void compile_or(hll_compiler *compiler, hll_value args) {
-  if (hll_list_length(args) == 1) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    return;
-  }
-  args = hll_unwrap_cdr(args);
-
-  size_t previous_jump = 0;
-  size_t original_idx = hll_bytecode_op_idx(compiler->bytecode);
-  for (hll_value arg_slot = args; hll_is_cons(arg_slot);
-       arg_slot = hll_unwrap_cdr(arg_slot)) {
-    hll_value item = hll_unwrap_car(arg_slot);
-
-    if (arg_slot != args) {
-      assert(previous_jump != 0);
-      write_u16_be(compiler->bytecode->ops + previous_jump,
-                   hll_bytecode_op_idx(compiler->bytecode) - previous_jump - 2);
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
-    }
-
-    compile_eval_expression(compiler, item);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_DUP);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN); // jump to next
-    previous_jump = hll_bytecode_emit_u16(compiler->bytecode, 0);
-    if (hll_get_value_kind(hll_unwrap_cdr(arg_slot)) != HLL_VALUE_NIL) {
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_JN);
-      hll_bytecode_emit_u16(compiler->bytecode, 0);
-    }
-  }
-
-  size_t total_out = hll_bytecode_op_idx(compiler->bytecode);
-
-  uint8_t *cursor = compiler->bytecode->ops + original_idx;
-  while (cursor < compiler->bytecode->ops + total_out) {
-    uint8_t op = *cursor++;
-    if (op == HLL_BYTECODE_JN) {
-      uint16_t current;
-      memcpy(&current, cursor, sizeof(uint16_t));
-      if (current == 0) {
-        write_u16_be(cursor,
-                     total_out - (cursor - compiler->bytecode->ops) - 2);
-      }
-    }
-    cursor += hll_get_bytecode_op_body_size(op);
-  }
 }
 
 static void process_defmacro(hll_compiler *compiler, hll_value args) {
@@ -1443,26 +1321,25 @@ static void process_defmacro(hll_compiler *compiler, hll_value args) {
   }
 
   hll_value name = hll_unwrap_car(control);
-  if (hll_get_value_kind(name) != HLL_VALUE_SYMB) {
+  if (!hll_is_symb(name)) {
     compiler_error(compiler, args, "'defmacro' name should be a symbol");
     return;
   }
 
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   hll_value params = hll_unwrap_cdr(control);
   hll_value body = hll_unwrap_cdr(hll_unwrap_cdr(args));
 
   hll_value macro_expansion;
-
-  if (compile_function_internal(compiler, params, args, body, true,
+  if (compile_function_internal(compiler, params, args, body, name,
                                 &macro_expansion)) {
-    /* if (hll_find_var(compiler->tu->vm, compiler->env, name, NULL)) { */
-    /*   compiler_error(compiler, name, "Macro with same name already exists
-     * (%s)", */
-    /*                  hll_unwrap_zsymb(name)); */
-    /*   return; */
-    /* } */
-    hll_add_variable(compiler->tu->vm, compiler->env, name, macro_expansion);
+    if (hll_find_var(compiler->tu->vm->macro_env, name, NULL)) {
+      compiler_error(compiler, args, "Macro with same name already exists (%s)",
+                     hll_unwrap_zsymb(name));
+      return;
+    }
+    hll_add_variable(compiler->tu->vm, compiler->tu->vm->macro_env, name,
+                     macro_expansion);
   }
 }
 
@@ -1488,14 +1365,19 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     compile_expression(compiler, name);
 
     uint16_t function_idx;
-    if (compile_function(compiler, params, args, body, &function_idx)) {
+    if (compile_function(compiler, params, args, body, name, &function_idx)) {
       return;
     }
 
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_MAKEFUN);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_MAKEFUN);
     hll_bytecode_emit_u16(compiler->bytecode, function_idx);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
   } else if (hll_get_value_kind(decide) == HLL_VALUE_SYMB) {
+    if (hll_list_length(args) > 3) {
+      compiler_error(compiler, args,
+                     "'define' variable expects exactly 2 or 3 arguments");
+      return;
+    }
     hll_value value = rest;
     if (hll_is_cons(value)) {
       assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
@@ -1504,7 +1386,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
 
     compile_expression(compiler, decide);
     compile_eval_expression(compiler, value);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_LET);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
   } else {
     compiler_error(compiler, args,
                    "'define' first argument must either be a function name and "
@@ -1558,12 +1440,6 @@ static void compile_form(hll_compiler *compiler, hll_value args,
     break;
     HLL_ENUMERATE_CAR_CDR
 #undef HLL_CAR_CDR
-  case HLL_FORM_OR:
-    compile_or(compiler, args);
-    break;
-  case HLL_FORM_AND:
-    compile_and(compiler, args);
-    break;
   case HLL_FORM_DEFMACRO:
     process_defmacro(compiler, args);
     break;
@@ -1576,13 +1452,13 @@ static void compile_form(hll_compiler *compiler, hll_value args,
 static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
   switch (hll_get_value_kind(ast)) {
   case HLL_VALUE_NIL:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
   case HLL_VALUE_TRUE:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_TRUE);
     break;
   case HLL_VALUE_NUM:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
     hll_bytecode_emit_u16(compiler->bytecode,
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
@@ -1599,8 +1475,8 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
   } break;
   case HLL_VALUE_SYMB:
     compile_symbol(compiler, ast);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_FIND);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CDR);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_FIND);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CDR);
     break;
   default:
     HLL_UNREACHABLE;
@@ -1614,38 +1490,38 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
 static void compile_expression(hll_compiler *compiler, hll_value ast) {
   switch (hll_get_value_kind(ast)) {
   case HLL_VALUE_NIL:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
   case HLL_VALUE_TRUE:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_TRUE);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_TRUE);
     break;
   case HLL_VALUE_NUM:
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_CONST);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
     hll_bytecode_emit_u16(compiler->bytecode,
                           add_num_const(compiler, hll_unwrap_num(ast)));
     break;
   case HLL_VALUE_CONS: {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
 
     hll_value obj = ast;
     bool pop = compiler_push_location(compiler, obj);
     while (!hll_is_nil(obj)) {
       assert(hll_is_cons(obj));
       compile_expression(compiler, hll_unwrap_car(obj));
-      hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_APPEND);
+      hll_bytecode_emit_op(compiler->bytecode, HLL_BC_APPEND);
 
       hll_value cdr = hll_unwrap_cdr(obj);
       if (!hll_is_nil(cdr) && !hll_is_cons(cdr)) {
         compile_expression(compiler, cdr);
-        hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_SETCDR);
+        hll_bytecode_emit_op(compiler->bytecode, HLL_BC_SETCDR);
         break;
       }
 
       obj = cdr;
     }
     compiler_pop_location(compiler, pop);
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
   } break;
   case HLL_VALUE_SYMB:
     compile_symbol(compiler, ast);
@@ -1660,104 +1536,23 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast) {
   hll_value result =
       hll_new_func(compiler->tu->vm, hll_nil(), compiler->bytecode);
   if (hll_is_nil(ast)) {
-    hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_NIL);
+    hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
   } else {
+    bool pop_ = compiler_push_location(compiler, ast);
+    assert(pop_);
     for (; hll_is_cons(ast); ast = hll_unwrap_cdr(ast)) {
       hll_value expr = hll_unwrap_car(ast);
       bool pop = compiler_push_location(compiler, expr);
       compile_eval_expression(compiler, expr);
       if (!hll_is_nil(hll_unwrap_cdr(ast))) {
-        hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_POP);
+        hll_bytecode_emit_op(compiler->bytecode, HLL_BC_POP);
       }
       compiler_pop_location(compiler, pop);
     }
+    compiler_pop_location(compiler, pop_);
   }
-  hll_bytecode_emit_op(compiler->bytecode, HLL_BYTECODE_END);
+  hll_bytecode_emit_op(compiler->bytecode, HLL_BC_END);
+  hll_optimize_bytecode(compiler->bytecode);
+  assert(hll_sb_len(compiler->loc_stack) == 0);
   return result;
 }
-
-#if 0
-
-enum hll_tail_recursive_form_kind {
-  HLL_TAIL_RECURIVE_FORM_OTHER,
-  HLL_TAIL_RECURSIVE_FORM_IF,
-  HLL_TAIL_RECURSIVE_FORM_PROGN,
-  HLL_TAIL_RECURSIVE_FORM_AND,
-  HLL_TAIL_RECURSIVE_FORM_OR,
-  HLL_TAIL_RECURSIVE_FORM_LET,
-};
-
-static enum hll_tail_recursive_form_kind
-get_tail_recursive_form_kind(hll_value form) {
-  assert(hll_is_symb(form));
-  const char *symb = hll_unwrap_zsymb(form);
-
-  enum hll_tail_recursive_form_kind kind = HLL_TAIL_RECURIVE_FORM_OTHER;
-  if (strcmp(symb, "if") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_IF;
-  } else if (strcmp(symb, "progn") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_PROGN;
-  } else if (strcmp(symb, "and") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_AND;
-  } else if (strcmp(symb, "or") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_OR;
-  } else if (strcmp(symb, "let") == 0) {
-    kind = HLL_TAIL_RECURSIVE_FORM_LET;
-  }
-
-  return kind;
-}
-
-static bool is_if_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_and_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_or_tail_recursive(hll_value form, hll_value name_symb) {}
-
-static bool is_let_tail_recurive(hll_value form, hll_value name_symb) {}
-
-bool is_progn_tail_recursive(hll_value progn, hll_value name_symb) {
-  assert(hll_is_symb(name_symb));
-  // skip to the last statement
-  for (; hll_is_cons(progn) && !hll_is_nil(hll_unwrap_cdr(progn));
-       progn = hll_unwrap_cdr(progn))
-    ;
-
-  // Now progn has either last element or some bogus value.
-  if (!hll_is_cons(progn) || !hll_is_nil(hll_unwrap_cdr(progn))) {
-    return false;
-  }
-
-  hll_value last = hll_unwrap_car(progn);
-  if (!hll_is_cons(last)) {
-    return false;
-  }
-
-  hll_value form = hll_unwrap_car(last);
-  if (!hll_is_symb(form)) {
-    return false;
-  }
-
-  enum hll_tail_recursive_form_kind kind = get_tail_recursive_form_kind(form);
-  switch (kind) {
-  case HLL_TAIL_RECURIVE_FORM_OTHER: {
-    const char *name = hll_unwrap_zsymb(name_symb);
-    if (strcmp(name, hll_unwrap_zsymb(form)) == 0) {
-      return true;
-    }
-  } break;
-  case HLL_TAIL_RECURSIVE_FORM_IF:
-    return is_if_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_PROGN:
-    return is_progn_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_AND:
-    return is_and_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_OR:
-    return is_or_tail_recursive(form, name_symb);
-  case HLL_TAIL_RECURSIVE_FORM_LET:
-    return is_let_tail_recurive(form, name_symb);
-  }
-
-  return false;
-}
-#endif

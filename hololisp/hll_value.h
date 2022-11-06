@@ -11,8 +11,6 @@
 
 #include "hll_hololisp.h"
 
-#define HLL_MAX_SYMB_LENGTH 128
-
 typedef uint8_t hll_value_kind;
 enum {
   // Singleton values. These are not heap-allocated.
@@ -25,7 +23,6 @@ enum {
   HLL_VALUE_BIND = 0x5,
   HLL_VALUE_ENV = 0x6,
   HLL_VALUE_FUNC = 0x7,
-  HLL_VALUE_MACRO = 0x8,
 };
 
 HLL_PUB const char *hll_get_value_kind_str(hll_value_kind kind);
@@ -81,10 +78,6 @@ HLL_PUB hll_value hll_new_bind(struct hll_vm *vm,
                                                  hll_value args));
 HLL_PUB hll_value hll_new_func(struct hll_vm *vm, hll_value params,
                                struct hll_bytecode *bytecode);
-HLL_PUB hll_value hll_new_macro(struct hll_vm *vm, hll_value params,
-                                struct hll_bytecode *bytecode);
-
-void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 //
 // Unwrapper functions.
@@ -95,6 +88,8 @@ void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 HLL_PUB double hll_unwrap_num(hll_value value);
 HLL_PUB hll_value hll_unwrap_cdr(hll_value value);
 HLL_PUB hll_value hll_unwrap_car(hll_value value);
+HLL_PUB void hll_setcar(hll_value cons, hll_value car);
+HLL_PUB void hll_setcdr(hll_value cons, hll_value cdr);
 HLL_PUB hll_obj_cons *hll_unwrap_cons(hll_value value)
     __attribute__((returns_nonnull));
 HLL_PUB hll_obj_env *hll_unwrap_env(hll_value value)
@@ -107,10 +102,9 @@ HLL_PUB hll_obj_bind *hll_unwrap_bind(hll_value value)
     __attribute__((returns_nonnull));
 HLL_PUB hll_obj_func *hll_unwrap_func(hll_value value)
     __attribute__((returns_nonnull));
-HLL_PUB hll_obj_func *hll_unwrap_macro(hll_value value)
-    __attribute__((returns_nonnull));
 
 hll_obj *hll_unwrap_obj(hll_value value);
+void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
 //
 // Type-checking functions. Generally specific function 'hll_is_nil'

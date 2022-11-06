@@ -2,8 +2,10 @@
 #include "acutest.h"
 
 static void test_lexer_parses_simple_symbol(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "hello", NULL);
+  hll_lexer_init(&lexer, "hello", &tu);
   hll_lexer_next(&lexer);
 
   TEST_ASSERT(lexer.error_count == 0);
@@ -18,8 +20,10 @@ static void test_lexer_parses_simple_symbol(void) {
 }
 
 static void test_lexer_parses_number(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "123", NULL);
+  hll_lexer_init(&lexer, "123", &tu);
   hll_lexer_next(&lexer);
 
   TEST_ASSERT(lexer.error_count == 0);
@@ -35,8 +39,10 @@ static void test_lexer_parses_number(void) {
 }
 
 static void test_lexer_parse_basic_syntax_multiple_tokens(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "(cons -6 +7) (wha-te!ver . '-)", NULL);
+  hll_lexer_init(&lexer, "(cons -6 +7) (wha-te!ver . '-)", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -108,8 +114,10 @@ static void test_lexer_parse_basic_syntax_multiple_tokens(void) {
 }
 
 static void test_lexer_skips_whitespace_symbols(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, " \f\n\r\t\vhello", NULL);
+  hll_lexer_init(&lexer, " \f\n\r\t\vhello", &tu);
   hll_lexer_next(&lexer);
 
   TEST_ASSERT(lexer.error_count == 0);
@@ -121,8 +129,10 @@ static void test_lexer_skips_whitespace_symbols(void) {
 }
 
 static void test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "+ - +- -+", NULL);
+  hll_lexer_init(&lexer, "+ - +- -+", &tu);
   hll_lexer_next(&lexer);
 
   TEST_ASSERT(lexer.error_count == 0);
@@ -146,10 +156,12 @@ static void test_lexer_dont_think_that_plus_and_minus_are_numbers(void) {
 }
 
 static void test_lexer_parses_comments(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   const char *data = "hello ; this is comment\n"
                      "world ; this is comment too";
   hll_lexer lexer;
-  hll_lexer_init(&lexer, data, NULL);
+  hll_lexer_init(&lexer, data, &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -177,8 +189,10 @@ static void test_lexer_parses_comments(void) {
 }
 
 static void test_lexer_parses_dot(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, ".123 . 123.", NULL);
+  hll_lexer_init(&lexer, ".123 . 123.", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -200,8 +214,10 @@ static void test_lexer_parses_dot(void) {
 }
 
 static void test_lexer_parses_lparen(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "(abc ( bca(", NULL);
+  hll_lexer_init(&lexer, "(abc ( bca(", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -231,8 +247,10 @@ static void test_lexer_parses_lparen(void) {
 }
 
 static void test_lexer_parses_rparen(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, ")abc ) bca)", NULL);
+  hll_lexer_init(&lexer, ")abc ) bca)", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -262,8 +280,10 @@ static void test_lexer_parses_rparen(void) {
 }
 
 static void test_lexer_reports_symbol_consisting_of_only_dots(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "...", NULL);
+  hll_lexer_init(&lexer, "...", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count);
@@ -275,8 +295,10 @@ static void test_lexer_reports_symbol_consisting_of_only_dots(void) {
 }
 
 static void test_lexer_parses_quote(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
-  hll_lexer_init(&lexer, "'abc", NULL);
+  hll_lexer_init(&lexer, "'abc", &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count == 0);
@@ -292,9 +314,11 @@ static void test_lexer_parses_quote(void) {
 }
 
 static void test_lexer_reports_too_big_integer(void) {
+  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_translation_unit tu = hll_make_tu(vm, NULL, NULL, 0);
   hll_lexer lexer;
   hll_lexer_init(&lexer, "11111111111111111111111111111111111111111111111111",
-                 NULL);
+                 &tu);
 
   hll_lexer_next(&lexer);
   TEST_ASSERT(lexer.error_count);

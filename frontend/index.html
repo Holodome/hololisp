@@ -15,8 +15,6 @@
 
 <nav>
   <a class="name" href="/"><span>hololisp</span></a>
-
-  <a href="generated/book/index.html">book</a>
 </nav>
 
 <div class="editor">
@@ -24,10 +22,8 @@
     <h3>hololisp playground</h3>
     <span class="editor-controls-buttons">
       <button id="run" class="editor-controls-button-run">Run</button>
-      <button id="format">Format</button>
       <label>
-        <select>
-          <option>conway's game of life</option>
+        <select id="examples">
         </select>
       </label>
     </span>
@@ -36,13 +32,11 @@
   <div class="editor-playground">
     <textarea rows=25 id="editor-playground-code"
               class="editor-playground-code" autocomplete="off" spellcheck="false"></textarea>
-    <pre id="editor-playground-highlighting" aria-hidden="true"></pre>
-    <code class="language-closure" id="editor-playground-highlighting-content"></code>
   </div>
 
   <h4>Output</h4>
   <div class="editor-output">
-    <textarea rows=10 id="editor-output-code" disabled></textarea>
+    <textarea rows=5 id="editor-output-code" disabled></textarea>
   </div>
 </div>
 

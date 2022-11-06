@@ -44,8 +44,8 @@ static uint32_t djb2(const char *src, const char *dst) {
 }
 
 const char *hll_get_value_kind_str(hll_value_kind kind) {
-  static const char *strs[] = {"num",  "nil", "true", "cons", "symb",
-                               "bind", "env", "func", "macro"};
+  static const char *strs[] = {"num",  "nil",  "true", "cons",
+                               "symb", "bind", "env",  "func"};
 
   assert(kind < sizeof(strs) / sizeof(strs[0]));
   return strs[kind];
@@ -68,10 +68,6 @@ void hll_free_obj(hll_vm *vm, hll_obj *obj) {
     hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_env));
     break;
   case HLL_VALUE_FUNC:
-    hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
-    hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
-    break;
-  case HLL_VALUE_MACRO:
     hll_bytecode_dec_refcount(((hll_obj_func *)obj->as)->bytecode);
     hll_gc_free(vm->gc, obj, sizeof(hll_obj) + sizeof(hll_obj_func));
     break;
@@ -98,10 +94,6 @@ hll_value hll_num(double num) {
 hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   assert(symbol != NULL);
   assert(length != 0);
-  if (length >= HLL_MAX_SYMB_LENGTH) {
-    // todo error
-    assert(0);
-  }
 
   void *memory =
       hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);
@@ -171,19 +163,6 @@ hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
   return nan_box_ptr(obj);
 }
 
-hll_value hll_new_macro(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
-  void *memory = hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_func));
-  hll_obj *obj = memory;
-  obj->kind = HLL_VALUE_MACRO;
-  hll_obj_func *func = (void *)(obj + 1);
-  func->param_names = params;
-  func->bytecode = bytecode;
-  register_gc_obj(vm, obj);
-  hll_bytecode_inc_refcount(bytecode);
-
-  return nan_box_ptr(obj);
-}
-
 hll_obj_cons *hll_unwrap_cons(hll_value value) {
   assert(hll_is_obj(value));
   hll_obj *obj = nan_unbox_ptr(value);
@@ -240,13 +219,6 @@ hll_obj_func *hll_unwrap_func(hll_value value) {
   return (hll_obj_func *)obj->as;
 }
 
-hll_obj_func *hll_unwrap_macro(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_MACRO);
-  return (hll_obj_func *)obj->as;
-}
-
 double hll_unwrap_num(hll_value value) {
   assert(hll_is_num(value));
   double result;
@@ -257,6 +229,14 @@ double hll_unwrap_num(hll_value value) {
 hll_obj *hll_unwrap_obj(hll_value value) {
   assert(hll_is_obj(value));
   return nan_unbox_ptr(value);
+}
+
+void hll_setcar(hll_value cons, hll_value car) {
+  hll_unwrap_cons(cons)->car = car;
+}
+
+void hll_setcdr(hll_value cons, hll_value cdr) {
+  hll_unwrap_cons(cons)->cdr = cdr;
 }
 
 size_t hll_list_length(hll_value value) {
@@ -274,7 +254,7 @@ hll_value_kind hll_get_value_kind(hll_value value) {
                            : nan_unbox_singleton(value);
 }
 
-bool hll_is_nil(hll_value value) { return (uint64_t)value == hll_nil(); }
+bool hll_is_nil(hll_value value) { return value == hll_nil(); }
 
 bool hll_is_cons(hll_value value) {
   return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_CONS;

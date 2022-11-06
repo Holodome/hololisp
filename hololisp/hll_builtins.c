@@ -4,6 +4,7 @@
 #include "hll_vm.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -40,13 +41,18 @@ static hll_value builtin_add(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'-' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
   hll_value first = hll_car(vm, args);
+  if (!hll_is_num(first)) {
+    hll_runtime_error(vm, "'-' form expects integer arguments (got %s)",
+                      hll_get_value_kind_str(hll_get_value_kind(first)));
+  }
   if (hll_is_nil(hll_unwrap_cdr(args))) {
     return hll_num(-hll_unwrap_num(first));
   }
-  // CHECK_TYPE(first, struct hll_obj_INT, "arguments");
   double result = hll_unwrap_num(first);
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
        obj = hll_cdr(vm, obj)) {
@@ -61,9 +67,15 @@ static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
-  // CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'/' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
   hll_value first = hll_car(vm, args);
-  // CHECK_TYPE(first, struct hll_obj_INT, "arguments");
+  if (!hll_is_num(first)) {
+    hll_runtime_error(vm, "'/' form expects integer arguments (got %s)",
+                      hll_get_value_kind_str(hll_get_value_kind(first)));
+  }
   double result = hll_unwrap_num(first);
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
        obj = hll_cdr(vm, obj)) {
@@ -94,8 +106,10 @@ static hll_value builtin_mul(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'/=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
        obj1 = hll_cdr(vm, obj1)) {
@@ -126,8 +140,10 @@ static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
        obj1 = hll_cdr(vm, obj1)) {
@@ -159,8 +175,10 @@ static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'>' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -187,8 +205,10 @@ static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'>=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -214,8 +234,10 @@ static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'<' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -241,8 +263,10 @@ static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_ATLEAST_N_ARGS(1);
+  if (hll_list_length(args) == 0) {
+    hll_runtime_error(vm, "'<=' form expects at least 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
@@ -268,8 +292,10 @@ static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_rem(struct hll_vm *vm, hll_value args) {
-  (void)vm;
-  //  CHECK_HAS_N_ARGS(2);
+  if (hll_list_length(args) != 2) {
+    hll_runtime_error(vm, "'rem' form expects exactly 1 argument (got %zu)",
+                      hll_list_length(args));
+  }
 
   hll_value x = hll_car(vm, args);
   if (!hll_is_num(x)) {
@@ -742,6 +768,14 @@ static hll_value builtin_length(struct hll_vm *vm, hll_value args) {
   return hll_num(hll_list_length(hll_car(vm, args)));
 }
 
+static hll_value builtin_gensym(struct hll_vm *vm, hll_value args) {
+  (void)args;
+  static int64_t count = 0;
+  char buf[16];
+  snprintf(buf, sizeof(buf), "__gsym%" PRId64, count++);
+  return hll_new_symbolz(vm, buf);
+}
+
 static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
   (void)vm;
   for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
@@ -796,15 +830,19 @@ void add_builtins(struct hll_vm *vm) {
   hll_add_binding(vm, "sleep", builtin_sleep);
   hll_add_binding(vm, "length", builtin_length);
   hll_add_binding(vm, "range", builtin_range);
-
+  hll_add_binding(vm, "gensym", builtin_gensym);
   hll_add_binding(vm, "eq?", builtin_eq);
-#if 1
   hll_interpret(vm,
-                "(defmacro (not x) (list 'if x () 't))\n"
-                "(defmacro (when expr . body)\n"
-                "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
-                "(defmacro (unless expr . body)\n"
-                "  (cons 'if (cons expr (cons () body))))\n"
+                "(defmacro (and expr . rest)\n"
+                "  (if rest\n"
+                "    (list 'if expr (cons 'and rest))\n"
+                "  expr))\n"
+                "(defmacro (or expr . rest)\n"
+                "  (if rest\n"
+                "      (let ((var (gensym)))\n"
+                "           (list 'let (list (list var expr))\n"
+                "                 (list 'if var var (cons 'or rest))))\n"
+                "      expr))\n"
                 "(defmacro (not x) (list 'if x () 't))\n"
                 "(defmacro (when expr . body)\n"
                 "  (cons 'if (cons expr (list (cons 'progn body)))))\n"
@@ -844,7 +882,6 @@ void add_builtins(struct hll_vm *vm) {
                 "      t))\n",
                 "builtins1", 0);
   hll_interpret(vm,
-
                 "(define (any pred lis)\n"
                 "  (when lis\n"
                 "    (or (pred (car lis))\n"
@@ -886,5 +923,4 @@ void add_builtins(struct hll_vm *vm) {
                 "    (cons (fn (car lis))\n"
                 "          (map fn (cdr lis)))))\n",
                 "builtins2", 0);
-#endif
 }

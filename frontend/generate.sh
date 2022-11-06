@@ -7,22 +7,24 @@ if [[ $(basename $(pwd)) != frontend ]]; then
     exit 1
 fi
 
-# Generate webassembly code
+rm -rf generated
+mkdir -p generated
 
 pushd ..
 make wasm
-
-pushd book
-mdbook build
-popd
 popd
 
-# copy webassembly output
-# copy book
+python3 - > generated/examples.js <<EOF
+files = ["../examples/mazegen.hl", "../examples/quicksort.hl", "../examples/hello.hl"]
+names = ["maze generator", "quicksort", "hello world"]
 
-mkdir -p generated
+print("export const Examples = {")
+for (file, name) in zip(files, names):
+    print(f"\"{name}\": \`{open(file).read()}\`,")
+print("};")
+EOF
+
 cp ../build/hololisp.js generated
 cp ../build/hololisp.wasm generated
-cp -r ../book/book generated
 
 echo DONE
