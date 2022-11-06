@@ -518,7 +518,9 @@ static void test_compiler_generates_mbtr_in_if(void) {
 }
 
 #define TCASE(_name)                                                           \
-  { #_name, _name }
+  {                                                                            \
+#_name, _name                                                              \
+  }
 
 TEST_LIST = {TCASE(test_compiler_compiles_integer),
              TCASE(test_compiler_compiles_addition),
