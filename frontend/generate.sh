@@ -15,8 +15,8 @@ make wasm
 popd
 
 python3 - > generated/examples.js <<EOF
-files = ["../examples/mazegen.hl", "../examples/quicksort.hl", "../examples/game_of_life.hl", "../examples/hello.hl"]
-names = ["maze generator", "quicksort", "game of life", "hello world"]
+files = ["../examples/mazegen.hl", "../examples/quicksort.hl", "../examples/hello.hl"]
+names = ["maze generator", "quicksort", "hello world"]
 
 print("export const Examples = {")
 for (file, name) in zip(files, names):

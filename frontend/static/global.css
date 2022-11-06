@@ -65,6 +65,7 @@ footer {
     text-align: center;
     transform: translateY(25%);
     color: dimgray;
+
 }
 
 .github-link {
@@ -121,6 +122,10 @@ footer {
 
 .editor-controls-button-run {
     background: #0074d9;
+}
+
+.editor-controls-button-stop {
+    background: #ee1111;
 }
 
 .editor-playground {
