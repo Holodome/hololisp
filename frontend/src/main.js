@@ -1,4 +1,5 @@
 import Module from "../generated/hololisp.js";
+import {Examples} from "../generated/examples.js";
 
 class HllVm {
     constructor(hll_make_vm, hll_interpret, hll_delete_vm) {
@@ -22,8 +23,7 @@ const handle_print = (text) => {
 
 window.onload = (_) => {
     Module({
-        print: handle_print,
-        printErr: handle_print
+        print: handle_print, printErr: handle_print
     }).then((Module) => {
         const hll_make_vm = Module.cwrap("hll_make_vm", "number", ["number"]);
         const hll_interpret = Module.cwrap("hll_interpret", "number", ["number", "string", "string", "number"]);
@@ -33,6 +33,16 @@ window.onload = (_) => {
         console.error(err);
         alert("Fatal error: Failed to initialize wasm")
     });
+
+    let examples_select = document.getElementById("examples");
+    examples_select.innerHTML = Object.keys(Examples).map(it => "<option value=\""
+        + it + "\">" + it + "</option>").join(" ");
+    examples_select.onchange = (e) => {
+        console.log("as");
+        document.getElementById("editor-playground-code").value = Examples[e.target.value];
+    };
+
+    document.getElementById("editor-playground-code").value = Examples["hello world"];
 
     document.getElementById("run").onclick = () => {
         document.getElementById("editor-output-code").value = "";
