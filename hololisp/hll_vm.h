@@ -65,10 +65,10 @@ HLL_PUB bool hll_find_var(hll_value env, hll_value car, hll_value *found);
 
 HLL_PUB void hll_runtime_error(hll_vm *vm, const char *fmt, ...);
 
-hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
+HLL_PUB hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                           hll_value compiled);
 
-void hll_print(hll_vm *vm, const char *str);
+HLL_PUB void hll_print(hll_vm *vm, const char *str);
 
 //
 // Accessor overriding functions. By lisp standards, car returns car of object

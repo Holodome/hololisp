@@ -11,18 +11,13 @@ fi
 
 pushd ..
 make wasm
-
-pushd book
-mdbook build
-popd
 popd
 
 # copy webassembly output
-# copy book
 
+rm -rf generated
 mkdir -p generated
 cp ../build/hololisp.js generated
 cp ../build/hololisp.wasm generated
-cp -r ../book/book generated
 
 echo DONE

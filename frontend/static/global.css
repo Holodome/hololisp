@@ -173,18 +173,3 @@ footer {
     padding: 5px;
     box-sizing: border-box;
 }
-
-#editor-playground-code, #editor-playground-highlighting {
-    margin: 10px;
-    padding: 10px;
-    border: 0;
-    width: calc(100% - 32px);
-}
-
-#editor-playground-code, #editor-playground-highlighting, #editor-playground-highlighting-content {
-    tab-size: 2;
-}
-
-#editor-playground-code, #editor-playground-highlighting {
-    position: abs;
-}

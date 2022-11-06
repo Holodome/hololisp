@@ -254,7 +254,7 @@ hll_value_kind hll_get_value_kind(hll_value value) {
                            : nan_unbox_singleton(value);
 }
 
-bool hll_is_nil(hll_value value) { return (uint64_t)value == hll_nil(); }
+bool hll_is_nil(hll_value value) { return value == hll_nil(); }
 
 bool hll_is_cons(hll_value value) {
   return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_CONS;

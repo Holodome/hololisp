@@ -81,14 +81,14 @@ $(UNIT_TEST_OUT_DIR): $(OUT_DIR)
 
 WASM_TARGET = $(OUT_DIR)/hololisp.wasm
 WASM_SOURCES = $(filter-out $(SRC_DIR)/main.c, $(SRCS))
-WASM_FLAGS = -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1
+WASM_FLAGS = -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sMODULARIZE=1 -sEXPORT_ES6=1 
 EMCC = emcc
 EMRUN = emrun
 
 wasm: $(OUT_DIR) $(WASM_TARGET)
 
 $(WASM_TARGET): $(WASM_SOURCES)
-	$(EMCC) -Os --no-entry -sEXPORTED_RUNTIME_METHODS=ccall,cwrap $(WASM_FLAGS) -o $(OUT_DIR)/hololisp.js $^
+	$(EMCC) -O2 --no-entry -sEXPORTED_RUNTIME_METHODS=ccall,cwrap $(WASM_FLAGS) -o $(OUT_DIR)/hololisp.js $^
 
 wasm-test: $(SRCS)
 	$(EMCC) -O0 --preload-file examples --emrun $(WASM_FLAGS) -o $(OUT_DIR)/test.html $^
