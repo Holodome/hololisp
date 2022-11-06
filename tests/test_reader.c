@@ -255,9 +255,7 @@ static void test_reader_parses_quote(void) {
 }
 
 #define TCASE(_name)                                                           \
-  {                                                                            \
-#_name, _name                                                              \
-  }
+  { #_name, _name }
 
 TEST_LIST = {TCASE(test_reader_reports_eof),
              TCASE(test_reader_parses_num),

@@ -330,9 +330,7 @@ static void test_lexer_reports_too_big_integer(void) {
 }
 
 #define TCASE(_name)                                                           \
-  {                                                                            \
-#_name, _name                                                              \
-  }
+  { #_name, _name }
 
 TEST_LIST = {TCASE(test_lexer_parses_simple_symbol),
              TCASE(test_lexer_parses_number),
