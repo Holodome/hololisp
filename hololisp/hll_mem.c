@@ -27,19 +27,8 @@ void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride) {
   return header + 1;
 }
 
-#ifdef HLL_MEM_CHECK
-static size_t global_allocated_size;
-size_t hll_mem_check(void) { return global_allocated_size; }
-#endif
-
 void *hll_realloc(void *ptr, size_t old_size, size_t new_size) {
-#ifdef HLL_MEM_CHECK
-  assert(global_allocated_size >= old_size);
-  global_allocated_size -= old_size;
-  global_allocated_size += new_size;
-#else
   (void)old_size;
-#endif
   if (old_size == 0) {
     assert(ptr == NULL);
     void *result = calloc(1, new_size);

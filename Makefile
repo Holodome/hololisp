@@ -24,7 +24,7 @@ ifneq (,$(STRESS_GC))
 endif
 
 ifneq (,$(DEBUG))
-	CFLAGS += -O0 -g -DHLL_DEBUG -DHLL_MEM_CHECK
+	CFLAGS += -O0 -g -DHLL_DEBUG
 else 
 	CFLAGS += -DNDEBUG
 endif

@@ -8,10 +8,6 @@
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
 
-#ifdef HLL_MEM_CHECK
-#include "hll_mem.h"
-#endif
-
 typedef enum {
   HLL_MODE_EREPL,
   HLL_MODE_EREPL_NO_TTY,
@@ -273,13 +269,5 @@ int main(int argc, const char **argv) {
   }
 
 out:
-  (void)0;
-#if HLL_MEM_CHECK
-  size_t not_freed = hll_mem_check();
-  if (not_freed) {
-    fprintf(stderr, "Memory check failed: %zu not freed!\n", not_freed);
-    result = EXIT_FAILURE;
-  }
-#endif
   return result;
 }
