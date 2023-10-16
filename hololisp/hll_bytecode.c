@@ -132,6 +132,7 @@ void make_ident(void *file, size_t ident) {
 }
 
 void dump_function_info(void *file, hll_value value);
+
 void hll_dump_value(void *file, hll_value value) {
   hll_value_kind kind = hll_get_value_kind(value);
   fprintf(file, "{ \"kind\": \"%s\"", hll_get_value_kind_str(kind));
@@ -178,20 +179,16 @@ void dump_function_info(void *file, hll_value value) {
   }
   fprintf(file, "],"); // params
 
-#if 0
   hll_bytecode *bc = func->bytecode;
   fprintf(file,
-          "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu, \"locs\": "
-          "%zu, \"loc_rles\": %zu },\n",
-          hll_sb_len(bc->ops), hll_sb_len(bc->constant_pool),
-          hll_sb_len(bc->locs), hll_sb_len(bc->loc_rle));
+          "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu}, ",
+          hll_sb_len(bc->ops), hll_sb_len(bc->constant_pool));
 
   fprintf(file, "\"ops\": [");
   const uint8_t *instruction = bc->ops;
-  size_t op_idx = 0;
   hll_bytecode_op op;
   while ((op = *instruction++)) {
-    fprintf(file, "{ \"idx\": %zu, \"offset\": %zu, \"op\": \"%s\"", op_idx++,
+    fprintf(file, "{ \"offset\": %zu, \"op\": \"%s\"",
             instruction - bc->ops, get_op_str(op));
     switch (op) {
     case HLL_BC_CONST:
@@ -221,30 +218,7 @@ void dump_function_info(void *file, hll_value value) {
     }
   }
 
-  fprintf(file, "], "); // consts
-  fprintf(file, "\"locs\": [");
-  for (size_t i = 0; i < hll_sb_len(bc->locs); ++i) {
-    hll_loc *loc = bc->locs + i;
-    fprintf(file,
-            "{ \"translation_unit\": %" PRIu32 ", \"offset\": %" PRIu32 " }",
-            loc->translation_unit, loc->offset);
-    if (i != hll_sb_len(bc->locs) - 1) {
-      fprintf(file, ", ");
-    }
-  }
-  fprintf(file, "], "); // locs
-
-  fprintf(file, "\"loc_rle\": [");
-  for (size_t i = 0; i < hll_sb_len(bc->loc_rle); ++i) {
-    hll_bytecode_rle *rle = bc->loc_rle + i;
-    fprintf(file, "{ \"length\": %" PRIu32 ", \"loc_idx\": %" PRIu32 " }",
-            rle->length, rle->loc_idx);
-    if (i != hll_sb_len(bc->loc_rle) - 1) {
-      fprintf(file, ", ");
-    }
-  }
-  fprintf(file, "]"); // loc_rle
-#endif
+  fprintf(file, "]"); // consts
 }
 
 void hll_dump_program_info(void *file, hll_value program) {

@@ -87,11 +87,11 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
     const char *opt = argv[cursor++];
     assert(opt != NULL);
     if (*opt != '-') {
-      opts->mode = HLL_MODE_ESCRIPT;
+      if (opts->mode != HLL_MODE_DUMP_BYTECODE)
+        opts->mode = HLL_MODE_ESCRIPT;
       opts->str = opt;
       continue;
     }
-
     if (strcmp(opt, "-e") == 0) {
       if (cursor >= argc) {
         fprintf(stderr, "-e expects 1 parameter\n");
@@ -209,6 +209,7 @@ static bool execute_dump_bytecode(const char *filename) {
 
 static bool execute(hll_options *opts) {
   bool error = false;
+
   switch (opts->mode) {
   case HLL_MODE_DUMP_BYTECODE:
     error = execute_dump_bytecode(opts->str);
