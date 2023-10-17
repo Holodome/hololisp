@@ -8,6 +8,8 @@
 #include "hll_compiler.h"
 #include "hll_hololisp.h"
 
+#include "amalgamated.c"
+
 typedef enum {
   HLL_MODE_EREPL,
   HLL_MODE_EREPL_NO_TTY,

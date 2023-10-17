@@ -25,16 +25,16 @@ else
 	CFLAGS += -DNDEBUG
 endif
 
-#SRCS = hololisp/main.c hololisp/amalgamated.c
-SRCS = hololisp/hll_builtins.c \
-	hololisp/hll_bytecode.c \
-	hololisp/hll_compiler.c \
-	hololisp/hll_gc.c \
-	hololisp/hll_mem.c \
-	hololisp/hll_meta.c \
-	hololisp/hll_value.c \
-	hololisp/hll_vm.c \
-	hololisp/main.c
+SRCS = hololisp/main.c
+# SRCS = hololisp/hll_builtins.c \
+# 	hololisp/hll_bytecode.c \
+# 	hololisp/hll_compiler.c \
+# 	hololisp/hll_gc.c \
+# 	hololisp/hll_mem.c \
+# 	hololisp/hll_meta.c \
+# 	hololisp/hll_value.c \
+# 	hololisp/hll_vm.c \
+# 	hololisp/main.c
 
 #
 # Program rules
@@ -57,12 +57,11 @@ clean:
 # Test rules
 #
 
-TEST_DIR = tests
-UNIT_TEST_OUT_DIR = build/$(TEST_DIR)
-UNIT_TEST_PROJECT_SRCS = $(filter-out hololisp/main.c, $(SRCS))
+UNIT_TEST_OUT_DIR = build/tests
+UNIT_TEST_PROJECT_SRCS = hololisp/amalgamated.c
 UNIT_TEST_PROJECT_OBJS = $(UNIT_TEST_PROJECT_SRCS:hololisp/%.c=$(UNIT_TEST_OUT_DIR)/%.o) 
-UNIT_TEST_SRCS = $(wildcard $(TEST_DIR)/*.c) 
-UNIT_TESTS = $(UNIT_TEST_SRCS:$(TEST_DIR)/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
+UNIT_TEST_SRCS = $(wildcard tests/*.c) 
+UNIT_TESTS = $(UNIT_TEST_SRCS:tests/%.c=$(UNIT_TEST_OUT_DIR)/%.test)
 	
 UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
 
@@ -74,7 +73,7 @@ $(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
 $(UNIT_TEST_OUT_DIR)/%.o: hololisp/%.c
 	$(CC) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
 
-$(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
+$(UNIT_TEST_OUT_DIR)/%.o: tests/%.c
 	$(CC) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) -O0 -g -c -o $@ $<  
 
 test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
@@ -83,15 +82,13 @@ test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 $(UNIT_TEST_OUT_DIR): build
 	mkdir -p $(UNIT_TEST_OUT_DIR)
 
-WASM_TARGET = build/hololisp.wasm
-WASM_SOURCES = $(filter-out hololisp/main.c, $(SRCS))
 WASM_FLAGS = -sSTRICT=1 -sALLOW_MEMORY_GROWTH=1 -sMALLOC=dlmalloc -sEXPORT_ES6=1
 EMCC = emcc
 EMRUN = emrun
 
-wasm: build $(WASM_TARGET)
+wasm: build/hololisp.wasm
 
-$(WASM_TARGET): $(WASM_SOURCES)
+build/hololisp.wasm: hololisp/amalgamated.c
 	$(EMCC) -O2 --no-entry -sEXPORTED_RUNTIME_METHODS=ccall,cwrap $(WASM_FLAGS) -o build/hololisp.js $^
 
 wasm-test: $(SRCS)
@@ -101,10 +98,10 @@ wasm-test: $(SRCS)
 
 FUZZ = build/fuzz
 
-$(FUZZ): $(filter-out hololisp/main.c, $(SRCS)) tests/fuzz/fuzz.c
+$(FUZZ): hololisp/amalgamated.c tests/fuzz/fuzz.c
 	$(CC) $(CFLAGS) -g -O0 -fsanitize=fuzzer,address $^ -o $@
 
 fuzz: $(FUZZ)
 	$(shell rm -r crash-*)
 
-.PHONY: all test tests clean wasm-test fuzz
+.PHONY: all test tests clean wasm-test fuzz wasm
