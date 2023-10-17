@@ -134,7 +134,7 @@ void make_ident(void *file, size_t ident) {
 void dump_function_info(void *file, hll_value value);
 
 void hll_dump_value(void *file, hll_value value) {
-  hll_value_kind kind = hll_get_value_kind(value);
+  uint8_t kind = hll_get_value_kind(value);
   fprintf(file, "{ \"kind\": \"%s\"", hll_get_value_kind_str(kind));
   switch (kind) {
   case HLL_VALUE_NIL:

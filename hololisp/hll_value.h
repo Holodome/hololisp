@@ -11,7 +11,6 @@
 
 #include "hll_hololisp.h"
 
-typedef uint8_t hll_value_kind;
 enum {
   // Singleton values. These are not heap-allocated.
   HLL_VALUE_NUM = 0x0,
@@ -25,10 +24,10 @@ enum {
   HLL_VALUE_FUNC = 0x7,
 };
 
-HLL_PUB const char *hll_get_value_kind_str(hll_value_kind kind);
+HLL_PUB const char *hll_get_value_kind_str(uint8_t kind);
 
 typedef struct hll_obj {
-  hll_value_kind kind;
+  uint8_t kind;
   bool is_dark;
   struct hll_obj *next_gc;
   char as[];
@@ -112,7 +111,7 @@ void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 // compiler optimizations easier.
 //
 
-HLL_PUB hll_value_kind hll_get_value_kind(hll_value value);
+HLL_PUB uint8_t hll_get_value_kind(hll_value value);
 HLL_PUB bool hll_is_nil(hll_value value);
 HLL_PUB bool hll_is_num(hll_value value);
 HLL_PUB bool hll_is_cons(hll_value value);

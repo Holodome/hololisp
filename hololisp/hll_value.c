@@ -16,11 +16,11 @@ bool hll_is_obj(hll_value value) {
   return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
 }
 
-static hll_value nan_box_singleton(hll_value_kind kind) {
+static hll_value nan_box_singleton(uint8_t kind) {
   return HLL_QNAN | kind;
 }
 
-static hll_value_kind nan_unbox_singleton(hll_value value) {
+static uint8_t nan_unbox_singleton(hll_value value) {
   return value & ~(HLL_QNAN);
 }
 
@@ -42,7 +42,7 @@ static uint32_t djb2(const char *src, const char *dst) {
   return hash;
 }
 
-const char *hll_get_value_kind_str(hll_value_kind kind) {
+const char *hll_get_value_kind_str(uint8_t kind) {
   static const char *strs[] = {"num",  "nil",  "true", "cons",
                                "symb", "bind", "env",  "func"};
 
@@ -248,7 +248,7 @@ size_t hll_list_length(hll_value value) {
   return length;
 }
 
-hll_value_kind hll_get_value_kind(hll_value value) {
+uint8_t hll_get_value_kind(hll_value value) {
   return hll_is_obj(value) ? nan_unbox_ptr(value)->kind
                            : nan_unbox_singleton(value);
 }
