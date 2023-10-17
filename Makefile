@@ -1,4 +1,3 @@
-TARGET = build/hololisp
 CFLAGS = -O2
 LDFLAGS = -lm
 
@@ -8,9 +7,8 @@ ifneq (,$(COV))
 	COVERAGE_FLAGS = --coverage -fprofile-arcs -ftest-coverage
 endif
 
-LOCAL_CFLAGS = -std=c99 -Ihololisp -pedantic -Wshadow -Wextra -Wall -Werror
-
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
+CFLAGS += -std=c99 -Ihololisp -pedantic -Wshadow -Wextra -Wall -Werror
 
 ifneq (,$(ASAN))
 	CFLAGS += -fsanitize=address 
@@ -27,22 +25,21 @@ else
 	CFLAGS += -DNDEBUG
 endif
 
-SRCS = hololisp/amalgamated.c
-OBJS = $(SRCS:hololisp/%.c=build/%.o)
+SRCS = $(wildcard hololisp/*.c)
 
 #
 # Program rules
 #
 
-all: $(TARGET)
+all: build/hololisp
 
 -include $(SRCS:hololisp/%.c=build/%.d)
 
-$(TARGET): $(OBJS)
+build/hololisp: $(SRCS:hololisp/%.c=build/%.o)
 	$(CC) $(COVERAGE_FLAGS) -o $@ $^ $(LDFLAGS)
 
 build/%.o: hololisp/%.c
-	$(CC) $(LOCAL_CFLAGS) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
+	$(CC) $(DEPFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -c -o $@ $<  
 
 clean:
 	rm -rf build 
@@ -63,13 +60,13 @@ UNIT_TEST_DEPFLAGS = -MT $@ -MMD -MP -MF $(UNIT_TEST_OUT_DIR)/$*.d
 -include $(wildcard $(UNIT_TEST_OUT_DIR)/*.d)
 
 $(UNIT_TEST_OUT_DIR)/%.test: $(UNIT_TEST_PROJECT_OBJS) $(UNIT_TEST_OUT_DIR)/%.o
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(COVERAGE_FLAGS) -g -O0 -o $@ $^ $(LDFLAGS)
 
 $(UNIT_TEST_OUT_DIR)/%.o: hololisp/%.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
+	$(CC) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) $(COVERAGE_FLAGS) -g -O0 -c -o $@ $<  
 
 $(UNIT_TEST_OUT_DIR)/%.o: $(TEST_DIR)/%.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) -O0 -g -c -o $@ $<  
+	$(CC) $(CFLAGS) $(UNIT_TEST_DEPFLAGS) -O0 -g -c -o $@ $<  
 
 test tests: $(UNIT_TEST_OUT_DIR) $(UNIT_TESTS) all
 	./scripts/test.sh
@@ -96,7 +93,7 @@ wasm-test: $(SRCS)
 FUZZ = build/fuzz
 
 $(FUZZ): $(filter-out hololisp/main.c, $(SRCS)) tests/fuzz/fuzz.c
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -g -O0 -fsanitize=fuzzer,address $^ -o $@
+	$(CC) $(CFLAGS) -g -O0 -fsanitize=fuzzer,address $^ -o $@
 
 fuzz: $(FUZZ)
 	$(shell rm -r crash-*)

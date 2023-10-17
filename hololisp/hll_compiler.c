@@ -1219,7 +1219,7 @@ static void add_symbol_to_function_param_list(hll_compiler *compiler,
 static bool compile_function_internal(hll_compiler *compiler, hll_value params,
                                       hll_value report, hll_value body,
                                       hll_value name, hll_value *compiled_) {
-  hll_compiler new_compiler = {0};
+  hll_compiler new_compiler;
   hll_compiler_init(&new_compiler, compiler->tu, name);
   hll_value compiled = hll_compile_ast(&new_compiler, body);
   hll_sb_free(new_compiler.loc_stack);

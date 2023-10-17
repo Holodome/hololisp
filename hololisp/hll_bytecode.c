@@ -73,7 +73,7 @@ void hll_dump_bytecode(void *file, const hll_bytecode *bytecode) {
           (long long unsigned)(instruction - bytecode->ops - 1));
 }
 
-size_t hll_bytecode_op_body_size(hll_bytecode_op op) {
+static size_t hll_bytecode_op_body_size(hll_bytecode_op op) {
   size_t s = 0;
   if (op == HLL_BC_CONST || op == HLL_BC_MAKEFUN || op == HLL_BC_JN) {
     s = 2;
