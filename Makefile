@@ -25,7 +25,16 @@ else
 	CFLAGS += -DNDEBUG
 endif
 
-SRCS = $(wildcard hololisp/*.c)
+#SRCS = hololisp/main.c hololisp/amalgamated.c
+SRCS = hololisp/hll_builtins.c \
+	hololisp/hll_bytecode.c \
+	hololisp/hll_compiler.c \
+	hololisp/hll_gc.c \
+	hololisp/hll_mem.c \
+	hololisp/hll_meta.c \
+	hololisp/hll_value.c \
+	hololisp/hll_vm.c \
+	hololisp/main.c
 
 #
 # Program rules

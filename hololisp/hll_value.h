@@ -105,21 +105,49 @@ HLL_PUB hll_obj_func *hll_unwrap_func(hll_value value)
 hll_obj *hll_unwrap_obj(hll_value value);
 void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
 
-//
-// Type-checking functions. Generally specific function 'hll_is_nil'
-// is preferred to hll_get_value_kind() == HLL_VALUE_NIL because it makes
-// compiler optimizations easier.
-//
-
-HLL_PUB uint8_t hll_get_value_kind(hll_value value);
-HLL_PUB bool hll_is_nil(hll_value value);
-HLL_PUB bool hll_is_num(hll_value value);
-HLL_PUB bool hll_is_cons(hll_value value);
-HLL_PUB bool hll_is_symb(hll_value value);
-HLL_PUB bool hll_is_list(hll_value value);
-
-bool hll_is_obj(hll_value value);
-
 HLL_PUB size_t hll_list_length(hll_value value);
+
+#define HLL_SIGN_BIT ((uint64_t)1 << 63)
+#define HLL_QNAN ((uint64_t)0x7ffc000000000000)
+
+
+static inline hll_value nan_box_singleton(uint8_t kind) {
+  return HLL_QNAN | kind;
+}
+
+static inline uint8_t nan_unbox_singleton(hll_value value) {
+  return value & ~(HLL_QNAN);
+}
+
+static inline hll_value nan_box_ptr(void *ptr) {
+  return ((uintptr_t)ptr) | (HLL_SIGN_BIT | HLL_QNAN);
+}
+
+static inline hll_obj *nan_unbox_ptr(hll_value value) {
+  return (hll_obj *)(uintptr_t)(value & ~(HLL_SIGN_BIT | HLL_QNAN));
+}
+
+static inline bool hll_is_num(hll_value value) { return (value & HLL_QNAN) != HLL_QNAN; }
+static inline bool hll_is_obj(hll_value value) {
+  return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
+}
+static inline uint8_t hll_get_value_kind(hll_value value) {
+  return hll_is_obj(value) ? nan_unbox_ptr(value)->kind
+                           : nan_unbox_singleton(value);
+}
+
+static inline bool hll_is_nil(hll_value value) { return value == hll_nil(); }
+
+static inline bool hll_is_cons(hll_value value) {
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_CONS;
+}
+
+static inline bool hll_is_symb(hll_value value) {
+  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_SYMB;
+}
+
+static inline bool hll_is_list(hll_value value) {
+  return hll_is_cons(value) || hll_is_nil(value);
+}
 
 #endif

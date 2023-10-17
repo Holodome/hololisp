@@ -8,30 +8,6 @@
 #include "hll_mem.h"
 #include "hll_vm.h"
 
-#define HLL_SIGN_BIT ((uint64_t)1 << 63)
-#define HLL_QNAN ((uint64_t)0x7ffc000000000000)
-
-bool hll_is_num(hll_value value) { return (value & HLL_QNAN) != HLL_QNAN; }
-bool hll_is_obj(hll_value value) {
-  return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
-}
-
-static hll_value nan_box_singleton(uint8_t kind) {
-  return HLL_QNAN | kind;
-}
-
-static uint8_t nan_unbox_singleton(hll_value value) {
-  return value & ~(HLL_QNAN);
-}
-
-static hll_value nan_box_ptr(void *ptr) {
-  return ((uintptr_t)ptr) | (HLL_SIGN_BIT | HLL_QNAN);
-}
-
-static hll_obj *nan_unbox_ptr(hll_value value) {
-  return (hll_obj *)(uintptr_t)(value & ~(HLL_SIGN_BIT | HLL_QNAN));
-}
-
 static uint32_t djb2(const char *src, const char *dst) {
   uint32_t hash = 5381;
   do {
@@ -248,21 +224,3 @@ size_t hll_list_length(hll_value value) {
   return length;
 }
 
-uint8_t hll_get_value_kind(hll_value value) {
-  return hll_is_obj(value) ? nan_unbox_ptr(value)->kind
-                           : nan_unbox_singleton(value);
-}
-
-bool hll_is_nil(hll_value value) { return value == hll_nil(); }
-
-bool hll_is_cons(hll_value value) {
-  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_CONS;
-}
-
-bool hll_is_symb(hll_value value) {
-  return hll_is_obj(value) && nan_unbox_ptr(value)->kind == HLL_VALUE_SYMB;
-}
-
-bool hll_is_list(hll_value value) {
-  return hll_is_cons(value) || hll_is_nil(value);
-}
