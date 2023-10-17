@@ -8,11 +8,10 @@
 
 #include "hll_bytecode.h"
 #include "hll_compiler.h"
-#include "hll_debug.h"
+#include "hll_meta.h"
 #include "hll_gc.h"
 #include "hll_hololisp.h"
 #include "hll_mem.h"
-#include "hll_util.h"
 #include "hll_value.h"
 
 extern void add_builtins(hll_vm *vm);
@@ -78,13 +77,13 @@ void hll_delete_vm(hll_vm *vm) {
 
 hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
                                    const char *name,
-                                   hll_interpret_flags flags) {
+                                   uint32_t flags) {
   hll_interpret_result result;
 
   hll_reset_debug(vm->debug);
   // Set debug colored flag
   vm->debug->flags &= ~HLL_DEBUG_DIAGNOSTICS_COLORED;
-  if (flags & HLL_INTERPRET_DEBUG_COLORED) {
+  if (flags & HLL_INTERPRET_COLORED) {
     vm->debug->flags |= HLL_DEBUG_DIAGNOSTICS_COLORED;
   }
 
@@ -320,7 +319,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       if (hll_is_nil(*headp)) {
         *headp = *tailp = cons;
       } else {
-        if (HLL_UNLIKELY(hll_get_value_kind(*tailp) != HLL_VALUE_CONS)) {
+        if (hll_get_value_kind(*tailp) != HLL_VALUE_CONS) {
           hll_runtime_error(vm,
                             "tail operand of APPEND is not a cons (found %s)",
                             hll_get_value_kind_str(hll_get_value_kind(*tailp)));
@@ -333,14 +332,14 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
     case HLL_BC_FIND: {
       hll_value symb = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, symb);
-      if (HLL_UNLIKELY(hll_get_value_kind(symb) != HLL_VALUE_SYMB)) {
+      if (hll_get_value_kind(symb) != HLL_VALUE_SYMB) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
                           hll_get_value_kind_str(hll_get_value_kind(symb)));
       }
 
       hll_value found;
       bool is_found = hll_find_var(vm->env, symb, &found);
-      if (HLL_UNLIKELY(!is_found)) {
+      if (!is_found) {
         hll_runtime_error(vm, "failed to find variable '%s' in current scope",
                           hll_unwrap_zsymb(symb));
         goto bail;

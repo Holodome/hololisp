@@ -127,9 +127,9 @@ static bool execute_repl(hll_options *opts, bool tty) {
       break;
     }
 
-    hll_interpret_flags flags = HLL_INTERPRET_PRINT_RESULT;
+    uint32_t flags = HLL_INTERPRET_PRINT_RESULT;
     if (!opts->forbid_colors) {
-      flags |= HLL_INTERPRET_DEBUG_COLORED;
+      flags |= HLL_INTERPRET_COLORED;
     }
     hll_interpret_result interpret_result =
         hll_interpret(vm, line, "repl", flags);
@@ -154,9 +154,9 @@ static bool execute_script(hll_options *opts) {
   }
 
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_flags flags = 0;
+  uint32_t flags = 0;
   if (!opts->forbid_colors) {
-    flags |= HLL_INTERPRET_DEBUG_COLORED;
+    flags |= HLL_INTERPRET_COLORED;
   }
   hll_interpret_result interpret_result =
       hll_interpret(vm, file_contents, opts->str, flags);
@@ -169,9 +169,9 @@ static bool execute_script(hll_options *opts) {
 
 static bool execute_string(hll_options *opts) {
   struct hll_vm *vm = hll_make_vm(NULL);
-  hll_interpret_flags flags = HLL_INTERPRET_PRINT_RESULT;
+  uint32_t flags = HLL_INTERPRET_PRINT_RESULT;
   if (!opts->forbid_colors) {
-    flags |= HLL_INTERPRET_DEBUG_COLORED;
+    flags |= HLL_INTERPRET_COLORED;
   }
   hll_interpret_result result = hll_interpret(vm, opts->str, "cli", flags);
   hll_delete_vm(vm);

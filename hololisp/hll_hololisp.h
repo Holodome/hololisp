@@ -19,6 +19,20 @@
 #define HLL_PUB extern
 #endif
 
+#ifdef HLL_DEBUG
+#if defined(__GNUC__) || defined(__clang__)
+#define HLL_UNREACHABLE __builtin_trap()
+#else
+#error Not implemented
+#endif
+#else // HLL_DEBUG
+#if defined(__GNUC__) || defined(__clang__)
+#define HLL_UNREACHABLE __builtin_unreachable()
+#else
+#error Not implemented
+#endif
+#endif // HLL_DEBUG
+
 // Instance of hololisp virtual machine. Virtual machine stores state
 // of execution hololisp code in a single session, e.g. REPL session.
 struct hll_vm;
@@ -75,14 +89,13 @@ typedef enum {
   HLL_RESULT_ERROR = 0x1,
 } hll_interpret_result;
 
-typedef uint32_t hll_interpret_flags;
 enum {
   // Print result of execution. This may be needed depending on context:
   // for example, when execution REPL result print is needed, while when
   // executing files this is unwanted.
   HLL_INTERPRET_PRINT_RESULT = 0x1,
   // Make output of error messages be colored using ANSI escape codes.
-  HLL_INTERPRET_DEBUG_COLORED = 0x2
+  HLL_INTERPRET_COLORED = 0x2
 };
 
 // If config is NULL, uses default config.
@@ -95,7 +108,7 @@ HLL_PUB void hll_delete_vm(struct hll_vm *vm) __attribute__((nonnull));
 // Runs given source as hololisp code.
 HLL_PUB hll_interpret_result hll_interpret(struct hll_vm *vm,
                                            const char *source, const char *name,
-                                           hll_interpret_flags flags)
+                                           uint32_t flags)
     __attribute__((nonnull));
 
 #endif

@@ -1,4 +1,4 @@
-#include "hll_debug.h"
+#include "hll_meta.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -46,7 +46,7 @@ static hll_src_loc_info get_src_loc_info(const char *src, size_t offset) {
                             .column = column_number};
 }
 
-void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
+void hll_report_errorv(hll_meta_storage *debug, hll_loc loc, const char *fmt,
                        va_list args) {
   ++debug->error_count;
 
@@ -114,7 +114,7 @@ void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
   }
 }
 
-void hll_report_error(hll_debug_storage *vm, hll_loc loc, const char *fmt,
+void hll_report_error(hll_meta_storage *vm, hll_loc loc, const char *fmt,
                       ...) {
   va_list args;
   va_start(args, fmt);
@@ -122,22 +122,21 @@ void hll_report_error(hll_debug_storage *vm, hll_loc loc, const char *fmt,
   va_end(args);
 }
 
-uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source,
+uint32_t hll_ds_init_tu(hll_meta_storage *ds, const char *source,
                         const char *name) {
   hll_dtu tu = {.source = source, .name = name};
   hll_sb_push(ds->dtus, tu);
   return hll_sb_len(ds->dtus);
 }
 
-hll_debug_storage *hll_make_debug(hll_vm *vm, hll_debug_flags flags) {
-  hll_debug_storage *storage = hll_alloc(sizeof(*storage));
+hll_meta_storage *hll_make_debug(hll_vm *vm, uint32_t flags) {
+  hll_meta_storage *storage = hll_alloc(sizeof(*storage));
   storage->flags = flags;
   storage->vm = vm;
-
   return storage;
 }
 
-void hll_delete_debug(hll_debug_storage *ds) {
+void hll_delete_debug(hll_meta_storage *ds) {
   for (size_t i = 0; i < hll_sb_len(ds->dtus); ++i) {
     hll_dtu *dtu = ds->dtus + i;
     hll_sb_free(dtu->locs);
@@ -147,9 +146,9 @@ void hll_delete_debug(hll_debug_storage *ds) {
   hll_free(ds, sizeof(*ds));
 }
 
-void hll_reset_debug(hll_debug_storage *ds) { ds->error_count = 0; }
+void hll_reset_debug(hll_meta_storage *ds) { ds->error_count = 0; }
 
-void hll_debug_print_summary(hll_debug_storage *debug) {
+void hll_debug_print_summary(hll_meta_storage *debug) {
   char buffer[1024];
   if (debug->error_count != 1) {
     snprintf(buffer, sizeof(buffer), "%" PRIu32 " errors generated.\n",
@@ -165,7 +164,7 @@ void hll_debug_print_summary(hll_debug_storage *debug) {
   }
 }
 
-void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
+void hll_report_runtime_errorv(hll_meta_storage *debug, const char *fmt,
                                va_list args) {
   hll_call_frame *f = &hll_sb_last(debug->vm->call_stack);
   size_t op_idx = f->ip - f->bytecode->ops;
@@ -179,7 +178,7 @@ void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
       fmt, args);
 }
 
-void hll_bytecode_add_loc(hll_debug_storage *debug, uint32_t translation_unit,
+void hll_bytecode_add_loc(hll_meta_storage *debug, uint32_t translation_unit,
                           size_t op_length, uint32_t compilation_unit,
                           uint32_t offset) {
   hll_dtu *dtu = debug->dtus + translation_unit - 1;
@@ -196,7 +195,7 @@ void hll_bytecode_add_loc(hll_debug_storage *debug, uint32_t translation_unit,
   hll_sb_push(dtu->loc_rle, rle);
 }
 
-uint32_t hll_bytecode_get_loc(hll_debug_storage *debug,
+uint32_t hll_bytecode_get_loc(hll_meta_storage *debug,
                               uint32_t translation_unit, size_t op_idx) {
   hll_dtu *dtu = debug->dtus + translation_unit - 1;
   assert(dtu <= &hll_sb_last(debug->dtus));

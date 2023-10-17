@@ -20,7 +20,7 @@ typedef struct hll_call_frame {
 
 typedef struct hll_vm {
   struct hll_config config;
-  struct hll_debug_storage *debug;
+  struct hll_meta_storage *debug;
   struct hll_gc *gc;
 
   // We use xorshift64 for random number generation. Because hololisp is

@@ -1,5 +1,4 @@
 #include "hll_compiler.h"
-#include "hll_util.h"
 #include "hll_value.h"
 #include "hll_vm.h"
 
@@ -427,7 +426,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_get_value_kind(args) != HLL_VALUE_CONS)) {
+  if (hll_get_value_kind(args) != HLL_VALUE_CONS) {
     hll_runtime_error(vm, "min' form expects at least 1 argument");
     return hll_nil();
   }
@@ -435,7 +434,7 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
   hll_value result = hll_nil();
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value test = hll_car(vm, obj);
-    if (HLL_UNLIKELY(hll_get_value_kind(test) != HLL_VALUE_NUM)) {
+    if (hll_get_value_kind(test) != HLL_VALUE_NUM) {
       hll_runtime_error(vm, "'min' form expects number arguments");
       return hll_nil();
     }
@@ -450,7 +449,7 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_get_value_kind(args) != HLL_VALUE_CONS)) {
+  if (hll_get_value_kind(args) != HLL_VALUE_CONS) {
     hll_runtime_error(vm, "max' form expects at least 1 argument");
     return hll_nil();
   }
@@ -458,7 +457,7 @@ static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
   hll_value result = hll_nil();
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value test = hll_car(vm, obj);
-    if (HLL_UNLIKELY(hll_get_value_kind(test) != HLL_VALUE_NUM)) {
+    if (hll_get_value_kind(test) != HLL_VALUE_NUM) {
       hll_runtime_error(vm, "'max' form expects number arguments");
       return hll_nil();
     }
@@ -473,7 +472,7 @@ static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_listp(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'list?' expects exactly 1 argument");
     return hll_nil();
   }
@@ -488,7 +487,7 @@ static hll_value builtin_listp(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_null(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'null' expects exactly 1 argument");
     return hll_nil();
   }
@@ -504,13 +503,13 @@ static hll_value builtin_null(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_minusp(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'negative?' expects number argument");
     return hll_nil();
   }
@@ -524,13 +523,13 @@ static hll_value builtin_minusp(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_zerop(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'zero?' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'zero?' expects number argument");
     return hll_nil();
   }
@@ -544,13 +543,13 @@ static hll_value builtin_zerop(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_even(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'even?' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'even?' expects number argument");
     return hll_nil();
   }
@@ -563,13 +562,13 @@ static hll_value builtin_even(struct hll_vm *vm, hll_value args) {
   return result;
 }
 static hll_value builtin_odd(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'odd?' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'odd?' expects number argument");
     return hll_nil();
   }
@@ -583,13 +582,13 @@ static hll_value builtin_odd(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_plusp(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'negative?' expects number argument");
     return hll_nil();
   }
@@ -603,7 +602,7 @@ static hll_value builtin_plusp(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_numberp(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'null' expects exactly 1 argument");
     return hll_nil();
   }
@@ -618,13 +617,13 @@ static hll_value builtin_numberp(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_abs(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'abs' expects exactly 1 argument");
     return hll_nil();
   }
 
   hll_value obj = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(obj) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'abs' expects number argument");
     return hll_nil();
   }
@@ -670,7 +669,7 @@ static hll_value builtin_append(struct hll_vm *vm, hll_value args) {
 
 static hll_value builtin_reverse(struct hll_vm *vm, hll_value args) {
   // NOTE: This seems like it can be compiled to bytecode directly
-  if (HLL_UNLIKELY(hll_list_length(args) != 1)) {
+  if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'reverse' expects exactly 1 argument");
     return hll_nil();
   }
@@ -690,16 +689,16 @@ static hll_value builtin_reverse(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
+  if (hll_list_length(args) != 2) {
     hll_runtime_error(vm, "'nthcdr' expects exactly 2 arguments");
     return hll_nil();
   }
 
   hll_value num = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(num) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(num) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'nthcdr' first argument must be a number");
     return hll_nil();
-  } else if (HLL_UNLIKELY(hll_unwrap_num(num) < 0)) {
+  } else if (hll_unwrap_num(num) < 0) {
     hll_runtime_error(vm, "'nthcdr' expects non-negative number (got %F)",
                       hll_unwrap_num(num));
     return hll_nil();
@@ -720,16 +719,16 @@ static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_nth(struct hll_vm *vm, hll_value args) {
-  if (HLL_UNLIKELY(hll_list_length(args) != 2)) {
+  if (hll_list_length(args) != 2) {
     hll_runtime_error(vm, "'nth' expects exactly 2 arguments");
     return hll_nil();
   }
 
   hll_value num = hll_car(vm, args);
-  if (HLL_UNLIKELY(hll_get_value_kind(num) != HLL_VALUE_NUM)) {
+  if (hll_get_value_kind(num) != HLL_VALUE_NUM) {
     hll_runtime_error(vm, "'nth' first argument must be a number");
     return hll_nil();
-  } else if (HLL_UNLIKELY(hll_unwrap_num(num) < 0)) {
+  } else if (hll_unwrap_num(num) < 0) {
     hll_runtime_error(vm, "'nth' expects non-negative number (got %F)",
                       hll_unwrap_num(num));
     return hll_nil();

@@ -61,7 +61,6 @@ typedef struct {
 } hll_location_table;
 
 // Flags of translation unit.
-typedef uint32_t hll_tu_flags;
 enum { HLL_TU_FLAG_DEBUG = 0x1 };
 
 // Meta information used during compilation.
@@ -74,11 +73,11 @@ typedef struct {
   const char *name;
   const char *source;
   struct hll_vm *vm;
-  hll_tu_flags flags;
+  uint32_t flags;
 } hll_translation_unit;
 
 hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
-                                 const char *name, hll_tu_flags flags);
+                                 const char *name, uint32_t flags);
 void hll_delete_tu(hll_translation_unit *tu);
 
 // Kinds of tokens recognized by lexer.

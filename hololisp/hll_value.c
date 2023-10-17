@@ -6,7 +6,6 @@
 #include "hll_bytecode.h"
 #include "hll_gc.h"
 #include "hll_mem.h"
-#include "hll_util.h"
 #include "hll_vm.h"
 
 #define HLL_SIGN_BIT ((uint64_t)1 << 63)

@@ -4,7 +4,6 @@
 
 #include "hll_bytecode.h"
 #include "hll_mem.h"
-#include "hll_util.h"
 #include "hll_value.h"
 #include "hll_vm.h"
 

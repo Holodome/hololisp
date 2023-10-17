@@ -54,25 +54,24 @@ typedef struct {
   hll_bytecode_rle *loc_rle;
 } hll_dtu;
 
-typedef uint32_t hll_debug_flags;
 enum {
   HLL_DEBUG_DIAGNOSTICS_COLORED = 0x1,
 };
 
-typedef struct hll_debug_storage {
+typedef struct hll_meta_storage {
   struct hll_vm *vm;
 
   hll_dtu *dtus;
-  hll_debug_flags flags;
+  uint32_t flags;
 
   uint32_t error_count;
-} hll_debug_storage;
+} hll_meta_storage;
 
-hll_debug_storage *hll_make_debug(struct hll_vm *vm, hll_debug_flags flags);
-void hll_delete_debug(hll_debug_storage *ds);
-void hll_reset_debug(hll_debug_storage *ds);
+hll_meta_storage *hll_make_debug(struct hll_vm *vm, uint32_t flags);
+void hll_delete_debug(hll_meta_storage *ds);
+void hll_reset_debug(hll_meta_storage *ds);
 
-uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source,
+uint32_t hll_ds_init_tu(hll_meta_storage *ds, const char *source,
                         const char *name);
 
 // Used to report error in current state contained by vm.
@@ -80,20 +79,20 @@ uint32_t hll_ds_init_tu(hll_debug_storage *ds, const char *source,
 // source location.
 // offset specifies byte offset of reported location in file.
 // len specifies length of reported part (e.g. token).
-void hll_report_errorv(hll_debug_storage *debug, hll_loc loc, const char *fmt,
+void hll_report_errorv(hll_meta_storage *debug, hll_loc loc, const char *fmt,
                        va_list args);
-void hll_report_error(hll_debug_storage *debug, hll_loc loc, const char *fmt,
+void hll_report_error(hll_meta_storage *debug, hll_loc loc, const char *fmt,
                       ...) __attribute__((format(printf, 3, 4)));
 
-void hll_report_runtime_errorv(hll_debug_storage *debug, const char *fmt,
+void hll_report_runtime_errorv(hll_meta_storage *debug, const char *fmt,
                                va_list args);
 
-void hll_debug_print_summary(hll_debug_storage *debug);
+void hll_debug_print_summary(hll_meta_storage *debug);
 
-void hll_bytecode_add_loc(hll_debug_storage *debug, uint32_t tu,
+void hll_bytecode_add_loc(hll_meta_storage *debug, uint32_t tu,
                           size_t op_length, uint32_t compilation_unit,
                           uint32_t offset);
-uint32_t hll_bytecode_get_loc(hll_debug_storage *debug, uint32_t tu,
+uint32_t hll_bytecode_get_loc(hll_meta_storage *debug, uint32_t tu,
                               size_t op_idx);
 
 #endif

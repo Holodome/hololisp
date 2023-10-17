@@ -8,10 +8,9 @@
 #include <string.h>
 
 #include "hll_bytecode.h"
-#include "hll_debug.h"
 #include "hll_gc.h"
 #include "hll_mem.h"
-#include "hll_util.h"
+#include "hll_meta.h"
 #include "hll_value.h"
 #include "hll_vm.h"
 
@@ -452,7 +451,7 @@ const hll_token *hll_lexer_next(hll_lexer *lexer) {
 }
 
 hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
-                                 const char *name, hll_tu_flags flags) {
+                                 const char *name, uint32_t flags) {
   hll_translation_unit tu = {0};
   tu.vm = vm;
   tu.flags = flags;
