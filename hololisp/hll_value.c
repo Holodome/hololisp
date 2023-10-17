@@ -57,15 +57,6 @@ static void register_gc_obj(hll_vm *vm, hll_obj *obj) {
   vm->gc->all_objs = obj;
 }
 
-hll_value hll_nil(void) { return nan_box_singleton(HLL_VALUE_NIL); }
-hll_value hll_true(void) { return nan_box_singleton(HLL_VALUE_TRUE); }
-
-hll_value hll_num(double num) {
-  hll_value value;
-  memcpy(&value, &num, sizeof(hll_value));
-  return value;
-}
-
 hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   assert(symbol != NULL);
   assert(length != 0);
@@ -136,82 +127,6 @@ hll_value hll_new_func(hll_vm *vm, hll_value params, hll_bytecode *bytecode) {
   hll_bytecode_inc_refcount(bytecode);
 
   return nan_box_ptr(obj);
-}
-
-hll_obj_cons *hll_unwrap_cons(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_CONS);
-  return (hll_obj_cons *)obj->as;
-}
-
-const char *hll_unwrap_zsymb(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_SYMB);
-  return ((hll_obj_symb *)obj->as)->symb;
-}
-
-hll_obj_symb *hll_unwrap_symb(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_SYMB);
-  return (hll_obj_symb *)obj->as;
-}
-
-hll_value hll_unwrap_cdr(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_CONS);
-  return ((hll_obj_cons *)obj->as)->cdr;
-}
-
-hll_value hll_unwrap_car(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_CONS);
-  return ((hll_obj_cons *)obj->as)->car;
-}
-
-hll_obj_bind *hll_unwrap_bind(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_BIND);
-  return (hll_obj_bind *)obj->as;
-}
-
-hll_obj_env *hll_unwrap_env(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_ENV);
-  return (hll_obj_env *)obj->as;
-}
-
-hll_obj_func *hll_unwrap_func(hll_value value) {
-  assert(hll_is_obj(value));
-  hll_obj *obj = nan_unbox_ptr(value);
-  assert(obj->kind == HLL_VALUE_FUNC);
-  return (hll_obj_func *)obj->as;
-}
-
-double hll_unwrap_num(hll_value value) {
-  assert(hll_is_num(value));
-  double result;
-  memcpy(&result, &value, sizeof(hll_value));
-  return result;
-}
-
-hll_obj *hll_unwrap_obj(hll_value value) {
-  assert(hll_is_obj(value));
-  return nan_unbox_ptr(value);
-}
-
-void hll_setcar(hll_value cons, hll_value car) {
-  hll_unwrap_cons(cons)->car = car;
-}
-
-void hll_setcdr(hll_value cons, hll_value cdr) {
-  hll_unwrap_cons(cons)->cdr = cdr;
 }
 
 size_t hll_list_length(hll_value value) {
