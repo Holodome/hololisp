@@ -63,8 +63,8 @@ HLL_PUB void hll_print_value(hll_vm *vm, hll_value obj);
 
 HLL_PUB bool hll_find_var(hll_value env, hll_value car, hll_value *found);
 
-__attribute__((format(printf, 2, 3))) 
-HLL_PUB void hll_runtime_error(hll_vm *vm, const char *fmt, ...);
+__attribute__((format(printf, 2, 3))) HLL_PUB void
+hll_runtime_error(hll_vm *vm, const char *fmt, ...);
 
 HLL_PUB hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                                                   hll_value compiled);

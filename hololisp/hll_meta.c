@@ -114,8 +114,7 @@ void hll_report_errorv(hll_meta_storage *debug, hll_loc loc, const char *fmt,
   }
 }
 
-void hll_report_error(hll_meta_storage *vm, hll_loc loc, const char *fmt,
-                      ...) {
+void hll_report_error(hll_meta_storage *vm, hll_loc loc, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hll_report_errorv(vm, loc, fmt, args);

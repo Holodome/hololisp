@@ -5,10 +5,10 @@
 #ifndef HLL_VALUE_H
 #define HLL_VALUE_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <assert.h>
 #include <string.h>
 
 #include "hll_hololisp.h"
@@ -100,15 +100,21 @@ static inline hll_obj *nan_unbox_ptr(hll_value value) {
   return (hll_obj *)(uintptr_t)(value & ~(HLL_SIGN_BIT | HLL_QNAN));
 }
 
-static inline hll_value hll_nil(void) { return nan_box_singleton(HLL_VALUE_NIL); }
-static inline hll_value hll_true(void) { return nan_box_singleton(HLL_VALUE_TRUE); }
+static inline hll_value hll_nil(void) {
+  return nan_box_singleton(HLL_VALUE_NIL);
+}
+static inline hll_value hll_true(void) {
+  return nan_box_singleton(HLL_VALUE_TRUE);
+}
 static inline hll_value hll_num(double num) {
   hll_value value;
   memcpy(&value, &num, sizeof(hll_value));
   return value;
 }
 
-static inline bool hll_is_num(hll_value value) { return (value & HLL_QNAN) != HLL_QNAN; }
+static inline bool hll_is_num(hll_value value) {
+  return (value & HLL_QNAN) != HLL_QNAN;
+}
 static inline bool hll_is_obj(hll_value value) {
   return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
 }

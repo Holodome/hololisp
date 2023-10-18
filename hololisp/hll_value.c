@@ -138,4 +138,3 @@ size_t hll_list_length(hll_value value) {
 
   return length;
 }
-

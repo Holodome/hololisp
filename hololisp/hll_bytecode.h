@@ -97,7 +97,8 @@ typedef struct hll_bytecode {
   // Constant pool dynamic array
   hll_value *constant_pool;
   uint32_t translation_unit;
-  // Name string object. It needs to be hololisp object because it comes from AST.
+  // Name string object. It needs to be hololisp object because it comes from
+  // AST.
   hll_value name;
 } hll_bytecode;
 

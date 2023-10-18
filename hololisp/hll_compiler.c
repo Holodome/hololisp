@@ -213,7 +213,7 @@ static inline hll_lexer_equivalence_class get_equivalence_class(char symb) {
   default: break;
   }
   // clang-format on
-  
+
   return eqc;
 }
 

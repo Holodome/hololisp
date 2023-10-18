@@ -180,16 +180,15 @@ void dump_function_info(void *file, hll_value value) {
   fprintf(file, "],"); // params
 
   hll_bytecode *bc = func->bytecode;
-  fprintf(file,
-          "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu}, ",
+  fprintf(file, "\"bytecode_stats\": { \"ops\": %zu, \"constants\": %zu}, ",
           hll_sb_len(bc->ops), hll_sb_len(bc->constant_pool));
 
   fprintf(file, "\"ops\": [");
   const uint8_t *instruction = bc->ops;
   hll_bytecode_op op;
   while ((op = *instruction++)) {
-    fprintf(file, "{ \"offset\": %zu, \"op\": \"%s\"",
-            instruction - bc->ops, get_op_str(op));
+    fprintf(file, "{ \"offset\": %zu, \"op\": \"%s\"", instruction - bc->ops,
+            get_op_str(op));
     switch (op) {
     case HLL_BC_CONST:
     case HLL_BC_MAKEFUN:

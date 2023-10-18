@@ -53,6 +53,9 @@ build/%.o: hololisp/%.c
 clean:
 	rm -rf build 
 
+format:
+	$(Q)find hololisp \( -name "*.c" -o -name "*.h" \) -exec clang-format -i {} \;
+
 #
 # Test rules
 #

@@ -53,5 +53,4 @@ void *hll_sb_grow_impl(void *arr, size_t inc, size_t stride);
 void *hll_realloc(void *ptr, size_t old_size, size_t new_size)
     __attribute__((alloc_size(3)));
 
-
 #endif
