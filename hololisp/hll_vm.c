@@ -8,10 +8,10 @@
 
 #include "hll_bytecode.h"
 #include "hll_compiler.h"
-#include "hll_meta.h"
 #include "hll_gc.h"
 #include "hll_hololisp.h"
 #include "hll_mem.h"
+#include "hll_meta.h"
 #include "hll_value.h"
 
 extern void add_builtins(hll_vm *vm);
@@ -48,7 +48,7 @@ void hll_add_variable(hll_vm *vm, hll_value env, hll_value name,
 }
 
 hll_vm *hll_make_vm(const hll_config *config) {
-  hll_vm *vm = hll_alloc(sizeof(hll_vm));
+  hll_vm *vm = hll_alloc(sizeof(*vm));
 
   if (config == NULL) {
     hll_initialize_default_config(&vm->config);
@@ -76,8 +76,7 @@ void hll_delete_vm(hll_vm *vm) {
 }
 
 hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
-                                   const char *name,
-                                   uint32_t flags) {
+                                   const char *name, uint32_t flags) {
   hll_interpret_result result;
 
   hll_reset_debug(vm->debug);
@@ -188,8 +187,7 @@ void hll_print_value(hll_vm *vm, hll_value value) {
   }
 }
 
-__attribute__((format(printf, 2, 3))) void
-hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
+void hll_runtime_error(hll_vm *vm, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hll_report_runtime_errorv(vm->debug, fmt, args);
