@@ -8,7 +8,7 @@ ifneq (,$(COV))
 endif
 
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-CFLAGS += -std=c99 -Ihololisp -pedantic -Wshadow -Wextra -Wall -Werror
+CFLAGS += -std=c99 -Ihololisp -pedantic -Wshadow -Wextra -Wall -Werror -Wno-gnu-label-as-value
 
 ifneq (,$(ASAN))
 	CFLAGS += -fsanitize=address 

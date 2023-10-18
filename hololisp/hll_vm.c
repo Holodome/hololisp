@@ -254,14 +254,20 @@ static void call_func(hll_vm *vm, hll_value callable, hll_value args,
   }
 }
 
-#ifndef HLL_USE_PRECOMPUTED_GOTO
-#define HLL_VM_SWITCH() switch (*current_call_frame->ip++)
+#define HLL_USE_COMPUTED_GOTO
+
+#ifndef HLL_USE_COMPUTED_GOTO
+#define HLL_VM_SWITCH()                                                        \
+  vm_start:                                                                    \
+  switch (*current_call_frame->ip++)
 #define HLL_VM_CASE(_name) case _name:
-#define HLL_VM_NEXT()                                                          \
-  do {                                                                         \
-    goto vm_start;                                                             \
-  } while (0)
+#define HLL_VM_DISPATCH()
+#define HLL_VM_NEXT() goto vm_start;
 #else
+#define HLL_VM_SWITCH()
+#define HLL_VM_CASE(_name) CASE_##_name:
+#define HLL_VM_DISPATCH() goto *(dispatch_table[*current_call_frame->ip++])
+#define HLL_VM_NEXT() HLL_VM_DISPATCH()
 #endif
 
 hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
@@ -287,7 +293,18 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   }
   hll_call_frame *current_call_frame = vm->call_stack;
 
-vm_start:
+#ifdef HLL_USE_COMPUTED_GOTO
+  static const void *const dispatch_table[] = {
+      &&CASE_HLL_BC_END,    &&CASE_HLL_BC_NIL,    &&CASE_HLL_BC_TRUE,
+      &&CASE_HLL_BC_CONST,  &&CASE_HLL_BC_APPEND, &&CASE_HLL_BC_POP,
+      &&CASE_HLL_BC_FIND,   &&CASE_HLL_BC_CALL,   &&CASE_HLL_BC_MBTRCALL,
+      &&CASE_HLL_BC_JN,     &&CASE_HLL_BC_LET,    &&CASE_HLL_BC_PUSHENV,
+      &&CASE_HLL_BC_POPENV, &&CASE_HLL_BC_CAR,    &&CASE_HLL_BC_CDR,
+      &&CASE_HLL_BC_SETCAR, &&CASE_HLL_BC_SETCDR, &&CASE_HLL_BC_MAKEFUN,
+  };
+#endif
+  HLL_VM_DISPATCH();
+
   HLL_VM_SWITCH() {
     HLL_VM_CASE(HLL_BC_END) {
       assert(hll_sb_len(vm->stack) != 0);
