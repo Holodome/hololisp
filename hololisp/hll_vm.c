@@ -317,11 +317,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       current_call_frame = &hll_sb_last(vm->call_stack);
       HLL_VM_NEXT();
     }
-    HLL_VM_CASE(HLL_BC_POP) {
-      assert(hll_sb_len(vm->stack) != 0);
-      (void)hll_sb_pop(vm->stack);
-      HLL_VM_NEXT();
-    }
     HLL_VM_CASE(HLL_BC_NIL) {
       hll_sb_push(vm->stack, hll_nil());
       HLL_VM_NEXT();
@@ -362,6 +357,11 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_pop_temp_root(vm->gc); // obj
       HLL_VM_NEXT();
     }
+    HLL_VM_CASE(HLL_BC_POP) {
+      assert(hll_sb_len(vm->stack) != 0);
+      (void)hll_sb_pop(vm->stack);
+      HLL_VM_NEXT();
+    }
     HLL_VM_CASE(HLL_BC_FIND) {
       hll_value symb = hll_sb_pop(vm->stack);
       hll_gc_push_temp_root(vm->gc, symb);
@@ -381,19 +381,16 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_sb_push(vm->stack, found);
       HLL_VM_NEXT();
     }
-    HLL_VM_CASE(HLL_BC_MAKEFUN) {
-      uint16_t idx =
-          (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
-      current_call_frame->ip += 2;
-      assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
+    HLL_VM_CASE(HLL_BC_CALL) {
+      hll_value args = hll_sb_pop(vm->stack);
+      hll_gc_push_temp_root(vm->gc, args);
+      hll_value callable = hll_sb_pop(vm->stack);
+      hll_gc_push_temp_root(vm->gc, callable);
 
-      hll_value value = current_call_frame->bytecode->constant_pool[idx];
-      assert(hll_get_value_kind(value) == HLL_VALUE_FUNC);
-      value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
-                           hll_unwrap_func(value)->bytecode);
-      hll_unwrap_func(value)->env = vm->env;
+      call_func(vm, callable, args, &current_call_frame, false);
 
-      hll_sb_push(vm->stack, value);
+      hll_gc_pop_temp_root(vm->gc); // args
+      hll_gc_pop_temp_root(vm->gc); // callable
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_MBTRCALL) {
@@ -403,18 +400,6 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_push_temp_root(vm->gc, callable);
 
       call_func(vm, callable, args, &current_call_frame, true);
-
-      hll_gc_pop_temp_root(vm->gc); // args
-      hll_gc_pop_temp_root(vm->gc); // callable
-      HLL_VM_NEXT();
-    }
-    HLL_VM_CASE(HLL_BC_CALL) {
-      hll_value args = hll_sb_pop(vm->stack);
-      hll_gc_push_temp_root(vm->gc, args);
-      hll_value callable = hll_sb_pop(vm->stack);
-      hll_gc_push_temp_root(vm->gc, callable);
-
-      call_func(vm, callable, args, &current_call_frame, false);
 
       hll_gc_pop_temp_root(vm->gc); // args
       hll_gc_pop_temp_root(vm->gc); // callable
@@ -489,6 +474,21 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_value cons = hll_sb_last(vm->stack);
       hll_unwrap_cons(cons)->cdr = cdr;
       hll_gc_pop_temp_root(vm->gc); // cdr
+      HLL_VM_NEXT();
+    }
+    HLL_VM_CASE(HLL_BC_MAKEFUN) {
+      uint16_t idx =
+          (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
+      current_call_frame->ip += 2;
+      assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
+
+      hll_value value = current_call_frame->bytecode->constant_pool[idx];
+      assert(hll_get_value_kind(value) == HLL_VALUE_FUNC);
+      value = hll_new_func(vm, hll_unwrap_func(value)->param_names,
+                           hll_unwrap_func(value)->bytecode);
+      hll_unwrap_func(value)->env = vm->env;
+
+      hll_sb_push(vm->stack, value);
       HLL_VM_NEXT();
     }
   }
