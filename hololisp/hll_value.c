@@ -18,12 +18,16 @@ static uint32_t djb2(const char *src, const char *dst) {
   return hash;
 }
 
-const char *hll_get_value_kind_str(uint8_t kind) {
+const char *hll_value_kind_str_(uint8_t kind) {
   static const char *strs[] = {"num",  "nil",  "true", "cons",
                                "symb", "bind", "env",  "func"};
 
   assert(kind < sizeof(strs) / sizeof(strs[0]));
   return strs[kind];
+}
+
+HLL_PUB const char *hll_value_kind_str(hll_value value) {
+  return hll_value_kind_str_(hll_value_kind(value));
 }
 
 void hll_free_obj(hll_vm *vm, hll_obj *obj) {
@@ -60,6 +64,7 @@ static void register_gc_obj(hll_vm *vm, hll_obj *obj) {
 hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length) {
   assert(symbol != NULL);
   assert(length != 0);
+  assert(length < UINT32_MAX);
 
   void *memory =
       hll_gc_alloc(vm->gc, sizeof(hll_obj) + sizeof(hll_obj_symb) + length + 1);

@@ -26,7 +26,8 @@ enum {
   HLL_VALUE_FUNC = 0x7,
 };
 
-HLL_PUB const char *hll_get_value_kind_str(uint8_t kind);
+HLL_PUB const char *hll_value_kind_str_(uint8_t kind);
+HLL_PUB const char *hll_value_kind_str(hll_value value);
 
 typedef struct hll_obj {
   uint8_t kind;
@@ -42,7 +43,6 @@ typedef struct hll_obj_cons {
 
 typedef struct hll_obj_func {
   struct hll_bytecode *bytecode;
-  // List if function parameter names
   hll_value param_names;
   hll_value env;
 } hll_obj_func;
@@ -57,7 +57,7 @@ typedef struct hll_obj_bind {
 } hll_obj_bind;
 
 typedef struct hll_obj_symb {
-  size_t length;
+  uint32_t length;
   uint32_t hash;
   char symb[];
 } hll_obj_symb;
@@ -118,7 +118,7 @@ static inline bool hll_is_num(hll_value value) {
 static inline bool hll_is_obj(hll_value value) {
   return (((value) & (HLL_QNAN | HLL_SIGN_BIT)) == (HLL_QNAN | HLL_SIGN_BIT));
 }
-static inline uint8_t hll_get_value_kind(hll_value value) {
+static inline uint8_t hll_value_kind(hll_value value) {
   return hll_is_obj(value) ? nan_unbox_ptr(value)->kind
                            : nan_unbox_singleton(value);
 }

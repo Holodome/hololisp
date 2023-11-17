@@ -207,7 +207,7 @@ static void test_compiler_compiles_define(void) {
 
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[1];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  TEST_ASSERT(hll_value_kind(func) == HLL_VALUE_FUNC);
 
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
@@ -441,7 +441,7 @@ static void test_compiler_compiles_lambda(void) {
 
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[0];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  TEST_ASSERT(hll_value_kind(func) == HLL_VALUE_FUNC);
 
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
@@ -462,7 +462,7 @@ static void test_compiler_generates_mbtr(void) {
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[1];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  TEST_ASSERT(hll_value_kind(func) == HLL_VALUE_FUNC);
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
   TEST_ASSERT(hll_is_symb(function_bytecode_compiled->name));
@@ -510,7 +510,7 @@ static void test_compiler_generates_mbtr_in_if(void) {
   struct hll_bytecode *compiled = hll_unwrap_func(result)->bytecode;
   TEST_ASSERT(hll_sb_len(compiled->constant_pool) >= 1);
   hll_value func = compiled->constant_pool[1];
-  TEST_ASSERT(hll_get_value_kind(func) == HLL_VALUE_FUNC);
+  TEST_ASSERT(hll_value_kind(func) == HLL_VALUE_FUNC);
   struct hll_bytecode *function_bytecode_compiled =
       hll_unwrap_func(func)->bytecode;
   test_bytecode_equals(bytecode, sizeof(bytecode), function_bytecode_compiled);

@@ -32,7 +32,7 @@ static hll_value builtin_add(struct hll_vm *vm, hll_value args) {
     hll_value value = hll_car(vm, obj);
     if (!hll_is_num(value)) {
       hll_runtime_error(vm, "'+' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(value)));
+                        hll_value_kind_str(value));
     }
     result += hll_unwrap_num(value);
   }
@@ -47,7 +47,7 @@ static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
   hll_value first = hll_car(vm, args);
   if (!hll_is_num(first)) {
     hll_runtime_error(vm, "'-' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(first)));
+                      hll_value_kind_str(first));
   }
   if (hll_is_nil(hll_unwrap_cdr(args))) {
     return hll_num(-hll_unwrap_num(first));
@@ -58,7 +58,7 @@ static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
     hll_value value = hll_car(vm, obj);
     if (!hll_is_num(value)) {
       hll_runtime_error(vm, "'-' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(value)));
+                        hll_value_kind_str(value));
     }
     result -= hll_unwrap_num(value);
   }
@@ -73,7 +73,7 @@ static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
   hll_value first = hll_car(vm, args);
   if (!hll_is_num(first)) {
     hll_runtime_error(vm, "'/' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(first)));
+                      hll_value_kind_str(first));
   }
   double result = hll_unwrap_num(first);
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
@@ -81,7 +81,7 @@ static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
     hll_value value = hll_car(vm, obj);
     if (!hll_is_num(value)) {
       hll_runtime_error(vm, "'/' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(value)));
+                        hll_value_kind_str(value));
     }
     if (hll_unwrap_num(value) == 0.0) {
       hll_runtime_error(vm, "'/' zero division error");
@@ -97,7 +97,7 @@ static hll_value builtin_mul(struct hll_vm *vm, hll_value args) {
     hll_value value = hll_car(vm, obj);
     if (!hll_is_num(value)) {
       hll_runtime_error(vm, "'mul' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(value)));
+                        hll_value_kind_str(value));
     }
     result *= hll_unwrap_num(value);
   }
@@ -110,15 +110,14 @@ static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
                       hll_list_length(args));
   }
 
-  for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
-       obj1 = hll_cdr(vm, obj1)) {
+  for (hll_value obj1 = args; hll_is_cons(obj1); obj1 = hll_cdr(vm, obj1)) {
     hll_value num1 = hll_car(vm, obj1);
     if (!hll_is_num(num1)) {
       hll_runtime_error(vm, "'/=' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num1)));
+                        hll_value_kind_str(num1));
     }
-    for (hll_value obj2 = hll_cdr(vm, obj1);
-         hll_get_value_kind(obj2) == HLL_VALUE_CONS; obj2 = hll_cdr(vm, obj2)) {
+    for (hll_value obj2 = hll_cdr(vm, obj1); hll_is_cons(obj2);
+         obj2 = hll_cdr(vm, obj2)) {
       if (obj1 == obj2) {
         continue;
       }
@@ -126,7 +125,7 @@ static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
       hll_value num2 = hll_car(vm, obj2);
       if (!hll_is_num(num2)) {
         hll_runtime_error(vm, "'/=' form expects integer arguments (got %s)",
-                          hll_get_value_kind_str(hll_get_value_kind(num2)));
+                          hll_value_kind_str(num2));
       }
 
       if (fabs(hll_unwrap_num(num1) - hll_unwrap_num(num2)) < 1e-3) {
@@ -144,16 +143,15 @@ static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
                       hll_list_length(args));
   }
 
-  for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
-       obj1 = hll_cdr(vm, obj1)) {
+  for (hll_value obj1 = args; hll_is_cons(obj1); obj1 = hll_cdr(vm, obj1)) {
     hll_value num1 = hll_car(vm, obj1);
     if (!hll_is_num(num1)) {
       hll_runtime_error(vm, "'=' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num1)));
+                        hll_value_kind_str(num1));
     }
 
-    for (hll_value obj2 = hll_cdr(vm, obj1);
-         hll_get_value_kind(obj2) == HLL_VALUE_CONS; obj2 = hll_cdr(vm, obj2)) {
+    for (hll_value obj2 = hll_cdr(vm, obj1); hll_is_cons(obj2);
+         obj2 = hll_cdr(vm, obj2)) {
       if (obj1 == obj2) {
         continue;
       }
@@ -161,7 +159,7 @@ static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
       hll_value num2 = hll_car(vm, obj2);
       if (!hll_is_num(num2)) {
         hll_runtime_error(vm, "'=' form expects integer arguments (got %s)",
-                          hll_get_value_kind_str(hll_get_value_kind(num2)));
+                          hll_value_kind_str(num2));
       }
 
       if (fabs(hll_unwrap_num(num1) - hll_unwrap_num(num2)) >= 1e-3) {
@@ -182,7 +180,7 @@ static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
     hll_runtime_error(vm, "'>' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(prev)));
+                      hll_value_kind_str(prev));
   }
 
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
@@ -190,7 +188,7 @@ static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
     hll_value num = hll_car(vm, obj);
     if (!hll_is_num(num)) {
       hll_runtime_error(vm, "'>' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num)));
+                        hll_value_kind_str(num));
     }
 
     if (hll_unwrap_num(prev) <= hll_unwrap_num(num)) {
@@ -212,7 +210,7 @@ static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
     hll_runtime_error(vm, "'>=' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(prev)));
+                      hll_value_kind_str(prev));
   }
 
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
@@ -220,7 +218,7 @@ static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
     hll_value num = hll_car(vm, obj);
     if (!hll_is_num(num)) {
       hll_runtime_error(vm, "'>=' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num)));
+                        hll_value_kind_str(num));
     }
 
     if (hll_unwrap_num(prev) < hll_unwrap_num(num)) {
@@ -241,7 +239,7 @@ static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
     hll_runtime_error(vm, "'<' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(prev)));
+                      hll_value_kind_str(prev));
   }
 
   for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
@@ -249,7 +247,7 @@ static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
     hll_value num = hll_car(vm, obj);
     if (!hll_is_num(num)) {
       hll_runtime_error(vm, "'<' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num)));
+                        hll_value_kind_str(num));
     }
 
     if (hll_unwrap_num(prev) >= hll_unwrap_num(num)) {
@@ -270,15 +268,15 @@ static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
   hll_value prev = hll_car(vm, args);
   if (!hll_is_num(prev)) {
     hll_runtime_error(vm, "'<=' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(prev)));
+                      hll_value_kind_str(prev));
   }
 
-  for (hll_value obj = hll_cdr(vm, args);
-       hll_get_value_kind(obj) != HLL_VALUE_NIL; obj = hll_cdr(vm, obj)) {
+  for (hll_value obj = hll_cdr(vm, args); hll_is_cons(obj);
+       obj = hll_cdr(vm, obj)) {
     hll_value num = hll_car(vm, obj);
     if (!hll_is_num(num)) {
       hll_runtime_error(vm, "'<=' form expects integer arguments (got %s)",
-                        hll_get_value_kind_str(hll_get_value_kind(num)));
+                        hll_value_kind_str(num));
     }
 
     if (hll_unwrap_num(prev) > hll_unwrap_num(num)) {
@@ -299,12 +297,12 @@ static hll_value builtin_rem(struct hll_vm *vm, hll_value args) {
   hll_value x = hll_car(vm, args);
   if (!hll_is_num(x)) {
     hll_runtime_error(vm, "'rem' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(x)));
+                      hll_value_kind_str(x));
   }
   hll_value y = hll_car(vm, hll_cdr(vm, args));
   if (!hll_is_num(y)) {
     hll_runtime_error(vm, "'rem' form expects integer arguments (got %s)",
-                      hll_get_value_kind_str(hll_get_value_kind(y)));
+                      hll_value_kind_str(y));
   }
 
   return hll_num(fmod(hll_unwrap_num(x), hll_unwrap_num(y)));
@@ -366,7 +364,7 @@ static hll_value builtin_random(struct hll_vm *vm, hll_value args) {
 static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
   hll_value low = hll_nil();
   hll_value high;
-  if (hll_get_value_kind(args) == HLL_VALUE_CONS) {
+  if (hll_is_cons(args)) {
     high = hll_car(vm, args);
     if (!hll_is_num(high)) {
       hll_runtime_error(vm, "'range' form expects number arguments");
@@ -375,7 +373,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
 
     args = hll_cdr(vm, args);
 
-    if (hll_get_value_kind(args) == HLL_VALUE_CONS) {
+    if (hll_is_cons(args)) {
       low = hll_car(vm, args);
       if (!hll_is_num(low)) {
         hll_runtime_error(vm, "'range' form expects number arguments");
@@ -383,7 +381,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
       }
       args = hll_cdr(vm, args);
 
-      if (hll_get_value_kind(args) != HLL_VALUE_NIL) {
+      if (!hll_is_nil(args)) {
         hll_runtime_error(vm, "'range' form expects at most 2 arguments");
         return hll_nil();
       }
@@ -426,7 +424,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
-  if (hll_get_value_kind(args) != HLL_VALUE_CONS) {
+  if (!hll_is_cons(args)) {
     hll_runtime_error(vm, "min' form expects at least 1 argument");
     return hll_nil();
   }
@@ -434,13 +432,12 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
   hll_value result = hll_nil();
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value test = hll_car(vm, obj);
-    if (hll_get_value_kind(test) != HLL_VALUE_NUM) {
+    if (!hll_is_num(test)) {
       hll_runtime_error(vm, "'min' form expects number arguments");
       return hll_nil();
     }
 
-    if (hll_get_value_kind(result) == HLL_VALUE_NIL ||
-        hll_unwrap_num(result) > hll_unwrap_num(test)) {
+    if (hll_is_nil(result) || hll_unwrap_num(result) > hll_unwrap_num(test)) {
       result = test;
     }
   }
@@ -449,7 +446,7 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
-  if (hll_get_value_kind(args) != HLL_VALUE_CONS) {
+  if (!hll_is_cons(args)) {
     hll_runtime_error(vm, "max' form expects at least 1 argument");
     return hll_nil();
   }
@@ -457,13 +454,12 @@ static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
   hll_value result = hll_nil();
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value test = hll_car(vm, obj);
-    if (hll_get_value_kind(test) != HLL_VALUE_NUM) {
+    if (!hll_is_num(test)) {
       hll_runtime_error(vm, "'max' form expects number arguments");
       return hll_nil();
     }
 
-    if (hll_get_value_kind(result) == HLL_VALUE_NIL ||
-        hll_unwrap_num(result) < hll_unwrap_num(test)) {
+    if (hll_is_nil(result) || hll_unwrap_num(result) < hll_unwrap_num(test)) {
       result = test;
     }
   }
@@ -479,7 +475,7 @@ static hll_value builtin_listp(struct hll_vm *vm, hll_value args) {
 
   hll_value obj = hll_car(vm, args);
   hll_value result = hll_nil();
-  if (hll_is_cons(obj) || hll_get_value_kind(obj) == HLL_VALUE_NIL) {
+  if (hll_is_cons(obj) || hll_is_nil(obj)) {
     result = hll_true();
   }
 
@@ -495,7 +491,7 @@ static hll_value builtin_null(struct hll_vm *vm, hll_value args) {
   hll_value obj = hll_car(vm, args);
   hll_value result = hll_nil();
 
-  if (hll_get_value_kind(obj) == HLL_VALUE_NIL) {
+  if (hll_is_nil(obj)) {
     result = hll_true();
   }
 
@@ -509,7 +505,7 @@ static hll_value builtin_minusp(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'negative?' expects number argument");
     return hll_nil();
   }
@@ -529,7 +525,7 @@ static hll_value builtin_zerop(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'zero?' expects number argument");
     return hll_nil();
   }
@@ -549,7 +545,7 @@ static hll_value builtin_even(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'even?' expects number argument");
     return hll_nil();
   }
@@ -568,7 +564,7 @@ static hll_value builtin_odd(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'odd?' expects number argument");
     return hll_nil();
   }
@@ -588,7 +584,7 @@ static hll_value builtin_plusp(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'negative?' expects number argument");
     return hll_nil();
   }
@@ -609,7 +605,7 @@ static hll_value builtin_numberp(struct hll_vm *vm, hll_value args) {
 
   hll_value obj = hll_car(vm, args);
   hll_value result = hll_nil();
-  if (hll_get_value_kind(obj) == HLL_VALUE_NUM) {
+  if (hll_is_num(obj)) {
     result = hll_true();
   }
 
@@ -623,7 +619,7 @@ static hll_value builtin_abs(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value obj = hll_car(vm, args);
-  if (hll_get_value_kind(obj) != HLL_VALUE_NUM) {
+  if (!hll_is_num(obj)) {
     hll_runtime_error(vm, "'abs' expects number argument");
     return hll_nil();
   }
@@ -632,31 +628,29 @@ static hll_value builtin_abs(struct hll_vm *vm, hll_value args) {
 }
 
 static hll_value builtin_append(struct hll_vm *vm, hll_value args) {
-  if (hll_get_value_kind(args) == HLL_VALUE_NIL) {
+  if (hll_is_nil(args)) {
     return args;
   }
 
   (void)vm;
   hll_value list = hll_car(vm, args);
-  while (hll_get_value_kind(list) != HLL_VALUE_CONS &&
-         hll_get_value_kind(args) == HLL_VALUE_CONS) {
+  while (!hll_is_cons(list) && hll_is_cons(args)) {
     args = hll_cdr(vm, args);
     list = hll_car(vm, args);
   }
 
-  if (hll_get_value_kind(list) == HLL_VALUE_NIL) {
+  if (hll_is_nil(list)) {
     return list;
   }
 
   hll_value tail = list;
-  for (hll_value slot = hll_cdr(vm, args);
-       hll_get_value_kind(slot) == HLL_VALUE_CONS; slot = hll_cdr(vm, slot)) {
-    for (; hll_get_value_kind(tail) == HLL_VALUE_CONS &&
-           hll_get_value_kind(hll_cdr(vm, tail)) != HLL_VALUE_NIL;
+  for (hll_value slot = hll_cdr(vm, args); hll_is_cons(slot);
+       slot = hll_cdr(vm, slot)) {
+    for (; hll_is_cons(tail) && !hll_is_nil(hll_cdr(vm, tail));
          tail = hll_cdr(vm, tail)) {
     }
 
-    if (hll_get_value_kind(tail) == HLL_VALUE_CONS) {
+    if (hll_is_cons(tail)) {
       hll_unwrap_cons(tail)->cdr = hll_car(vm, slot);
     } else {
       tail = slot;
@@ -677,7 +671,7 @@ static hll_value builtin_reverse(struct hll_vm *vm, hll_value args) {
   hll_value obj = hll_car(vm, args);
   hll_value result = hll_nil();
 
-  while (hll_get_value_kind(obj) != HLL_VALUE_NIL) {
+  while (!hll_is_nil(obj)) {
     assert(hll_is_cons(obj));
     hll_value head = obj;
     obj = hll_cdr(vm, obj);
@@ -695,7 +689,7 @@ static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value num = hll_car(vm, args);
-  if (hll_get_value_kind(num) != HLL_VALUE_NUM) {
+  if (!hll_is_num(num)) {
     hll_runtime_error(vm, "'nthcdr' first argument must be a number");
     return hll_nil();
   } else if (hll_unwrap_num(num) < 0) {
@@ -706,8 +700,7 @@ static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
 
   size_t n = (size_t)floor(hll_unwrap_num(num));
   hll_value list = hll_car(vm, hll_cdr(vm, args));
-  for (; hll_get_value_kind(list) == HLL_VALUE_CONS && n != 0;
-       --n, list = hll_cdr(vm, list))
+  for (; hll_is_cons(list) && n != 0; --n, list = hll_cdr(vm, list))
     ;
 
   hll_value result = hll_nil();
@@ -725,7 +718,7 @@ static hll_value builtin_nth(struct hll_vm *vm, hll_value args) {
   }
 
   hll_value num = hll_car(vm, args);
-  if (hll_get_value_kind(num) != HLL_VALUE_NUM) {
+  if (!hll_is_num(num)) {
     hll_runtime_error(vm, "'nth' first argument must be a number");
     return hll_nil();
   } else if (hll_unwrap_num(num) < 0) {
@@ -736,12 +729,11 @@ static hll_value builtin_nth(struct hll_vm *vm, hll_value args) {
 
   size_t n = (size_t)floor(hll_unwrap_num(num));
   hll_value list = hll_car(vm, hll_cdr(vm, args));
-  for (; hll_get_value_kind(list) == HLL_VALUE_CONS && n != 0;
-       --n, list = hll_cdr(vm, list))
+  for (; hll_is_cons(list) && n != 0; --n, list = hll_cdr(vm, list))
     ;
 
   hll_value result = hll_nil();
-  if (n == 0 && hll_get_value_kind(list) == HLL_VALUE_CONS) {
+  if (n == 0 && hll_is_cons(list)) {
     result = hll_car(vm, list);
   }
 
@@ -777,11 +769,10 @@ static hll_value builtin_gensym(struct hll_vm *vm, hll_value args) {
 
 static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
   (void)vm;
-  for (hll_value obj1 = args; hll_get_value_kind(obj1) == HLL_VALUE_CONS;
-       obj1 = hll_cdr(vm, obj1)) {
+  for (hll_value obj1 = args; hll_is_cons(obj1); obj1 = hll_cdr(vm, obj1)) {
     hll_value it1 = hll_car(vm, obj1);
-    for (hll_value obj2 = hll_cdr(vm, obj1);
-         hll_get_value_kind(obj2) == HLL_VALUE_CONS; obj2 = hll_cdr(vm, obj2)) {
+    for (hll_value obj2 = hll_cdr(vm, obj1); hll_is_cons(obj2);
+         obj2 = hll_cdr(vm, obj2)) {
       if (obj1 == obj2) {
         continue;
       }

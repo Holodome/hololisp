@@ -821,7 +821,7 @@ static uint16_t add_symb_const(hll_compiler *compiler, const char *symb_,
 }
 
 static void compile_symbol(hll_compiler *compiler, hll_value ast) {
-  assert(hll_get_value_kind(ast) == HLL_VALUE_SYMB);
+  assert(hll_is_symb(ast));
   hll_bytecode_emit_op(compiler->bytecode, HLL_BC_CONST);
   hll_bytecode_emit_u16(compiler->bytecode,
                         add_symb_const(compiler, hll_unwrap_zsymb(ast),
@@ -849,7 +849,7 @@ static bool expand_macro(hll_compiler *compiler, hll_value list,
                          hll_value *expanded) {
   hll_value macro = hll_unwrap_car(list);
   hll_value args = hll_unwrap_cdr(list);
-  if (hll_get_value_kind(macro) != HLL_VALUE_SYMB) {
+  if (!hll_is_symb(macro)) {
     return false;
   }
 
@@ -960,11 +960,11 @@ static void compile_let(hll_compiler *compiler, hll_value args) {
     hll_value name = hll_unwrap_car(pair);
     hll_value value = hll_unwrap_cdr(pair);
     if (hll_is_cons(value)) {
-      assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
+      assert(hll_is_nil(hll_unwrap_cdr(value)));
       value = hll_unwrap_car(value);
     }
 
-    assert(hll_get_value_kind(name) == HLL_VALUE_SYMB);
+    assert(hll_is_symb(name));
     compile_expression(compiler, name);
     compile_eval_expression(compiler, value);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
@@ -1005,11 +1005,11 @@ HLL_ENUMERATE_CAR_CDR
 
 static hll_location_form get_location_form(hll_value location) {
   hll_location_form kind = HLL_LOC_NONE;
-  if (hll_get_value_kind(location) == HLL_VALUE_SYMB) {
+  if (hll_is_symb(location)) {
     kind = HLL_LOC_FORM_SYMB;
   } else if (hll_is_cons(location)) {
     hll_value first = hll_unwrap_car(location);
-    if (hll_get_value_kind(first) == HLL_VALUE_SYMB) {
+    if (hll_is_symb(first)) {
       const char *symb = hll_unwrap_zsymb(first);
       if (strcmp(symb, "nth") == 0) {
         kind = HLL_LOC_FORM_NTH;
@@ -1155,7 +1155,7 @@ static void compile_setcdr(hll_compiler *compiler, hll_value args) {
   hll_value location = hll_unwrap_car(hll_unwrap_cdr(args));
   hll_value value = hll_unwrap_cdr(hll_unwrap_cdr(args));
   if (hll_is_cons(value)) {
-    assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
+    assert(hll_is_nil(hll_unwrap_cdr(value)));
     value = hll_unwrap_car(value);
   }
 
@@ -1371,7 +1371,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_MAKEFUN);
     hll_bytecode_emit_u16(compiler->bytecode, function_idx);
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_LET);
-  } else if (hll_get_value_kind(decide) == HLL_VALUE_SYMB) {
+  } else if (hll_is_symb(decide)) {
     if (hll_list_length(args) > 3) {
       compiler_error(compiler, args,
                      "'define' variable expects exactly 2 or 3 arguments");
@@ -1379,7 +1379,7 @@ static void compile_define(hll_compiler *compiler, hll_value args) {
     }
     hll_value value = rest;
     if (hll_is_cons(value)) {
-      assert(hll_get_value_kind(hll_unwrap_cdr(value)) == HLL_VALUE_NIL);
+      assert(hll_is_nil(hll_unwrap_cdr(value)));
       value = hll_unwrap_car(value);
     }
 
@@ -1449,7 +1449,7 @@ static void compile_form(hll_compiler *compiler, hll_value args,
 }
 
 static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
-  switch (hll_get_value_kind(ast)) {
+  switch (hll_value_kind(ast)) {
   case HLL_VALUE_NIL:
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
@@ -1487,7 +1487,7 @@ static void compile_eval_expression(hll_compiler *compiler, hll_value ast) {
 // Does not evaluate it.
 // After it one value is located on top of the stack.
 static void compile_expression(hll_compiler *compiler, hll_value ast) {
-  switch (hll_get_value_kind(ast)) {
+  switch (hll_value_kind(ast)) {
   case HLL_VALUE_NIL:
     hll_bytecode_emit_op(compiler->bytecode, HLL_BC_NIL);
     break;
