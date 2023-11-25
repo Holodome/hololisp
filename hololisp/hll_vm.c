@@ -234,9 +234,9 @@ static void call_func(hll_vm *vm, hll_value callable, hll_value args,
       new_frame.ip = func->bytecode->ops;
       new_frame.env = vm->env;
       new_frame.func = callable;
-      hll_sb_push(vm->call_stack, new_frame);
+      hll_vm_call_stack_push(vm, new_frame);
     }
-    *current_call_frame = &hll_sb_last(vm->call_stack);
+    *current_call_frame = vm->call_stack - 1;
     hll_gc_pop_temp_root(vm->gc); // new_env
     vm->env = new_env;
   } break;
@@ -244,7 +244,7 @@ static void call_func(hll_vm *vm, hll_value callable, hll_value args,
     hll_push_forbid_gc(vm->gc);
     hll_value result = hll_unwrap_bind(callable)->bind(vm, args);
     hll_pop_forbid_gc(vm->gc);
-    hll_sb_push(vm->stack, result);
+    hll_vm_stack_push(vm, result);
   } break;
   default:
     hll_runtime_error(vm, "object is not callable (got %s)",
@@ -278,8 +278,9 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
 
   hll_gc_push_temp_root(vm->gc, compiled);
   hll_bytecode *initial_bytecode = hll_unwrap_func(compiled)->bytecode;
-  vm->call_stack = NULL;
-  vm->stack = NULL;
+  vm->call_stack = vm->call_stack_bottom =
+      hll_alloc(HLL_CALL_STACK_SIZE * sizeof(*vm->call_stack));
+  vm->stack = vm->stack_bottom = hll_alloc(HLL_STACK_SIZE * sizeof(*vm->stack));
   vm->env = env_;
 
   {
@@ -288,9 +289,9 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
     original_frame.bytecode = initial_bytecode;
     original_frame.env = env_;
     original_frame.func = compiled;
-    hll_sb_push(vm->call_stack, original_frame);
+    hll_vm_call_stack_push(vm, original_frame);
   }
-  hll_call_frame *current_call_frame = vm->call_stack;
+  hll_call_frame *current_call_frame = vm->call_stack - 1;
 
 #ifdef HLL_USE_COMPUTED_GOTO
   static const void *const dispatch_table[] = {
@@ -306,22 +307,21 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
 
   HLL_VM_SWITCH() {
     HLL_VM_CASE(HLL_BC_END) {
-      assert(hll_sb_len(vm->stack) != 0);
       vm->env = current_call_frame->env;
       assert(vm->env);
-      (void)hll_sb_pop(vm->call_stack);
-      if (hll_sb_len(vm->call_stack) == 0) {
+      hll_vm_call_stack_pop(vm);
+      if (vm->call_stack_bottom == vm->call_stack) {
         goto success;
       }
-      current_call_frame = &hll_sb_last(vm->call_stack);
+      current_call_frame = vm->call_stack - 1;
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_NIL) {
-      hll_sb_push(vm->stack, hll_nil());
+      hll_vm_stack_push(vm, hll_nil());
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_TRUE) {
-      hll_sb_push(vm->stack, hll_true());
+      hll_vm_stack_push(vm, hll_true());
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_CONST) {
@@ -330,39 +330,40 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       current_call_frame->ip += 2;
       assert(idx < hll_sb_len(current_call_frame->bytecode->constant_pool));
       hll_value value = current_call_frame->bytecode->constant_pool[idx];
-      hll_sb_push(vm->stack, value);
+      hll_vm_stack_push(vm, value);
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_APPEND) {
-      assert(hll_sb_len(vm->stack) >= 3);
-      hll_value *headp = &hll_sb_last(vm->stack) + -2;
-      hll_value *tailp = &hll_sb_last(vm->stack) + -1;
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value obj = hll_sb_pop(vm->stack);
+      hll_value obj = hll_vm_stack_pop(vm);
+      hll_value tail = hll_vm_stack_pop(vm);
+      hll_value head = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, obj);
+      hll_gc_push_temp_root(vm->gc, head);
 
       hll_value cons = hll_new_cons(vm, obj, hll_nil());
-      if (hll_is_nil(*headp)) {
-        *headp = *tailp = cons;
+      if (hll_is_nil(head)) {
+        head = tail = cons;
       } else {
-        if (!hll_is_cons(*tailp)) {
+        if (!hll_is_cons(tail)) {
           hll_runtime_error(vm,
                             "tail operand of APPEND is not a cons (found %s)",
-                            hll_value_kind_str(*tailp));
+                            hll_value_kind_str(tail));
         }
-        hll_unwrap_cons(*tailp)->cdr = cons;
-        *tailp = cons;
+        hll_unwrap_cons(tail)->cdr = cons;
+        tail = cons;
       }
+      hll_vm_stack_push(vm, head);
+      hll_vm_stack_push(vm, tail);
+      hll_gc_pop_temp_root(vm->gc); // head
       hll_gc_pop_temp_root(vm->gc); // obj
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_POP) {
-      assert(hll_sb_len(vm->stack) != 0);
-      (void)hll_sb_pop(vm->stack);
+      hll_vm_stack_pop(vm);
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_FIND) {
-      hll_value symb = hll_sb_pop(vm->stack);
+      hll_value symb = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, symb);
       if (!hll_is_symb(symb)) {
         hll_runtime_error(vm, "operand of FIND is not a symb (found %s)",
@@ -377,13 +378,13 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
         goto bail;
       }
       hll_gc_pop_temp_root(vm->gc); // symb
-      hll_sb_push(vm->stack, found);
+      hll_vm_stack_push(vm, found);
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_CALL) {
-      hll_value args = hll_sb_pop(vm->stack);
+      hll_value args = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, args);
-      hll_value callable = hll_sb_pop(vm->stack);
+      hll_value callable = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, callable);
 
       call_func(vm, callable, args, &current_call_frame, false);
@@ -393,9 +394,9 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_MBTRCALL) {
-      hll_value args = hll_sb_pop(vm->stack);
+      hll_value args = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, args);
-      hll_value callable = hll_sb_pop(vm->stack);
+      hll_value callable = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, callable);
 
       call_func(vm, callable, args, &current_call_frame, true);
@@ -409,8 +410,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
           (current_call_frame->ip[0] << 8) | current_call_frame->ip[1];
       current_call_frame->ip += 2;
 
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value cond = hll_sb_pop(vm->stack);
+      hll_value cond = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, cond);
       if (hll_is_nil(cond)) {
         current_call_frame->ip += offset;
@@ -421,10 +421,9 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_LET) {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value value = hll_sb_pop(vm->stack);
+      hll_value value = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, value);
-      hll_value name = hll_sb_last(vm->stack);
+      hll_value name = hll_vm_stack_top(vm);
       hll_add_variable(vm, vm->env, name, value);
       hll_gc_pop_temp_root(vm->gc); // value
       HLL_VM_NEXT();
@@ -440,37 +439,33 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_CAR) {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value cons = hll_sb_pop(vm->stack);
+      hll_value cons = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, cons);
       hll_value car = hll_car(vm, cons);
       hll_gc_pop_temp_root(vm->gc); // cons
-      hll_sb_push(vm->stack, car);
+      hll_vm_stack_push(vm, car);
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_CDR) {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value cons = hll_sb_pop(vm->stack);
+      hll_value cons = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, cons);
       hll_value cdr = hll_cdr(vm, cons);
       hll_gc_pop_temp_root(vm->gc); // cons
-      hll_sb_push(vm->stack, cdr);
+      hll_vm_stack_push(vm, cdr);
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_SETCAR) {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value car = hll_sb_pop(vm->stack);
+      hll_value car = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, car);
-      hll_value cons = hll_sb_last(vm->stack);
+      hll_value cons = hll_vm_stack_top(vm);
       hll_gc_pop_temp_root(vm->gc); // car
       hll_unwrap_cons(cons)->car = car;
       HLL_VM_NEXT();
     }
     HLL_VM_CASE(HLL_BC_SETCDR) {
-      assert(hll_sb_len(vm->stack) != 0);
-      hll_value cdr = hll_sb_pop(vm->stack);
+      hll_value cdr = hll_vm_stack_pop(vm);
       hll_gc_push_temp_root(vm->gc, cdr);
-      hll_value cons = hll_sb_last(vm->stack);
+      hll_value cons = hll_vm_stack_top(vm);
       hll_unwrap_cons(cons)->cdr = cdr;
       hll_gc_pop_temp_root(vm->gc); // cdr
       HLL_VM_NEXT();
@@ -487,7 +482,7 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
                            hll_unwrap_func(value)->bytecode);
       hll_unwrap_func(value)->env = vm->env;
 
-      hll_sb_push(vm->stack, value);
+      hll_vm_stack_push(vm, value);
       HLL_VM_NEXT();
     }
   }
@@ -495,13 +490,14 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
   hll_value result;
   goto success;
 success:
-  result = vm->stack[0];
+  result = *vm->stack_bottom;
   goto end;
 bail:
   result = hll_nil();
 end:
-  hll_sb_free(vm->stack);
-  hll_sb_free(vm->call_stack);
+  hll_free(vm->call_stack_bottom,
+           HLL_CALL_STACK_SIZE * sizeof(*vm->call_stack));
+  hll_free(vm->stack_bottom, HLL_STACK_SIZE * sizeof(*vm->stack));
   hll_gc_pop_temp_root(vm->gc); // callable
 
   return result;

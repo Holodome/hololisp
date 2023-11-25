@@ -1,6 +1,7 @@
 #ifndef HLL_GC_H
 #define HLL_GC_H
 
+
 #include "hll_hololisp.h"
 
 typedef struct hll_gc {
@@ -17,6 +18,7 @@ typedef struct hll_gc {
   // May not be greater than min_heap_size specified in config.
   size_t next_gc;
   hll_value *gray_objs;
+  hll_value temp_roots_storage[HLL_CALL_STACK_SIZE];
   hll_value *temp_roots;
   uint32_t forbid;
 } hll_gc;

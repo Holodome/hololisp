@@ -1124,7 +1124,7 @@ static void acutest_run_(const struct acutest_test_ *test, int index,
           signame = "SIGTERM";
           break;
         default:
-          sprintf(tmp, "signal %d", WTERMSIG(exit_code));
+          snprintf(tmp, sizeof(tmp), "signal %d", WTERMSIG(exit_code));
           signame = tmp;
           break;
         }
@@ -1307,7 +1307,7 @@ static int acutest_cmdline_read_(const ACUTEST_CMDLINE_OPTION_ *options,
                                 ACUTEST_CMDLINE_OPTFLAG_REQUIREDARG_)) {
                 ret = callback(opt->id, argv[i] + 2 + len + 1);
               } else {
-                sprintf(auxbuf, "--%s", opt->longname);
+                snprintf(auxbuf, sizeof(auxbuf), "--%s", opt->longname);
                 ret = callback(ACUTEST_CMDLINE_OPTID_BOGUSARG_, auxbuf);
               }
               break;

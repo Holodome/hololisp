@@ -18,6 +18,9 @@ typedef struct hll_call_frame {
   hll_value func;
 } hll_call_frame;
 
+#define HLL_CALL_STACK_SIZE 1024
+#define HLL_STACK_SIZE (1024 * 1024)
+
 typedef struct hll_vm {
   struct hll_config config;
   struct hll_meta_storage *debug;
@@ -33,12 +36,49 @@ typedef struct hll_vm {
   hll_value macro_env;
 
   // Current execution state
+  hll_value *stack_bottom;
   hll_value *stack;
+  hll_call_frame *call_stack_bottom;
   hll_call_frame *call_stack;
   hll_value env;
 
   jmp_buf err_jmp;
 } hll_vm;
+
+#define hll_vm_stack_push(_vm, _value)                                         \
+  do {                                                                         \
+    assert(_vm->stack + 1 < _vm->stack_bottom + HLL_STACK_SIZE);               \
+    *_vm->stack++ = (_value);                                                  \
+  } while (0)
+#define hll_vm_stack_pop(_vm)                                                  \
+  ({                                                                           \
+    assert(_vm->stack > _vm->stack_bottom);                                    \
+    *--_vm->stack;                                                             \
+  })
+#define hll_vm_stack_nth(_vm, _nth)                                            \
+  ({                                                                           \
+    assert(_vm->stack_bottom + (_nth) <= _vm->stack);                          \
+    _vm->stack[-(_nth)];                                                       \
+  })
+#define hll_vm_stack_top(_vm) hll_vm_stack_nth(_vm, 1)
+
+#define hll_vm_call_stack_push(_vm, _value)                                    \
+  do {                                                                         \
+    assert(_vm->call_stack + 1 <                                               \
+           _vm->call_stack_bottom + HLL_CALL_STACK_SIZE);                      \
+    *_vm->call_stack++ = (_value);                                             \
+  } while (0)
+#define hll_vm_call_stack_pop(_vm)                                             \
+  ({                                                                           \
+    assert(_vm->call_stack > _vm->call_stack_bottom);                          \
+    *--_vm->call_stack;                                                        \
+  })
+#define hll_vm_call_stack_nth(_vm, _nth)                                       \
+  ({                                                                           \
+    assert(_vm->call_stack_bottom + (_nth) >= _vm->call_stack);                \
+    _vm->call_stack[-(_nth)];                                                  \
+  })
+#define hll_vm_call_stack_top(_vm) hll_vm_call_stack_nth(_vm, 1)
 
 HLL_PUB void hll_add_binding(hll_vm *vm, const char *symb,
                              hll_value (*bind)(hll_vm *vm, hll_value args));

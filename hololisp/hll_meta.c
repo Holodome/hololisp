@@ -165,7 +165,7 @@ void hll_debug_print_summary(hll_meta_storage *debug) {
 
 void hll_report_runtime_errorv(hll_meta_storage *debug, const char *fmt,
                                va_list args) {
-  hll_call_frame *f = &hll_sb_last(debug->vm->call_stack);
+  hll_call_frame *f = debug->vm->call_stack - 1;
   size_t op_idx = f->ip - f->bytecode->ops;
   assert(op_idx);
   --op_idx;

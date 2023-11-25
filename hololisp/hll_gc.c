@@ -69,14 +69,16 @@ static void hll_collect_garbage(hll_gc *gc) {
   hll_sb_purge(gc->gray_objs);
   hll_gray_value(gc, vm->global_env);
   hll_gray_value(gc, vm->macro_env);
-  for (size_t i = 0; i < hll_sb_len(gc->temp_roots); ++i) {
-    hll_gray_value(gc, gc->temp_roots[i]);
+  for (size_t i = 0; i < (size_t)(gc->temp_roots - gc->temp_roots_storage);
+       ++i) {
+    hll_gray_value(gc, gc->temp_roots_storage[i]);
   }
-  for (size_t i = 0; i < hll_sb_len(vm->stack); ++i) {
-    hll_gray_value(gc, vm->stack[i]);
+  for (size_t i = 0; i < (size_t)(vm->stack - vm->stack_bottom); ++i) {
+    hll_gray_value(gc, vm->stack_bottom[i]);
   }
-  for (size_t i = 0; i < hll_sb_len(vm->call_stack); ++i) {
-    hll_call_frame *f = vm->call_stack + i;
+  for (size_t i = 0; i < (size_t)(vm->call_stack - vm->call_stack_bottom);
+       ++i) {
+    hll_call_frame *f = vm->call_stack_bottom + i;
     hll_gray_value(gc, f->env);
     hll_gray_value(gc, f->func);
   }
@@ -125,7 +127,7 @@ hll_gc *hll_make_gc(struct hll_vm *vm) {
   hll_gc *gc = hll_alloc(sizeof(*gc));
   gc->vm = vm;
   gc->next_gc = vm->config.heap_size;
-
+  gc->temp_roots = gc->temp_roots_storage;
   return gc;
 }
 
@@ -138,7 +140,6 @@ void hll_delete_gc(hll_gc *gc) {
     obj = next;
   }
   hll_sb_free(gc->gray_objs);
-  hll_sb_free(gc->temp_roots);
   hll_free(gc, sizeof(*gc));
 }
 
@@ -149,10 +150,11 @@ void hll_pop_forbid_gc(hll_gc *gc) {
 }
 
 void hll_gc_push_temp_root(hll_gc *gc, hll_value value) {
-  hll_sb_push(gc->temp_roots, value);
+  assert(gc->temp_roots + 1 < gc->temp_roots_storage + HLL_CALL_STACK_SIZE);
+  *gc->temp_roots++ = value;
 }
 
 void hll_gc_pop_temp_root(hll_gc *gc) {
-  assert(hll_sb_len(gc->temp_roots));
-  (void)hll_sb_pop(gc->temp_roots);
+  assert(gc->temp_roots != gc->temp_roots_storage);
+  --gc->temp_roots;
 }

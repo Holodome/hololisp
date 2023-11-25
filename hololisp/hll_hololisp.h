@@ -33,6 +33,9 @@
 #endif
 #endif // HLL_DEBUG
 
+#define HLL_CALL_STACK_SIZE 1024
+#define HLL_STACK_SIZE (1024 * 1024)
+
 // Instance of hololisp virtual machine. Virtual machine stores state
 // of execution hololisp code in a single session, e.g. REPL session.
 struct hll_vm;
