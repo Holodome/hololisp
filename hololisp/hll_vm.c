@@ -378,6 +378,12 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
         goto bail;
       }
       hll_gc_pop_temp_root(vm->gc); // symb
+      // optimization: since in most cases user wants to use only cdr of symbol,
+      // we can fuse these two instructions
+      if (*current_call_frame->ip == HLL_BC_CDR) {
+        ++current_call_frame->ip;
+        found = hll_unwrap_cdr(found);
+      }
       hll_vm_stack_push(vm, found);
       HLL_VM_NEXT();
     }
