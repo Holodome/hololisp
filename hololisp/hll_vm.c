@@ -340,15 +340,11 @@ hll_value hll_interpret_bytecode_internal(hll_vm *vm, hll_value env_,
       hll_gc_push_temp_root(vm->gc, obj);
       hll_gc_push_temp_root(vm->gc, head);
 
+      assert(hll_is_nil(tail) == hll_is_nil(head));
       hll_value cons = hll_new_cons(vm, obj, hll_nil());
       if (hll_is_nil(head)) {
         head = tail = cons;
       } else {
-        if (!hll_is_cons(tail)) {
-          hll_runtime_error(vm,
-                            "tail operand of APPEND is not a cons (found %s)",
-                            hll_value_kind_str(tail));
-        }
         hll_unwrap_cons(tail)->cdr = cons;
         tail = cons;
       }
