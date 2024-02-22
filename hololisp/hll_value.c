@@ -1,12 +1,7 @@
-#include "hll_value.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
 #include <string.h>
-
-#include "hll_bytecode.h"
-#include "hll_gc.h"
-#include "hll_mem.h"
-#include "hll_vm.h"
 
 static uint32_t djb2(const char *src, const char *dst) {
   uint32_t hash = 5381;
@@ -14,19 +9,17 @@ static uint32_t djb2(const char *src, const char *dst) {
     int c = *src++;
     hash = ((hash << 5) + hash) + c;
   } while (src != dst);
-
   return hash;
 }
 
 const char *hll_value_kind_str_(uint8_t kind) {
   static const char *strs[] = {"num",  "nil",  "true", "cons",
                                "symb", "bind", "env",  "func"};
-
   assert(kind < sizeof(strs) / sizeof(strs[0]));
   return strs[kind];
 }
 
-HLL_PUB const char *hll_value_kind_str(hll_value value) {
+const char *hll_value_kind_str(hll_value value) {
   return hll_value_kind_str_(hll_value_kind(value));
 }
 

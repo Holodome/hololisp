@@ -1,11 +1,8 @@
-#include "hll_bytecode.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
-
-#include "hll_mem.h"
-#include "hll_value.h"
 
 static const char *get_op_str(hll_bytecode_op op) {
   static const char *strs[] = {

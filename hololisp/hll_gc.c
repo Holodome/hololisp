@@ -1,11 +1,6 @@
-#include "hll_gc.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
-
-#include "hll_bytecode.h"
-#include "hll_mem.h"
-#include "hll_value.h"
-#include "hll_vm.h"
 
 static void hll_gray_value(hll_gc *gc, hll_value value) {
   if (!hll_is_obj(value)) {

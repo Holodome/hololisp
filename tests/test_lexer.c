@@ -1,4 +1,4 @@
-#include "../hololisp/hll_compiler.h"
+#include "../hololisp/hll_hololisp.h"
 #include "acutest.h"
 
 static void test_lexer_parses_simple_symbol(void) {

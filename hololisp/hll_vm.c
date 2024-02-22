@@ -1,4 +1,4 @@
-#include "hll_vm.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
 #include <stdarg.h>
@@ -6,15 +6,41 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hll_bytecode.h"
-#include "hll_compiler.h"
-#include "hll_gc.h"
-#include "hll_hololisp.h"
-#include "hll_mem.h"
-#include "hll_meta.h"
-#include "hll_value.h"
+#define hll_vm_stack_push(_vm, _value)                                         \
+  do {                                                                         \
+    assert(_vm->stack + 1 < _vm->stack_bottom + HLL_STACK_SIZE);               \
+    *_vm->stack++ = (_value);                                                  \
+  } while (0)
+#define hll_vm_stack_pop(_vm)                                                  \
+  ({                                                                           \
+    assert(_vm->stack > _vm->stack_bottom);                                    \
+    *--_vm->stack;                                                             \
+  })
+#define hll_vm_stack_nth(_vm, _nth)                                            \
+  ({                                                                           \
+    assert(_vm->stack_bottom + (_nth) <= _vm->stack);                          \
+    _vm->stack[-(_nth)];                                                       \
+  })
+#define hll_vm_stack_top(_vm) hll_vm_stack_nth(_vm, 1)
 
-extern void add_builtins(hll_vm *vm);
+#define hll_vm_call_stack_push(_vm, _value)                                    \
+  do {                                                                         \
+    assert(_vm->call_stack + 1 <                                               \
+           _vm->call_stack_bottom + HLL_CALL_STACK_SIZE);                      \
+    *_vm->call_stack++ = (_value);                                             \
+  } while (0)
+#define hll_vm_call_stack_pop(_vm)                                             \
+  ({                                                                           \
+    assert(_vm->call_stack > _vm->call_stack_bottom);                          \
+    *--_vm->call_stack;                                                        \
+  })
+#define hll_vm_call_stack_nth(_vm, _nth)                                       \
+  ({                                                                           \
+    assert(_vm->call_stack_bottom + (_nth) >= _vm->call_stack);                \
+    _vm->call_stack[-(_nth)];                                                  \
+  })
+#define hll_vm_call_stack_top(_vm) hll_vm_call_stack_nth(_vm, 1)
+
 
 static void default_error_fn(hll_vm *vm, const char *text) {
   (void)vm;

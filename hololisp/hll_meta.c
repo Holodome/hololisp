@@ -1,12 +1,8 @@
-#include "hll_meta.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
-
-#include "hll_bytecode.h"
-#include "hll_mem.h"
-#include "hll_vm.h"
 
 typedef struct {
   const char *line_start;

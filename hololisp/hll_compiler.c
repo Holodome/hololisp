@@ -1,4 +1,4 @@
-#include "hll_compiler.h"
+#include "hll_hololisp.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -6,13 +6,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "hll_bytecode.h"
-#include "hll_gc.h"
-#include "hll_mem.h"
-#include "hll_meta.h"
-#include "hll_value.h"
-#include "hll_vm.h"
 
 typedef enum {
   HLL_LEX_EQC_OTHER = 0x0, // Anything not handled

@@ -1,8 +1,4 @@
-#include "../hololisp/hll_bytecode.h"
-#include "../hololisp/hll_compiler.h"
-#include "../hololisp/hll_mem.h"
-#include "../hololisp/hll_value.h"
-#include "../hololisp/hll_vm.h"
+#include "../hololisp/hll_hololisp.h"
 
 #define TEST_MSG_MAXSIZE 16384
 #include "acutest.h"
