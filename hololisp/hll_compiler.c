@@ -125,7 +125,7 @@ static void store_location(hll_location_table *table, uint64_t hash,
 
 static uint64_t hash_value(hll_value value) {
   assert(hll_is_obj(value));
-  struct hll_obj *obj = hll_unwrap_obj(value);
+  hll_obj *obj = hll_unwrap_obj(value);
   return (uint64_t)(uintptr_t)obj;
 }
 
@@ -138,7 +138,7 @@ static hll_location_entry *get_location_entry(hll_location_table *table,
   return table->entries + *entry_idx;
 }
 
-bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
+bool hll_compile(hll_vm *vm, const char *source, const char *name,
                  hll_value *compiled) {
   bool result = true;
 
@@ -443,7 +443,7 @@ const hll_token *hll_lexer_next(hll_lexer *lexer) {
   return &lexer->next;
 }
 
-hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
+hll_translation_unit hll_make_tu(hll_vm *vm, const char *source,
                                  const char *name, uint32_t flags) {
   hll_translation_unit tu = {0};
   tu.vm = vm;

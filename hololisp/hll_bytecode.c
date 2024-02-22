@@ -10,7 +10,6 @@ static const char *get_op_str(hll_bytecode_op op) {
       "FIND",   "CALL", "MBTRCALL", "JN",     "LET",    "PUSHENV",
       "POPENV", "CAR",  "CDR",      "SETCAR", "SETCDR", "MAKEFUN",
   };
-
   assert(op < sizeof(strs) / sizeof(strs[0]));
   return strs[op];
 }

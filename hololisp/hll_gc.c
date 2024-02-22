@@ -57,7 +57,7 @@ static void hll_blacken_value(hll_gc *gc, hll_value value) {
 }
 
 static void hll_collect_garbage(hll_gc *gc) {
-  struct hll_vm *vm = gc->vm;
+  hll_vm *vm = gc->vm;
 
   // Reset allocated bytes count
   gc->bytes_allocated = 0;
@@ -118,7 +118,7 @@ void *hll_gc_realloc(hll_gc *gc, void *ptr, size_t old_size, size_t new_size) {
   return hll_realloc(ptr, old_size, new_size);
 }
 
-hll_gc *hll_make_gc(struct hll_vm *vm) {
+hll_gc *hll_make_gc(hll_vm *vm) {
   hll_gc *gc = hll_alloc(sizeof(*gc));
   gc->vm = vm;
   gc->next_gc = vm->config.heap_size;

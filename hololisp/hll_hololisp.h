@@ -89,6 +89,11 @@ typedef struct {
   uint32_t loc_idx;
 } hll_bytecode_rle;
 
+typedef struct {
+  uint32_t translation_unit;
+  uint32_t offset;
+} hll_loc;
+
 // Debug Translation Unit.
 typedef struct {
   const char *source;
@@ -106,7 +111,7 @@ typedef struct {
   // All that information accompanied with one got from runtime system (call
   // stack, memory usage etc.) can be used to display user-friendly thorough
   // error message.
-  struct hll_loc *locs;
+  hll_loc *locs;
   hll_bytecode_rle *loc_rle;
 } hll_dtu;
 
@@ -131,66 +136,10 @@ typedef struct hll_gc {
 
 typedef struct {
   struct hll_vm *vm;
-
   hll_dtu *dtus;
   uint32_t flags;
-
   uint32_t error_count;
 } hll_meta_storage;
-
-typedef struct {
-  const struct hll_bytecode *bytecode;
-  const uint8_t *ip;
-  hll_value env;
-  hll_value func;
-} hll_call_frame;
-
-typedef struct hll_vm {
-  hll_config config;
-  hll_meta_storage *debug;
-  hll_gc *gc;
-
-  // We use xorshift64 for random number generation. Because hololisp is
-  // single-threaded, we can use single global variable for rng state.
-  uint64_t rng_state;
-
-  // Global env. It is stored across calls to interpret, allowing defining
-  // toplevel functions.
-  hll_value global_env;
-  hll_value macro_env;
-
-  // Current execution state
-  hll_value *stack_bottom;
-  hll_value *stack;
-  hll_call_frame *call_stack_bottom;
-  hll_call_frame *call_stack;
-  hll_value env;
-
-  jmp_buf err_jmp;
-} hll_vm;
-
-typedef struct hll_loc {
-  uint32_t translation_unit;
-  uint32_t offset;
-} hll_loc;
-
-enum {
-  // Print result of execution. This may be needed depending on context:
-  // for example, when execution REPL result print is needed, while when
-  // executing files this is unwanted.
-  HLL_INTERPRET_PRINT_RESULT = 0x1,
-  // Make output of error messages be colored using ANSI escape codes.
-  HLL_INTERPRET_COLORED = 0x2
-};
-
-enum {
-  HLL_DEBUG_DIAGNOSTICS_COLORED = 0x1,
-};
-
-typedef enum {
-  HLL_EXPAND_MACRO_OK,
-  HLL_EXPAND_MACRO_ERR_ARGS
-} hll_expand_macro_result;
 
 typedef enum {
   // Bytecode must be terminated with 0. This means return from currently
@@ -252,7 +201,7 @@ typedef enum {
 // with list of all variables referenced in it.
 // Bytecode is reference counted in order to allow dynamic compilation and
 // bytecode freeing, necessary in dynamic lisp environment.
-typedef struct hll_bytecode {
+typedef struct {
   uint32_t refcount;
   // Bytecode dynamic array
   uint8_t *ops;
@@ -263,6 +212,55 @@ typedef struct hll_bytecode {
   // AST.
   hll_value name;
 } hll_bytecode;
+
+typedef struct {
+  hll_bytecode *bytecode;
+  const uint8_t *ip;
+  hll_value env;
+  hll_value func;
+} hll_call_frame;
+
+typedef struct hll_vm {
+  hll_config config;
+  hll_meta_storage *debug;
+  hll_gc *gc;
+
+  // We use xorshift64 for random number generation. Because hololisp is
+  // single-threaded, we can use single global variable for rng state.
+  uint64_t rng_state;
+
+  // Global env. It is stored across calls to interpret, allowing defining
+  // toplevel functions.
+  hll_value global_env;
+  hll_value macro_env;
+
+  // Current execution state
+  hll_value *stack_bottom;
+  hll_value *stack;
+  hll_call_frame *call_stack_bottom;
+  hll_call_frame *call_stack;
+  hll_value env;
+
+  jmp_buf err_jmp;
+} hll_vm;
+
+enum {
+  // Print result of execution. This may be needed depending on context:
+  // for example, when execution REPL result print is needed, while when
+  // executing files this is unwanted.
+  HLL_INTERPRET_PRINT_RESULT = 0x1,
+  // Make output of error messages be colored using ANSI escape codes.
+  HLL_INTERPRET_COLORED = 0x2
+};
+
+enum {
+  HLL_DEBUG_DIAGNOSTICS_COLORED = 0x1,
+};
+
+typedef enum {
+  HLL_EXPAND_MACRO_OK,
+  HLL_EXPAND_MACRO_ERR_ARGS
+} hll_expand_macro_result;
 
 // Result of calling hll_interpret.
 // Contains minimal information about source of error.
@@ -278,27 +276,27 @@ typedef struct hll_obj {
   char as[];
 } hll_obj;
 
-typedef struct hll_obj_cons {
+typedef struct {
   hll_value car;
   hll_value cdr;
 } hll_obj_cons;
 
-typedef struct hll_obj_func {
-  struct hll_bytecode *bytecode;
+typedef struct {
+  hll_bytecode *bytecode;
   hll_value param_names;
   hll_value env;
 } hll_obj_func;
 
-typedef struct hll_obj_env {
+typedef struct {
   hll_value vars;
   hll_value up;
 } hll_obj_env;
 
-typedef struct hll_obj_bind {
+typedef struct {
   hll_value (*bind)(struct hll_vm *vm, hll_value args);
 } hll_obj_bind;
 
-typedef struct hll_obj_symb {
+typedef struct {
   uint32_t length;
   uint32_t hash;
   char symb[];
@@ -412,7 +410,7 @@ typedef struct {
   uint32_t error_count;
 
   // Bytecode that is currently being generated.
-  struct hll_bytecode *bytecode;
+  hll_bytecode *bytecode;
 
   // Stack of locations compiler maintains. It is used to generate RLE-encoded
   // location information embedded in bytecode.
@@ -480,7 +478,7 @@ hll_interpret_result hll_interpret(hll_vm *vm, const char *source,
                                    const char *name, uint32_t flags)
     __attribute__((nonnull));
 
-hll_meta_storage *hll_make_debug(struct hll_vm *vm, uint32_t flags);
+hll_meta_storage *hll_make_debug(hll_vm *vm, uint32_t flags);
 void hll_delete_debug(hll_meta_storage *ds);
 void hll_reset_debug(hll_meta_storage *ds);
 
@@ -575,16 +573,16 @@ const char *hll_value_kind_str(hll_value value);
 // Functions that create new values.
 //
 
-hll_value hll_new_symbol(struct hll_vm *vm, const char *symbol, size_t length);
-hll_value hll_new_symbolz(struct hll_vm *vm, const char *symbol);
-hll_value hll_new_cons(struct hll_vm *vm, hll_value car, hll_value cdr);
-hll_value hll_new_env(struct hll_vm *vm, hll_value up, hll_value vars);
-hll_value hll_new_bind(struct hll_vm *vm,
-                       hll_value (*bind)(struct hll_vm *vm, hll_value args));
-hll_value hll_new_func(struct hll_vm *vm, hll_value params,
-                       struct hll_bytecode *bytecode);
+hll_value hll_new_symbol(hll_vm *vm, const char *symbol, size_t length);
+hll_value hll_new_symbolz(hll_vm *vm, const char *symbol);
+hll_value hll_new_cons(hll_vm *vm, hll_value car, hll_value cdr);
+hll_value hll_new_env(hll_vm *vm, hll_value up, hll_value vars);
+hll_value hll_new_bind(hll_vm *vm,
+                       hll_value (*bind)(hll_vm *vm, hll_value args));
+hll_value hll_new_func(hll_vm *vm, hll_value params,
+                       hll_bytecode *bytecode);
 
-void hll_free_obj(struct hll_vm *vm, hll_obj *obj);
+void hll_free_obj(hll_vm *vm, hll_obj *obj);
 
 size_t hll_list_length(hll_value value);
 
@@ -720,7 +718,7 @@ static inline void hll_setcdr(hll_value cons, hll_value cdr) {
   hll_unwrap_cons(cons)->cdr = cdr;
 }
 
-hll_translation_unit hll_make_tu(struct hll_vm *vm, const char *source,
+hll_translation_unit hll_make_tu(hll_vm *vm, const char *source,
                                  const char *name, uint32_t flags);
 void hll_delete_tu(hll_translation_unit *tu);
 
@@ -771,10 +769,10 @@ hll_value hll_compile_ast(hll_compiler *compiler, hll_value ast)
 // writes resulting function to location pointed by 'compiled' parameter.
 // If function does not success, contents of memory pointed by 'compiled'
 // are not defined.
-bool hll_compile(struct hll_vm *vm, const char *source, const char *name,
+bool hll_compile(hll_vm *vm, const char *source, const char *name,
                  hll_value *compiled) __attribute__((nonnull));
 
-hll_gc *hll_make_gc(struct hll_vm *vm);
+hll_gc *hll_make_gc(hll_vm *vm);
 void hll_delete_gc(hll_gc *gc);
 
 void hll_push_forbid_gc(hll_gc *gc);

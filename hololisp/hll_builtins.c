@@ -13,7 +13,7 @@
 #define __USE_MISC
 #include <unistd.h>
 
-static hll_value builtin_print(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_print(hll_vm *vm, hll_value args) {
   for (; hll_is_cons(args); args = hll_cdr(vm, args)) {
     hll_print_value(vm, hll_car(vm, args));
     if (hll_is_cons(hll_cdr(vm, args))) {
@@ -24,7 +24,7 @@ static hll_value builtin_print(struct hll_vm *vm, hll_value args) {
   return hll_car(vm, args);
 }
 
-static hll_value builtin_add(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_add(hll_vm *vm, hll_value args) {
   double result = 0;
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value value = hll_car(vm, obj);
@@ -37,7 +37,7 @@ static hll_value builtin_add(struct hll_vm *vm, hll_value args) {
   return hll_num(result);
 }
 
-static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_sub(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'-' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -63,7 +63,7 @@ static hll_value builtin_sub(struct hll_vm *vm, hll_value args) {
   return hll_num(result);
 }
 
-static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_div(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'/' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -89,7 +89,7 @@ static hll_value builtin_div(struct hll_vm *vm, hll_value args) {
   return hll_num(result);
 }
 
-static hll_value builtin_mul(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_mul(hll_vm *vm, hll_value args) {
   double result = 1;
   for (hll_value obj = args; hll_is_cons(obj); obj = hll_cdr(vm, obj)) {
     hll_value value = hll_car(vm, obj);
@@ -102,7 +102,7 @@ static hll_value builtin_mul(struct hll_vm *vm, hll_value args) {
   return hll_num(result);
 }
 
-static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_ne(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'/=' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -135,7 +135,7 @@ static hll_value builtin_num_ne(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_eq(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'=' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -169,7 +169,7 @@ static hll_value builtin_num_eq(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_gt(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'>' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -199,7 +199,7 @@ static hll_value builtin_num_gt(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_ge(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'>=' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -228,7 +228,7 @@ static hll_value builtin_num_ge(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_lt(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'<' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -257,7 +257,7 @@ static hll_value builtin_num_lt(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_num_le(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) == 0) {
     hll_runtime_error(vm, "'<=' form expects at least 1 argument (got %zu)",
                       hll_list_length(args));
@@ -286,7 +286,7 @@ static hll_value builtin_num_le(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-static hll_value builtin_rem(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_rem(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 2) {
     hll_runtime_error(vm, "'rem' form expects exactly 1 argument (got %zu)",
                       hll_list_length(args));
@@ -314,7 +314,7 @@ static uint64_t xorshift64(uint64_t *state) {
   return *state = x;
 }
 
-static hll_value builtin_random(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_random(hll_vm *vm, hll_value args) {
   hll_value low = hll_nil();
   hll_value high = hll_nil();
   if (hll_is_cons(args)) {
@@ -359,7 +359,7 @@ static hll_value builtin_random(struct hll_vm *vm, hll_value args) {
   return hll_num(result);
 }
 
-static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_range(hll_vm *vm, hll_value args) {
   hll_value low = hll_nil();
   hll_value high;
   if (hll_is_cons(args)) {
@@ -421,7 +421,7 @@ static hll_value builtin_range(struct hll_vm *vm, hll_value args) {
   return list_head;
 }
 
-static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_min(hll_vm *vm, hll_value args) {
   if (!hll_is_cons(args)) {
     hll_runtime_error(vm, "min' form expects at least 1 argument");
     return hll_nil();
@@ -443,7 +443,7 @@ static hll_value builtin_min(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_max(hll_vm *vm, hll_value args) {
   if (!hll_is_cons(args)) {
     hll_runtime_error(vm, "max' form expects at least 1 argument");
     return hll_nil();
@@ -465,7 +465,7 @@ static hll_value builtin_max(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_listp(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_listp(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'list?' expects exactly 1 argument");
     return hll_nil();
@@ -480,7 +480,7 @@ static hll_value builtin_listp(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_null(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_null(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'null' expects exactly 1 argument");
     return hll_nil();
@@ -496,7 +496,7 @@ static hll_value builtin_null(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_minusp(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_minusp(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return hll_nil();
@@ -516,7 +516,7 @@ static hll_value builtin_minusp(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_zerop(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_zerop(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'zero?' expects exactly 1 argument");
     return hll_nil();
@@ -536,7 +536,7 @@ static hll_value builtin_zerop(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_even(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_even(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'even?' expects exactly 1 argument");
     return hll_nil();
@@ -555,7 +555,7 @@ static hll_value builtin_even(struct hll_vm *vm, hll_value args) {
 
   return result;
 }
-static hll_value builtin_odd(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_odd(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'odd?' expects exactly 1 argument");
     return hll_nil();
@@ -575,7 +575,7 @@ static hll_value builtin_odd(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_plusp(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_plusp(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'negative?' expects exactly 1 argument");
     return hll_nil();
@@ -595,7 +595,7 @@ static hll_value builtin_plusp(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_numberp(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_numberp(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'null' expects exactly 1 argument");
     return hll_nil();
@@ -610,7 +610,7 @@ static hll_value builtin_numberp(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_abs(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_abs(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'abs' expects exactly 1 argument");
     return hll_nil();
@@ -625,7 +625,7 @@ static hll_value builtin_abs(struct hll_vm *vm, hll_value args) {
   return hll_num(fabs(hll_unwrap_num(obj)));
 }
 
-static hll_value builtin_append(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_append(hll_vm *vm, hll_value args) {
   if (hll_is_nil(args)) {
     return args;
   }
@@ -659,7 +659,7 @@ static hll_value builtin_append(struct hll_vm *vm, hll_value args) {
   return list;
 }
 
-static hll_value builtin_reverse(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_reverse(hll_vm *vm, hll_value args) {
   // NOTE: This seems like it can be compiled to bytecode directly
   if (hll_list_length(args) != 1) {
     hll_runtime_error(vm, "'reverse' expects exactly 1 argument");
@@ -680,7 +680,7 @@ static hll_value builtin_reverse(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_nthcdr(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 2) {
     hll_runtime_error(vm, "'nthcdr' expects exactly 2 arguments");
     return hll_nil();
@@ -709,7 +709,7 @@ static hll_value builtin_nthcdr(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_nth(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_nth(hll_vm *vm, hll_value args) {
   if (hll_list_length(args) != 2) {
     hll_runtime_error(vm, "'nth' expects exactly 2 arguments");
     return hll_nil();
@@ -738,26 +738,26 @@ static hll_value builtin_nth(struct hll_vm *vm, hll_value args) {
   return result;
 }
 
-static hll_value builtin_clear(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_clear(hll_vm *vm, hll_value args) {
   (void)vm;
   (void)args;
   printf("\033[2J");
   return hll_nil();
 }
 
-static hll_value builtin_sleep(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_sleep(hll_vm *vm, hll_value args) {
   (void)vm;
   double num = hll_unwrap_num(hll_car(vm, args));
   usleep(num * 1000);
   return hll_nil();
 }
 
-static hll_value builtin_length(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_length(hll_vm *vm, hll_value args) {
   (void)vm;
   return hll_num(hll_list_length(hll_car(vm, args)));
 }
 
-static hll_value builtin_gensym(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_gensym(hll_vm *vm, hll_value args) {
   (void)args;
   static int64_t count = 0;
   char buf[16];
@@ -765,7 +765,7 @@ static hll_value builtin_gensym(struct hll_vm *vm, hll_value args) {
   return hll_new_symbolz(vm, buf);
 }
 
-static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
+static hll_value builtin_eq(hll_vm *vm, hll_value args) {
   (void)vm;
   for (hll_value obj1 = args; hll_is_cons(obj1); obj1 = hll_cdr(vm, obj1)) {
     hll_value it1 = hll_car(vm, obj1);
@@ -785,7 +785,7 @@ static hll_value builtin_eq(struct hll_vm *vm, hll_value args) {
   return hll_true();
 }
 
-void add_builtins(struct hll_vm *vm) {
+void add_builtins(hll_vm *vm) {
   hll_add_binding(vm, "print", builtin_print);
   hll_add_binding(vm, "+", builtin_add);
   hll_add_binding(vm, "-", builtin_sub);

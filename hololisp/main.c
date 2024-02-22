@@ -116,7 +116,7 @@ static bool parse_cli_args(hll_options *opts, uint32_t argc,
 
 static bool execute_repl(hll_options *opts, bool tty) {
   bool result = false;
-  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_vm *vm = hll_make_vm(NULL);
 
   for (;;) {
     if (tty) {
@@ -153,7 +153,7 @@ static bool execute_script(hll_options *opts) {
     return true;
   }
 
-  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_vm *vm = hll_make_vm(NULL);
   uint32_t flags = 0;
   if (!opts->forbid_colors) {
     flags |= HLL_INTERPRET_COLORED;
@@ -168,7 +168,7 @@ static bool execute_script(hll_options *opts) {
 }
 
 static bool execute_string(hll_options *opts) {
-  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_vm *vm = hll_make_vm(NULL);
   uint32_t flags = HLL_INTERPRET_PRINT_RESULT;
   if (!opts->forbid_colors) {
     flags |= HLL_INTERPRET_COLORED;
@@ -191,7 +191,7 @@ static bool execute_dump_bytecode(const char *filename) {
     return true;
   }
 
-  struct hll_vm *vm = hll_make_vm(NULL);
+  hll_vm *vm = hll_make_vm(NULL);
   hll_value compiled;
   if (!hll_compile(vm, file_contents, filename, &compiled)) {
     return false;
